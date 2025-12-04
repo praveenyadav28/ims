@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/estimate/data/estimate_repository.dart';
 import 'package:ims/ui/sales/estimate/models/estimate_models.dart';
+import 'package:ims/ui/sales/estimate/models/estimateget_model.dart';
 import 'package:ims/ui/sales/estimate/state/estimate_bloc.dart';
 import 'package:ims/ui/sales/estimate/widgets/bill_to_card.dart';
 import 'package:ims/ui/sales/estimate/widgets/estimate_details_card.dart';
@@ -25,21 +26,28 @@ import 'package:ims/utils/snackbar.dart';
 
 class CreateEstimateFullScreen extends StatelessWidget {
   final EstimateRepository repo;
-  CreateEstimateFullScreen({Key? key, EstimateRepository? repo})
-    : repo = repo ?? EstimateRepository(),
-      super(key: key);
+  final EstimateData? estimateData;
+
+  CreateEstimateFullScreen({
+    Key? key,
+    EstimateRepository? repo,
+    this.estimateData,
+  }) : repo = repo ?? EstimateRepository(),
+       super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => EstBloc(repo: repo)..add(EstLoadInit()),
-      child: const CreateEstimateView(),
+      child: CreateEstimateView(estimateData: estimateData),
     );
   }
 }
 
 class CreateEstimateView extends StatefulWidget {
-  const CreateEstimateView({Key? key}) : super(key: key);
+  final EstimateData? estimateData;
+
+  const CreateEstimateView({Key? key, this.estimateData}) : super(key: key);
 
   @override
   State<CreateEstimateView> createState() => _CreateEstimateViewState();
@@ -61,7 +69,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
-  List<MiscChargeModel> miscList = [];
+  List<MiscChargeModelList> miscList = [];
 
   @override
   void dispose() {
@@ -512,7 +520,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
     if (res["status"] == true) {
       miscList = (res["data"] as List)
-          .map((e) => MiscChargeModel.fromJson(e))
+          .map((e) => MiscChargeModelList.fromJson(e))
           .toList();
       setState(() {});
     }

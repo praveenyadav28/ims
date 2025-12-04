@@ -17,7 +17,7 @@ class MiscChargeScreen extends StatefulWidget {
 }
 
 class _MiscChargeScreenState extends State<MiscChargeScreen> {
-  List<MiscChargeModel> miscList = [];
+  List<MiscChargeModelList> miscList = [];
   String _search = "";
 
   @override
@@ -35,7 +35,7 @@ class _MiscChargeScreenState extends State<MiscChargeScreen> {
 
     if (res["status"] == true) {
       miscList = (res["data"] as List)
-          .map((e) => MiscChargeModel.fromJson(e))
+          .map((e) => MiscChargeModelList.fromJson(e))
           .toList();
       setState(() {});
     }
@@ -180,7 +180,7 @@ class _MiscChargeScreenState extends State<MiscChargeScreen> {
 
   // ----------------------- TABLE CELLS -------------------------
 
-  Widget _actionButtons(MiscChargeModel e) {
+  Widget _actionButtons(MiscChargeModelList e) {
     return Padding(
       padding: const EdgeInsets.all(6),
       child: Row(

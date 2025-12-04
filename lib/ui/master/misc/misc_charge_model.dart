@@ -1,4 +1,4 @@
-class MiscChargeModel {
+class MiscChargeModelList {
   String id;
   int licenceNo;
   String branchId;
@@ -11,7 +11,7 @@ class MiscChargeModel {
   String? hsn;
   double? gst;
 
-  MiscChargeModel({
+  MiscChargeModelList({
     required this.id,
     required this.licenceNo,
     required this.branchId,
@@ -25,8 +25,8 @@ class MiscChargeModel {
     this.gst,
   });
 
-  factory MiscChargeModel.fromJson(Map<String, dynamic> json) {
-    return MiscChargeModel(
+  factory MiscChargeModelList.fromJson(Map<String, dynamic> json) {
+    return MiscChargeModelList(
       id: json["_id"] ?? "",
       licenceNo: json["licence_no"] ?? 0,
       branchId: json["branch_id"] ?? "",

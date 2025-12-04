@@ -10,7 +10,7 @@ import 'package:ims/utils/snackbar.dart';
 import 'package:ims/ui/group/hsn.dart';
 
 class CreateMiscCharge extends StatefulWidget {
-  final MiscChargeModel? editData;
+  final MiscChargeModelList? editData;
   const CreateMiscCharge({super.key, this.editData});
 
   @override

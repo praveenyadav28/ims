@@ -277,7 +277,9 @@ class _EstimateListScreenState extends State<EstimateListScreen> {
                     icon: Icons.edit,
                     tooltip: "Edit",
                     color: Colors.orange.shade700,
-                    onTap: () {},
+                    onTap: () {
+                      pushTo(CreateEstimateFullScreen(estimateData: e));
+                    },
                   ),
                   const SizedBox(width: 6),
                   _actionBtn(

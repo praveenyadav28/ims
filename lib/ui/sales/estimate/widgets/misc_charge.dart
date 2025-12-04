@@ -8,7 +8,7 @@ import 'package:ims/utils/textfield.dart';
 class MiscChargesSection extends StatefulWidget {
   final EstState state;
   final EstBloc bloc;
-  final List<MiscChargeModel> miscList; // From API
+  final List<MiscChargeModelList> miscList; // From API
 
   const MiscChargesSection({
     super.key,
@@ -22,7 +22,7 @@ class MiscChargesSection extends StatefulWidget {
 }
 
 class _MiscChargesSectionState extends State<MiscChargesSection> {
-  MiscChargeModel? selected;
+  MiscChargeModelList? selected;
   final amtCtrl = TextEditingController();
   bool incl = false;
   bool showAdd = false;
@@ -86,12 +86,12 @@ class _MiscChargesSectionState extends State<MiscChargesSection> {
                 /// SELECT MISC TYPE
                 Expanded(
                   flex: 4,
-                  child: CommonDropdownField<MiscChargeModel>(
+                  child: CommonDropdownField<MiscChargeModelList>(
                     value: selected,
                     hintText: "Select Charge",
 
                     items: widget.miscList.map((mc) {
-                      return DropdownMenuItem<MiscChargeModel>(
+                      return DropdownMenuItem<MiscChargeModelList>(
                         value: mc,
                         child: Text(mc.name),
                       );

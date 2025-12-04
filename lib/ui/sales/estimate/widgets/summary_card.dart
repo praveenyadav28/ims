@@ -17,7 +17,7 @@ class SummaryCard extends StatelessWidget {
 
   final EstState state;
   final EstBloc bloc;
-  final List<MiscChargeModel> miscList;
+  final List<MiscChargeModelList> miscList;
 
   @override
   Widget build(BuildContext context) {
