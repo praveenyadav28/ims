@@ -1,4 +1,6 @@
+import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/sales/estimate/models/estimate_models.dart';
+import 'package:ims/ui/sales/estimate/models/estimateget_model.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/prefence.dart';
 
@@ -12,6 +14,16 @@ class EstimateRepository {
     return data
         .map((e) => CustomerModel.fromMap(Map<String, dynamic>.from(e)))
         .toList();
+  }
+
+  Future<String> fetchEstimateNo() async {
+    final res = await ApiService.fetchData(
+      'get/estimate_no',
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+    final data = (res?['next_no'].toString()) ?? '';
+    print(data);
+    return data;
   }
 
   Future<List<ItemServiceModel>> fetchCatalogue() async {
@@ -35,13 +47,18 @@ class EstimateRepository {
     return combined;
   }
 
-  Future<Map<String, dynamic>?> saveEstimate(
-    Map<String, dynamic> payload,
-  ) async {
-    return await ApiService.postData(
-      'estimate',
-      payload,
+  Future<Map<String, dynamic>?> saveEstimate({
+    required Map<String, dynamic> payload,
+    XFile? signatureFile,
+    String? updateId,
+  }) async {
+    return await ApiService.uploadMultipart(
+      endpoint: updateId != null ? "estimate/$updateId" : "estimate",
+      fields: payload,
+      file: signatureFile,
+      fileKey: "signature",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
+      updateStatus: updateId != null,
     );
   }
 
@@ -56,5 +73,26 @@ class EstimateRepository {
     return data
         .map((e) => HsnModel.fromMap(Map<String, dynamic>.from(e)))
         .toList();
+  }
+
+  Future<List<EstimateData>> getEstimates() async {
+    final res = await ApiService.fetchData(
+      "get/estimate",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    if (res == null) return [];
+
+    final parsed = EstimateListResponse.fromJson(res);
+    return parsed.data;
+  }
+
+  Future<bool> deleteEstimate(String id) async {
+    final res = await ApiService.deleteData(
+      "estimate/$id",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    return (res?["status"] == true);
   }
 }

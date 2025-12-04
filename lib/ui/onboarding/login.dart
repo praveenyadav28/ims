@@ -22,9 +22,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  TextEditingController licenceNoController = TextEditingController();
-  TextEditingController userIdController = TextEditingController();
-  TextEditingController passwordController = TextEditingController();
+  TextEditingController licenceNoController = TextEditingController(text: "10001");
+  TextEditingController userIdController = TextEditingController(text: "Vijay");
+  TextEditingController passwordController = TextEditingController(text: "Vijay@1234");
 
   int selectedUserType = 0;
   BranchList? _selectedBranch;

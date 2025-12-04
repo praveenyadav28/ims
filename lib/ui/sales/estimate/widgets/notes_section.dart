@@ -28,18 +28,19 @@ class NotesSection extends StatelessWidget {
           NotesTcExpandable(
             title: "Notes",
             miscId: "10",
-            onSelectedChanged: onNotesChanged,  // 🔥 Callback
+            onSelectedChanged: onNotesChanged,
           ),
           NotesTcExpandable(
             title: "Terms and Conditions",
             miscId: "11",
-            onSelectedChanged: onTermsChanged, // 🔥 Callback
+            onSelectedChanged: onTermsChanged,
           ),
         ],
       ),
     );
   }
 }
+
 class NotesTcExpandable extends StatefulWidget {
   final String title;
   final String miscId;
@@ -59,8 +60,7 @@ class NotesTcExpandable extends StatefulWidget {
 class _NotesTcExpandableState extends State<NotesTcExpandable> {
   bool expanded = false;
   List<MiscItem> list = [];
-  List<String> selected = [];
-  String? dropdownValue;
+  List<String> selected = []; // now stores NAME, not ID
 
   @override
   void initState() {
@@ -92,10 +92,7 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
         child: SizedBox(
           width: 700,
           height: 550,
-          child: AddNotesScreen(
-            miscId: widget.miscId,
-            name: widget.title,
-          ),
+          child: AddNotesScreen(miscId: widget.miscId, name: widget.title),
         ),
       ),
     ).then((updateData) {
@@ -105,10 +102,10 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
     });
   }
 
-  void _removeSelected(String id) {
+  void _removeSelected(String name) {
     setState(() {
-      selected.remove(id);
-      widget.onSelectedChanged(selected);  // 🔥 Update parent
+      selected.remove(name);
+      widget.onSelectedChanged(selected);
     });
   }
 
@@ -152,7 +149,6 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /// Add new button
                 InkWell(
                   onTap: _openAddDialog,
                   child: Row(
@@ -172,7 +168,6 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
 
                 const SizedBox(height: 10),
 
-                /// Dropdown
                 CommonDropdownField<String>(
                   hintText: "Select ${widget.title}",
                   value: null,
@@ -183,42 +178,32 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
                     );
                   }).toList(),
                   onChanged: (id) {
-                    if (id != null && !selected.contains(id)) {
-                      setState(() {
-                        selected.add(id);
-                        widget.onSelectedChanged(selected); // 🔥 Update parent
-                      });
+                    if (id != null) {
+                      final item = list.firstWhere((e) => e.id == id);
+
+                      if (!selected.contains(item.name)) {
+                        setState(() {
+                          selected.add(item.name ?? "");
+                          widget.onSelectedChanged(selected);
+                        });
+                      }
                     }
                   },
                 ),
 
                 const SizedBox(height: 12),
 
-                /// Selected list
-                ...selected.map((id) {
-                  final item = list.firstWhere(
-                    (e) => e.id == id,
-                    orElse: () => MiscItem(
-                      id: id,
-                      name: "",
-                      licenceNo: '',
-                      branchId: '',
-                      miscId: '',
-                      createdAt: null,
-                      updatedAt: null,
-                    ),
-                  );
-
+                ...selected.map((name) {
                   return Card(
                     child: ListTile(
-                      title: Text(item.name ?? ""),
+                      title: Text(name),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _removeSelected(id),
+                        onPressed: () => _removeSelected(name),
                       ),
                     ),
                   );
-                }),
+                }).toList(),
               ],
             ),
           ),

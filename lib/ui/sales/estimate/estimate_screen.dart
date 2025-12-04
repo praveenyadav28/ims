@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:ims/component/side_menu.dart';
+import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/estimate/data/estimate_repository.dart';
 import 'package:ims/ui/sales/estimate/models/estimate_models.dart';
 import 'package:ims/ui/sales/estimate/state/estimate_bloc.dart';
@@ -53,7 +53,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
   final validForController = TextEditingController();
-  DateTime? pickedEstimateDate;
+  DateTime pickedEstimateDate = DateTime.now();
   DateTime? pickedValidityDate;
 
   File? signatureImage;
@@ -61,6 +61,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
+  List<MiscChargeModel> miscList = [];
 
   @override
   void dispose() {
@@ -77,7 +78,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   Future<void> _pickEstimateDate(BuildContext ctx, EstBloc bloc) async {
     final date = await showDatePicker(
       context: ctx,
-      initialDate: pickedEstimateDate ?? DateTime.now(),
+      initialDate: pickedEstimateDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
@@ -92,8 +93,6 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
         bloc.state.copyWith(
           estimateDate: date,
           validityDate: pickedValidityDate,
-          prefix: prefixController.text,
-          estimateNo: estimateNoController.text,
         ),
       );
     }
@@ -112,20 +111,16 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   String signatureUrl = "";
 
   Future<void> _pickValidityDate(BuildContext ctx, EstBloc bloc) async {
-    if (pickedEstimateDate == null) {
-      showCustomSnackbarError(ctx, 'Pick Estimate Date first');
-      return;
-    }
     final date = await showDatePicker(
       context: ctx,
-      initialDate: pickedValidityDate ?? pickedEstimateDate!,
-      firstDate: pickedEstimateDate!,
+      initialDate: pickedValidityDate ?? pickedEstimateDate,
+      firstDate: pickedEstimateDate,
       lastDate: DateTime(2100),
     );
     if (date != null) {
       pickedValidityDate = date;
       validForController.text = date
-          .difference(pickedEstimateDate!)
+          .difference(pickedEstimateDate)
           .inDays
           .toString();
       bloc.add(EstCalculate());
@@ -133,30 +128,35 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
         bloc.state.copyWith(
           estimateDate: pickedEstimateDate,
           validityDate: pickedValidityDate,
-          prefix: prefixController.text,
-          estimateNo: estimateNoController.text,
         ),
       );
     }
   }
 
   @override
+  void initState() {
+    super.initState();
+    fetchMiscCharges(); // <- YEHI CALL KARNA HAI
+  }
+
+  @override
   Widget build(BuildContext context) {
     final bloc = context.read<EstBloc>();
+
     return Scaffold(
       key: estimateNavigatorKey,
       backgroundColor: AppColor.white,
       appBar: AppBar(
         backgroundColor: AppColor.white,
         elevation: 0.5,
-        // leading: IconButton(
-        //   icon: const Icon(
-        //     Icons.arrow_back_ios_new_rounded,
-        //     size: 18,
-        //     color: Colors.black87,
-        //   ),
-        //   onPressed: () => Navigator.of(context).pop(),
-        // ),
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 18,
+            color: Colors.black87,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         titleSpacing: 0,
         title: Text(
           'Create Estimate',
@@ -192,7 +192,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       shippingAddress: cashShippingController.text,
                       notes: selectedNotesList,
                       terms: selectedTermsList,
-                      signatureUrl: signatureUrl,
+                      signatureImage: signatureImage,
                     ),
                   );
                 },
@@ -202,9 +202,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
           ),
         ],
       ),
-      drawer: SideMenu(),
       body: BlocBuilder<EstBloc, EstState>(
         builder: (context, state) {
+          estimateNoController.text = state.estimateNo.toString();
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -239,11 +239,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                         _pickValidityDate(context, context.read<EstBloc>()),
                     onValidForChanged: (value) {
                       final days = int.tryParse(value) ?? 0;
-                      if (pickedEstimateDate != null) {
-                        pickedValidityDate = pickedEstimateDate!.add(
-                          Duration(days: days),
-                        );
-                      }
+                      pickedValidityDate = pickedEstimateDate.add(
+                        Duration(days: days),
+                      );
                       bloc.add(EstCalculate());
                     },
                   ),
@@ -269,7 +267,11 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SummaryCard(state: state, bloc: bloc),
+                          SummaryCard(
+                            state: state,
+                            bloc: bloc,
+                            miscList: miscList,
+                          ),
                           SizedBox(height: Sizes.height * .02),
                           Row(
                             children: [
@@ -500,5 +502,19 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
         ],
       ),
     );
+  }
+
+  Future<void> fetchMiscCharges() async {
+    final res = await ApiService.fetchData(
+      "get/misccharge",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    if (res["status"] == true) {
+      miscList = (res["data"] as List)
+          .map((e) => MiscChargeModel.fromJson(e))
+          .toList();
+      setState(() {});
+    }
   }
 }

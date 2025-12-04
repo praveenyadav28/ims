@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/ui/sales/estimate/state/estimate_bloc.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
@@ -39,6 +41,14 @@ class EstimateDetailsCard extends StatelessWidget {
                 child: CommonTextField(
                   controller: prefixController,
                   hintText: 'Prefix',
+                  onChanged: (value) {
+                    EstBloc bloc = context.read<EstBloc>();
+                    bloc.emit(
+                      bloc.state.copyWith(
+                        estimateNo: estimateNoController.text,
+                      ),
+                    );
+                  },
                 ),
               ),
               SizedBox(width: 10),
@@ -46,6 +56,14 @@ class EstimateDetailsCard extends StatelessWidget {
                 child: CommonTextField(
                   controller: estimateNoController,
                   hintText: 'Estimate No',
+                  onChanged: (value) {
+                    EstBloc bloc = context.read<EstBloc>();
+                    bloc.emit(
+                      bloc.state.copyWith(
+                        estimateNo: estimateNoController.text,
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -65,7 +83,7 @@ class EstimateDetailsCard extends StatelessWidget {
                   controller: TextEditingController(
                     text: pickedEstimateDate == null
                         ? 'Select Date'
-                        : DateFormat('dd MMM yyyy').format(pickedEstimateDate!),
+                        : DateFormat('yyyy-MM-dd').format(pickedEstimateDate!),
                   ),
                 ),
               ),
@@ -111,7 +129,7 @@ class EstimateDetailsCard extends StatelessWidget {
                   controller: TextEditingController(
                     text: pickedValidityDate == null
                         ? 'Select Date'
-                        : DateFormat('dd MMM yyyy').format(pickedValidityDate!),
+                        : DateFormat('yyyy-MM-dd').format(pickedValidityDate!),
                   ),
                 ),
               ),

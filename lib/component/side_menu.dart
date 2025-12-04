@@ -6,6 +6,7 @@ import 'package:ims/ui/master/company/company_profile.dart';
 import 'package:ims/ui/master/ledger/ledger_master.dart';
 import 'package:ims/ui/master/misc/misc_charge_list.dart';
 import 'package:ims/ui/master/user/user_list.dart';
+import 'package:ims/ui/sales/estimate/estimate_list.dart';
 import 'package:ims/ui/sales/estimate/estimate_screen.dart';
 import 'package:ims/ui/voucher/payment/create.dart';
 import 'package:ims/utils/colors.dart';
@@ -76,9 +77,9 @@ class _SideMenuState extends State<SideMenu> {
           ),
           DrawerListtile(
             onTap: () {
-              pushNdRemove(CreateEstimateFullScreen());
+              pushNdRemove(const EstimateListScreen());
             },
-            title: "Estimate",
+            title: "Estimate List",
           ),
         ],
       ),

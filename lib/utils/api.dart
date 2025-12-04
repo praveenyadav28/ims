@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
@@ -14,7 +17,7 @@ class ApiException implements Exception {
 }
 
 class ApiService {
-  static String baseurl = "http://192.168.1.19:4000/api";
+  static String baseurl = "http://192.168.1.11:4000/api";
   static final Dio dio = Dio(
     BaseOptions(
       baseUrl: baseurl,
@@ -151,39 +154,33 @@ class ApiService {
     );
   }
 
-  // -------------------- UPLOAD (any files) --------------------
   static Future<dynamic> uploadFiles({
     required String endpoint,
     required Map<String, dynamic> fields,
-    Map<String, XFile?>? singleFiles,
-    Map<String, List<XFile>>? multiFiles,
+    XFile? singleFile,
   }) async {
     try {
-      final form = FormData();
+      final Map<String, dynamic> dataMap = {};
 
-      // Add fields
+      // Add all fields safely
       fields.forEach((key, value) {
-        form.fields.add(MapEntry(key, value.toString()));
+        if (value is Map || value is List) {
+          dataMap[key] = jsonEncode(value); // encode complex values
+        } else {
+          dataMap[key] = value;
+        }
       });
 
-      // Single files
-      if (singleFiles != null) {
-        for (final entry in singleFiles.entries) {
-          final file = entry.value;
-          if (file != null) {
-            form.files.add(MapEntry(entry.key, await toMultipartFile(file)));
-          }
-        }
+      // Add image from XFile
+      if (singleFile != null) {
+        dataMap["signature"] = await MultipartFile.fromFile(
+          singleFile.path,
+          filename: singleFile.name,
+        );
       }
 
-      // Multiple files
-      if (multiFiles != null) {
-        for (final entry in multiFiles.entries) {
-          for (final f in entry.value) {
-            form.files.add(MapEntry(entry.key, await toMultipartFile(f)));
-          }
-        }
-      }
+      // Create FormData
+      final form = FormData.fromMap(dataMap);
 
       final response = await dio.post(
         "/$endpoint",
@@ -193,6 +190,62 @@ class ApiService {
             ..addAll({"Content-Type": "multipart/form-data"}),
         ),
       );
+
+      return response.data;
+    } catch (e) {
+      throw _formatError(e);
+    }
+  }
+
+  // -------------------- REUSABLE MULTIPART API CALL --------------------
+  static Future<dynamic> uploadMultipart({
+    required String endpoint,
+    required Map<String, dynamic> fields,
+    required bool updateStatus,
+    XFile? file,
+    String fileKey = "signature",
+    int? licenceNo,
+  }) async {
+    try {
+      final Map<String, dynamic> dataMap = {};
+
+      // Convert + encode all fields safely
+      fields.forEach((key, value) {
+        if (value is Map || value is List) {
+          dataMap[key] = jsonEncode(value);
+        } else {
+          dataMap[key] = value?.toString() ?? "";
+        }
+      });
+
+      // Add file if available
+      if (file != null) {
+        dataMap[fileKey] = await toMultipartFile(file);
+      }
+
+      final form = FormData.fromMap(dataMap);
+
+      final response = updateStatus
+          ? await dio.put(
+              "/$endpoint",
+              data: form,
+              options: Options(
+                headers: {
+                  ..._authHeaders(licenceNo: licenceNo),
+                  "Content-Type": "multipart/form-data",
+                },
+              ),
+            )
+          : await dio.post(
+              "/$endpoint",
+              data: form,
+              options: Options(
+                headers: {
+                  ..._authHeaders(licenceNo: licenceNo),
+                  "Content-Type": "multipart/form-data",
+                },
+              ),
+            );
 
       return response.data;
     } catch (e) {
@@ -213,47 +266,3 @@ class ApiService {
     return ApiException(e.toString(), statusCode: 500);
   }
 }
-// """
-// Hola amigo (Yeah, yeah), kaise ho, theek ho?
-// Kya chal raha hai bruv?
-// Milte hai jald
-// Tell me what's up? (Haan)
-// Hola amigo (It's that dollar sign!)
-// Kaise ho, theek ho? (Seedhe Maut)
-// Ghar pe kaise hai sab?
-// Aunty ko bolna "I'm sending my love"
-
-// [Verse 1: KR$NA]
-// It's the return of the mack
-// Abhi bhi likhu toh karu murder ye rap (Yeah)
-// Sune tere word hi hai cap
-// Main toh jaanta ni tujhe, never heard of your rap (Na)
-// Suna tera crowd bhi na ruke
-// Fan bhi ab gaane tere chaav se na sune
-// Doubt hai na mujhe, tera daav pe na kuch hai
-// Kare ye clown, dekho now, inka mouth bhi ab chup hai
-// Kare out bhi na mujhe, yahan boundary na kuch hai
-// Chahiye bhaav, khade paav, thoda clout chahiye tujhe
-// Better bow to the power, mera paav bhi na jhuke
-// Inka baap bana now, bolte baau ji ab mujhe
-// Dilli ke londe ki buddhi garam (Haan), dilli ke launde hai kutti rakam (Haan)
-// Baaton mein tere na kuch bhi hai dam
-// Haan, khainch ke maare tere guddi pe hum
-// Dukhti hai nabz, phir na chhupti jalan
-// Tu choot ka ghulam, teri fuddi dharm (Huh)
-// Aaye karne jang, inki chudgi kalam
-// Ye toh khud bhi khatam, kara sudhikaran (Hoo)
-// Baap ke paise ni khaata
-// Toh kaisa sawaal hai, "Main kaise kamaata?"
-// Main laashe bichata, ye kehne main aata
-// Pull up with Neena main jaise Masaba (Like damn)
-// Get set go, ye hai green light gang
-// Karun main whatever, I feel like man
-// Saadi inki soorat, mile teen bhai
-// Kara saara scene tight, inko na neend aaye chain
-// Maine kare kaand, kitne kaam, mera chale naam
-// Girebaan mein bhi gire bomb, lage Vietnam
-// Dere jaan, dere balidaan, wo bhi sare-aam
-// Maine kare harm, katleaam, main na pareshaan (Damn)
-
-// """

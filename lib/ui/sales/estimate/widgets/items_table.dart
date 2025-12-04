@@ -381,14 +381,65 @@ class _ItemSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return SearchField<ItemServiceModel>(
       key: ValueKey(row.localId),
-      suggestions: catalog
-          .map(
-            (i) => SearchFieldListItem<ItemServiceModel>(
-              "${i.name} - ${i.itemNo}",
-              item: i,
+      itemHeight: 75,
+      suggestions: catalog.map((i) {
+        return SearchFieldListItem<ItemServiceModel>(
+          "${i.name} - ${i.itemNo}",
+          item: i,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
             ),
-          )
-          .toList(),
+            child: ListTile(
+              tileColor: Colors.white,
+              dense: true,
+
+              /// Icon / Badge
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.shopping_bag_outlined, size: 20),
+              ),
+
+              title: Text(
+                "${i.name}  •  ${i.itemNo}",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF111827),
+                ),
+              ),
+
+              subtitle: i.variantValue.isEmpty
+                  ? SizedBox()
+                  : Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      margin: EdgeInsets.symmetric(vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Color(0xFFE0F2FE),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        i.variantValue,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF0369A1),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+        );
+      }).toList(),
+
       searchInputDecoration: SearchInputDecoration(
         isDense: true,
         filled: true,
@@ -421,6 +472,7 @@ class _ItemSelector extends StatelessWidget {
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
+
       suggestionItemDecoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(4),

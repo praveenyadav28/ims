@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/estimate/state/estimate_bloc.dart';
 import 'package:ims/ui/sales/estimate/widgets/additional_charges_section.dart';
 import 'package:ims/ui/sales/estimate/widgets/discounts_section.dart';
+import 'package:ims/ui/sales/estimate/widgets/misc_charge.dart';
 import 'package:ims/utils/colors.dart';
 
 class SummaryCard extends StatelessWidget {
-  const SummaryCard({super.key, required this.state, required this.bloc});
+  const SummaryCard({
+    super.key,
+    required this.state,
+    required this.bloc,
+    required this.miscList,
+  });
 
   final EstState state;
   final EstBloc bloc;
+  final List<MiscChargeModel> miscList;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +42,8 @@ class SummaryCard extends StatelessWidget {
           _row('SGST', state.sgst),
           _row('CGST', state.cgst),
           AdditionalChargesSection(state: state, bloc: bloc),
+          // INSERT THIS:
+          MiscChargesSection(state: state, bloc: bloc, miscList: miscList),
           DiscountsSection(state: state, bloc: bloc),
           Divider(),
           Row(

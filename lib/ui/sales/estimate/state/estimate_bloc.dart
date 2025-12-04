@@ -1,14 +1,17 @@
+// estimate_bloc.dart
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/sales/estimate/data/estimate_repository.dart';
 import 'package:ims/ui/sales/estimate/models/estimate_models.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:intl/intl.dart';
 
-///
-/// EVENTS
-///
+/// ------------------- EVENTS -------------------
 abstract class EstEvent {}
 
 class EstLoadInit extends EstEvent {}
@@ -34,7 +37,6 @@ class EstUpdateRow extends EstEvent {
   final EstimateRow row;
   EstUpdateRow(this.row);
 }
-
 
 class EstSelectCatalogForRow extends EstEvent {
   final String rowId;
@@ -85,6 +87,23 @@ class EstRemoveDiscount extends EstEvent {
   EstRemoveDiscount(this.id);
 }
 
+/// ---------- NEW: misc charges events ----------
+class EstAddMiscCharge extends EstEvent {
+  final MiscChargeEntry m;
+  EstAddMiscCharge(this.m);
+}
+
+class EstRemoveMiscCharge extends EstEvent {
+  final String id;
+  EstRemoveMiscCharge(this.id);
+}
+
+class EstUpdateMiscCharge extends EstEvent {
+  final MiscChargeEntry m;
+  EstUpdateMiscCharge(this.m);
+}
+
+/// ----------------------------------------------
 class EstCalculate extends EstEvent {}
 
 class EstSave extends EstEvent {}
@@ -94,9 +113,7 @@ class EstToggleRoundOff extends EstEvent {
   EstToggleRoundOff(this.value);
 }
 
-///
-/// STATE
-///
+/// ------------------- STATE -------------------
 class EstState {
   final List<CustomerModel> customers;
   final CustomerModel? selectedCustomer;
@@ -110,6 +127,7 @@ class EstState {
   final List<ItemServiceModel> catalogue;
   final List<EstimateRow> rows;
   final List<AdditionalCharge> charges;
+  final List<MiscChargeEntry> miscCharges; // NEW
   final List<DiscountLine> discounts;
   final double subtotal;
   final double totalGst;
@@ -131,6 +149,7 @@ class EstState {
     this.catalogue = const [],
     this.rows = const [],
     this.charges = const [],
+    this.miscCharges = const [], // NEW
     this.discounts = const [],
     this.subtotal = 0,
     this.totalGst = 0,
@@ -153,6 +172,7 @@ class EstState {
     List<ItemServiceModel>? catalogue,
     List<EstimateRow>? rows,
     List<AdditionalCharge>? charges,
+    List<MiscChargeEntry>? miscCharges, // NEW
     List<DiscountLine>? discounts,
     double? subtotal,
     double? totalGst,
@@ -174,6 +194,7 @@ class EstState {
       catalogue: catalogue ?? this.catalogue,
       rows: rows ?? this.rows,
       charges: charges ?? this.charges,
+      miscCharges: miscCharges ?? this.miscCharges, // NEW
       discounts: discounts ?? this.discounts,
       subtotal: subtotal ?? this.subtotal,
       totalGst: totalGst ?? this.totalGst,
@@ -185,6 +206,7 @@ class EstState {
   }
 }
 
+/// ------------------- SAVE EVENT (UI) -------------------
 class EstSaveWithUIData extends EstEvent {
   final String customerName;
   final String mobile;
@@ -192,7 +214,7 @@ class EstSaveWithUIData extends EstEvent {
   final String shippingAddress;
   final List<String> notes;
   final List<String> terms;
-  final String signatureUrl;
+  final File? signatureImage; // NEW
 
   EstSaveWithUIData({
     required this.customerName,
@@ -201,16 +223,14 @@ class EstSaveWithUIData extends EstEvent {
     required this.shippingAddress,
     required this.notes,
     required this.terms,
-    required this.signatureUrl,
+    this.signatureImage, // NEW
   });
 }
 
 final GlobalKey<NavigatorState> estimateNavigatorKey =
     GlobalKey<NavigatorState>();
 
-///
-/// BLOC
-///
+/// ------------------- BLOC -------------------
 class EstBloc extends Bloc<EstEvent, EstState> {
   final EstimateRepository repo;
   EstBloc({required this.repo}) : super(EstState()) {
@@ -230,6 +250,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     on<EstUpdateCharge>(_onUpdateCharge);
     on<EstAddDiscount>(_onAddDiscount);
     on<EstRemoveDiscount>(_onRemoveDiscount);
+
+    // new misc charge handlers
+    on<EstAddMiscCharge>(_onAddMiscCharge);
+    on<EstRemoveMiscCharge>(_onRemoveMiscCharge);
+    on<EstUpdateMiscCharge>(_onUpdateMiscCharge);
+
     on<EstToggleRoundOff>(_onToggleRoundOff);
     on<EstCalculate>(_onCalculate);
   }
@@ -237,12 +263,14 @@ class EstBloc extends Bloc<EstEvent, EstState> {
   Future<void> _onLoad(EstLoadInit e, Emitter<EstState> emit) async {
     try {
       final customers = await repo.fetchCustomers();
+      final estimateNo = await repo.fetchEstimateNo();
       final catalogue = await repo.fetchCatalogue();
       final hsnList = await repo.fetchHsnList();
 
       emit(
         state.copyWith(
           customers: customers,
+          estimateNo: estimateNo,
           catalogue: catalogue,
           hsnMaster: hsnList,
           rows: [EstimateRow(localId: UniqueKey().toString())],
@@ -454,17 +482,47 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     add(EstCalculate());
   }
 
+  // ------------------- MISC CHARGE HANDLERS -------------------
+  void _onAddMiscCharge(EstAddMiscCharge e, Emitter<EstState> emit) {
+    emit(state.copyWith(miscCharges: [...state.miscCharges, e.m]));
+    add(EstCalculate());
+  }
+
+  void _onRemoveMiscCharge(EstRemoveMiscCharge e, Emitter<EstState> emit) {
+    emit(
+      state.copyWith(
+        miscCharges: state.miscCharges.where((m) => m.id != e.id).toList(),
+      ),
+    );
+    add(EstCalculate());
+  }
+
+  void _onUpdateMiscCharge(EstUpdateMiscCharge e, Emitter<EstState> emit) {
+    emit(
+      state.copyWith(
+        miscCharges: state.miscCharges.map((m) {
+          if (m.id == e.m.id) return e.m;
+          return m;
+        }).toList(),
+      ),
+    );
+    add(EstCalculate());
+  }
+
+  // ------------------- CALCULATION -------------------
   void _onCalculate(EstCalculate e, Emitter<EstState> emit) {
     final updatedRows = state.rows.map((r) => r.recalc()).toList();
 
     double subtotal = 0;
     double gst = 0;
 
+    // rows taxable + tax
     for (final r in updatedRows) {
       subtotal += r.taxable;
       gst += r.taxAmount;
     }
 
+    // additional charges (existing)
     for (final ch in state.charges) {
       if (ch.taxIncluded) {
         final divisor = 1 + (ch.taxPercent / 100);
@@ -477,8 +535,24 @@ class EstBloc extends Bloc<EstEvent, EstState> {
       }
     }
 
+    // discounts (applied on current subtotal)
     for (final d in state.discounts) {
       subtotal -= d.isPercent ? subtotal * (d.amount / 100) : d.amount;
+    }
+
+    // ------------------- MISC CHARGES (NEW) -------------------
+    // Each misc charge has gst value in misc.gst (0 if null)
+    for (final m in state.miscCharges) {
+      final gstRate = m.gst;
+      if (m.taxIncluded) {
+        final divisor = 1 + (gstRate / 100);
+        final base = m.amount / divisor;
+        subtotal += base;
+        gst += m.amount - base;
+      } else {
+        subtotal += m.amount;
+        gst += m.amount * (gstRate / 100);
+      }
     }
 
     final total = state.autoRound
@@ -497,6 +571,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     );
   }
 
+  // ------------------- SAVE -------------------
   Future<void> _onSaveWithUIData(
     EstSaveWithUIData e,
     Emitter<EstState> emit,
@@ -581,8 +656,14 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         return {"name": c.name, "amount": c.amount};
       }).toList();
 
+      // ---------------- MISC CHARGES (NEW) ----------------
+      final miscCharges = state.miscCharges.map((m) {
+        return {"name": m.name, "amount": m.amount, "type": m.taxIncluded};
+      }).toList();
+
       // ---------------- FINAL PAYLOAD ----------------
-      final payload = {
+
+      Map<String, dynamic> payload = {
         "licence_no": Preference.getint(PrefKeys.licenseNo),
         "branch_id": Preference.getString(PrefKeys.locationId),
         "customer_id": customerId,
@@ -591,35 +672,52 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         "address_0": billing,
         "address_1": shipping,
         "prefix": state.prefix,
-        "no": int.tryParse(state.estimateNo) ?? 0,
-        "estimate_date": DateFormat('yyyy-MM-dd').format(state.estimateDate!),
+        "no": int.tryParse(state.estimateNo),
+        "estimate_date": DateFormat(
+          'yyyy-MM-dd',
+        ).format(state.estimateDate ?? DateTime.now()),
         "payment_terms": state.validForDays,
-        "due_date": DateFormat('yyyy-MM-dd').format(state.validityDate!),
+        if (state.validityDate != null)
+          "due_date": DateFormat('yyyy-MM-dd').format(state.validityDate!),
         "case_sale": isCash,
-        "add_note": e.notes,
-        "te_co": e.terms,
+        "add_note": jsonEncode(e.notes),
+        "te_co": jsonEncode(e.terms),
         "sub_totle": state.subtotal,
         "sub_gst": state.totalGst,
         "auto_ro": state.autoRound,
         "totle_amo": state.totalAmount,
         "additional_charges": charges,
+        "misccharge": miscCharges, // NEW key as requested
         "discount": discounts,
         "item_details": itemRows,
         "service_details": serviceRows,
-        "signature": e.signatureUrl,
       };
-      final res = await repo.saveEstimate(payload);
-
-      if (res?['status'] == true) {
-        showCustomSnackbarSuccess(
-          estimateNavigatorKey.currentContext!,
-          res?['message'] ?? "Saved",
-        );
-      } else {
+      if (itemRows.isEmpty && serviceRows.isEmpty) {
         showCustomSnackbarError(
           estimateNavigatorKey.currentContext!,
-          res?['message'] ?? "Save failed",
+          "Add atleast one item or service",
         );
+        return;
+      } else {
+        final res = await repo.saveEstimate(
+          payload: payload,
+          signatureFile: e.signatureImage != null
+              ? XFile(e.signatureImage!.path)
+              : null,
+          // updateId: "69313504c29133095f0c34f0",
+        );
+
+        if (res?['status'] == true) {
+          showCustomSnackbarSuccess(
+            estimateNavigatorKey.currentContext!,
+            res?['message'] ?? "Saved",
+          );
+        } else {
+          showCustomSnackbarError(
+            estimateNavigatorKey.currentContext!,
+            res?['message'] ?? "Save failed",
+          );
+        }
       }
     } catch (err) {
       showCustomSnackbarError(
@@ -630,9 +728,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
   }
 }
 
-///
-/// ✅ IMMUTABLE CALCULATION EXTENSION
-///
+/// ------------------- IMMUTABLE CALC EXT -------------------
 extension EstimateRowCalc on EstimateRow {
   EstimateRow recalc() {
     final base = pricePerSelectedUnit * qty;
@@ -652,4 +748,40 @@ extension EstimateRowCalc on EstimateRow {
     }
   }
 }
-//
+
+/// ------------------- NEW: UI model for misc charges -------------------
+/// This model lives in the Bloc file for convenience. You may move it to
+/// a separate file if you prefer.
+class MiscChargeEntry {
+  String id; // local id for UI
+  String miscId; // _id from server misc charge
+  String ledgerId;
+  String name;
+  String? hsn;
+  double gst; // gst rate (0 if null)
+  double amount;
+  bool taxIncluded;
+
+  MiscChargeEntry({
+    required this.id,
+    required this.miscId,
+    required this.ledgerId,
+    required this.name,
+    this.hsn,
+    this.gst = 0,
+    required this.amount,
+    this.taxIncluded = false,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      "misc_id": miscId,
+      "ledger_id": ledgerId,
+      "name": name,
+      "hsn": hsn ?? "",
+      "gst": gst,
+      "amount": amount,
+      "inclusive": taxIncluded,
+    };
+  }
+}
