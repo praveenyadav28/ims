@@ -1,4 +1,5 @@
 import 'package:image_picker/image_picker.dart';
+import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/estimate/models/estimate_models.dart';
 import 'package:ims/ui/sales/estimate/models/estimateget_model.dart';
 import 'package:ims/utils/api.dart';
@@ -45,6 +46,21 @@ class EstimateRepository {
       combined.add(ItemServiceModel.fromService(Map<String, dynamic>.from(s)));
     }
     return combined;
+  }
+
+  Future<List<MiscChargeModelList>> fetchMiscMaster() async {
+    final res = await ApiService.fetchData(
+      "get/misccharge",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    if (res["status"] == true) {
+      return (res["data"] as List)
+          .map((e) => MiscChargeModelList.fromJson(e))
+          .toList();
+    } else {
+      return [];
+    }
   }
 
   Future<Map<String, dynamic>?> saveEstimate({

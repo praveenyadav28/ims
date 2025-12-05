@@ -97,6 +97,8 @@ class BillToCard extends StatelessWidget {
             bloc: bloc,
             onCreateCustomer: onCreateCustomer,
             mobileController: cashMobileController,
+            cashBillingController: cashBillingController,
+            cashShippingController: cashShippingController,
           ),
       ],
     );
@@ -145,12 +147,16 @@ class _CustomerDropdown extends StatelessWidget {
     required this.bloc,
     required this.onCreateCustomer,
     required this.mobileController,
+    required this.cashBillingController,
+    required this.cashShippingController,
   });
 
   final EstState state;
   final EstBloc bloc;
   final VoidCallback onCreateCustomer;
   final TextEditingController mobileController;
+  final TextEditingController cashBillingController;
+  final TextEditingController cashShippingController;
 
   @override
   Widget build(BuildContext context) {
@@ -177,13 +183,19 @@ class _CustomerDropdown extends StatelessWidget {
 
           onSuggestionTap: (item) {
             final c = item.item;
+            if (c == null) return;
 
-            // FILL MOBILE TEXTFIELD
-            mobileController.text = c?.mobile ?? "";
+            // autofill mobile
+            mobileController.text = c.mobile;
 
-            // UPDATE STATE
+            // IMPORTANT: autofill billing & shipping ONLY when user selects customer
+            cashBillingController.text = c.billingAddress;
+            cashShippingController.text = c.shippingAddress;
+
+            // Update bloc selected customer
             bloc.add(EstSelectCustomer(c));
 
+            // Rebuild to reflect changes
             (context as Element).markNeedsBuild();
           },
 

@@ -8,12 +8,20 @@ import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/textfield.dart';
 
+/// ----------------------------------------------------
+///          NOTES SECTION (handles Notes + Terms)
+/// ----------------------------------------------------
 class NotesSection extends StatelessWidget {
+  final List<String> initialNotes; // <-- NEW
+  final List<String> initialTerms; // <-- NEW
+
   final Function(List<String>) onNotesChanged;
   final Function(List<String>) onTermsChanged;
 
   const NotesSection({
     super.key,
+    required this.initialNotes,
+    required this.initialTerms,
     required this.onNotesChanged,
     required this.onTermsChanged,
   });
@@ -28,11 +36,13 @@ class NotesSection extends StatelessWidget {
           NotesTcExpandable(
             title: "Notes",
             miscId: "10",
+            initialList: initialNotes, // <-- NEW
             onSelectedChanged: onNotesChanged,
           ),
           NotesTcExpandable(
             title: "Terms and Conditions",
             miscId: "11",
+            initialList: initialTerms, // <-- NEW
             onSelectedChanged: onTermsChanged,
           ),
         ],
@@ -41,15 +51,20 @@ class NotesSection extends StatelessWidget {
   }
 }
 
+/// ----------------------------------------------------
+///          EXPANDABLE NOTES + TERMS PICKER
+/// ----------------------------------------------------
 class NotesTcExpandable extends StatefulWidget {
   final String title;
   final String miscId;
+  final List<String> initialList; // <-- NEW
   final Function(List<String>) onSelectedChanged;
 
   const NotesTcExpandable({
     super.key,
     required this.title,
     required this.miscId,
+    required this.initialList,
     required this.onSelectedChanged,
   });
 
@@ -60,12 +75,18 @@ class NotesTcExpandable extends StatefulWidget {
 class _NotesTcExpandableState extends State<NotesTcExpandable> {
   bool expanded = false;
   List<MiscItem> list = [];
-  List<String> selected = []; // now stores NAME, not ID
+  List<String> selected = [];
 
   @override
   void initState() {
     super.initState();
-    _fetch();
+
+    /// Pre-fill selected notes/terms during edit mode
+    selected = List.from(widget.initialList);
+    if (selected.isNotEmpty) {
+      expanded = true;
+    }
+    _fetch(); // load all misc items
   }
 
   Future<void> _fetch() async {
@@ -76,6 +97,7 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
 
     if (res != null && res["status"] == true) {
       final model = miscResponseFromJson(jsonEncode(res));
+
       setState(() {
         list = model.data.where((e) => e.miscId == widget.miscId).toList();
       });
@@ -139,7 +161,7 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
           ),
         ),
 
-        if (expanded) ...[
+        if (expanded)
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -168,6 +190,7 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
 
                 const SizedBox(height: 10),
 
+                /// Dropdown list of notes/terms
                 CommonDropdownField<String>(
                   hintText: "Select ${widget.title}",
                   value: null,
@@ -179,7 +202,10 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
                   }).toList(),
                   onChanged: (id) {
                     if (id != null) {
-                      final item = list.firstWhere((e) => e.id == id);
+                      final item = list.firstWhere(
+                        (e) => e.id == id,
+                        orElse: () => list.first,
+                      );
 
                       if (!selected.contains(item.name)) {
                         setState(() {
@@ -193,6 +219,7 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
 
                 const SizedBox(height: 12),
 
+                /// Selected notes/terms list
                 ...selected.map((name) {
                   return Card(
                     child: ListTile(
@@ -207,7 +234,6 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
               ],
             ),
           ),
-        ],
 
         const SizedBox(height: 10),
       ],

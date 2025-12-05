@@ -7,6 +7,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/sales/estimate/data/estimate_repository.dart';
 import 'package:ims/ui/sales/estimate/models/estimate_models.dart';
+import 'package:ims/ui/sales/estimate/models/estimateget_model.dart';
+import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:intl/intl.dart';
@@ -14,7 +16,10 @@ import 'package:intl/intl.dart';
 /// ------------------- EVENTS -------------------
 abstract class EstEvent {}
 
-class EstLoadInit extends EstEvent {}
+class EstLoadInit extends EstEvent {
+  final EstimateData? existing;
+  EstLoadInit({this.existing});
+}
 
 class EstSelectCustomer extends EstEvent {
   final CustomerModel? c;
@@ -127,7 +132,7 @@ class EstState {
   final List<ItemServiceModel> catalogue;
   final List<EstimateRow> rows;
   final List<AdditionalCharge> charges;
-  final List<MiscChargeEntry> miscCharges; // NEW
+  final List<MiscChargeEntry> miscCharges; // UI entries
   final List<DiscountLine> discounts;
   final double subtotal;
   final double totalGst;
@@ -135,6 +140,13 @@ class EstState {
   final double cgst;
   final double totalAmount;
   final bool autoRound;
+
+  // master list from get/misccharge (for lookup)
+  final List<MiscChargeModelList> miscMasterList;
+
+  // notes & terms (so UI can display when editing)
+  final List<String> notes;
+  final List<String> terms;
 
   EstState({
     this.customers = const [],
@@ -149,7 +161,7 @@ class EstState {
     this.catalogue = const [],
     this.rows = const [],
     this.charges = const [],
-    this.miscCharges = const [], // NEW
+    this.miscCharges = const [],
     this.discounts = const [],
     this.subtotal = 0,
     this.totalGst = 0,
@@ -157,6 +169,9 @@ class EstState {
     this.cgst = 0,
     this.totalAmount = 0,
     this.autoRound = true,
+    this.miscMasterList = const [],
+    this.notes = const [],
+    this.terms = const [],
   });
 
   EstState copyWith({
@@ -172,7 +187,7 @@ class EstState {
     List<ItemServiceModel>? catalogue,
     List<EstimateRow>? rows,
     List<AdditionalCharge>? charges,
-    List<MiscChargeEntry>? miscCharges, // NEW
+    List<MiscChargeEntry>? miscCharges,
     List<DiscountLine>? discounts,
     double? subtotal,
     double? totalGst,
@@ -180,6 +195,9 @@ class EstState {
     double? cgst,
     double? totalAmount,
     bool? autoRound,
+    List<MiscChargeModelList>? miscMasterList,
+    List<String>? notes,
+    List<String>? terms,
   }) {
     return EstState(
       customers: customers ?? this.customers,
@@ -194,7 +212,7 @@ class EstState {
       catalogue: catalogue ?? this.catalogue,
       rows: rows ?? this.rows,
       charges: charges ?? this.charges,
-      miscCharges: miscCharges ?? this.miscCharges, // NEW
+      miscCharges: miscCharges ?? this.miscCharges,
       discounts: discounts ?? this.discounts,
       subtotal: subtotal ?? this.subtotal,
       totalGst: totalGst ?? this.totalGst,
@@ -202,6 +220,9 @@ class EstState {
       cgst: cgst ?? this.cgst,
       totalAmount: totalAmount ?? this.totalAmount,
       autoRound: autoRound ?? this.autoRound,
+      miscMasterList: miscMasterList ?? this.miscMasterList,
+      notes: notes ?? this.notes,
+      terms: terms ?? this.terms,
     );
   }
 }
@@ -209,6 +230,7 @@ class EstState {
 /// ------------------- SAVE EVENT (UI) -------------------
 class EstSaveWithUIData extends EstEvent {
   final String customerName;
+  final String? updateId;
   final String mobile;
   final String billingAddress;
   final String shippingAddress;
@@ -223,7 +245,8 @@ class EstSaveWithUIData extends EstEvent {
     required this.shippingAddress,
     required this.notes,
     required this.terms,
-    this.signatureImage, // NEW
+    this.updateId,
+    this.signatureImage,
   });
 }
 
@@ -234,7 +257,14 @@ final GlobalKey<NavigatorState> estimateNavigatorKey =
 class EstBloc extends Bloc<EstEvent, EstState> {
   final EstimateRepository repo;
   EstBloc({required this.repo}) : super(EstState()) {
-    on<EstLoadInit>(_onLoad);
+    on<EstLoadInit>((event, emit) async {
+      await _onLoad(event, emit);
+
+      if (event.existing != null) {
+        emit(_prefillEstimate(event.existing!, state));
+        add(EstCalculate());
+      }
+    });
     on<EstSelectCustomer>(_onSelectCustomer);
     on<EstToggleCashSale>(_onToggleCashSale);
     on<EstAddRow>(_onAddRow);
@@ -251,7 +281,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     on<EstAddDiscount>(_onAddDiscount);
     on<EstRemoveDiscount>(_onRemoveDiscount);
 
-    // new misc charge handlers
+    // misc
     on<EstAddMiscCharge>(_onAddMiscCharge);
     on<EstRemoveMiscCharge>(_onRemoveMiscCharge);
     on<EstUpdateMiscCharge>(_onUpdateMiscCharge);
@@ -267,12 +297,22 @@ class EstBloc extends Bloc<EstEvent, EstState> {
       final catalogue = await repo.fetchCatalogue();
       final hsnList = await repo.fetchHsnList();
 
+      // fetch misc master list
+      List<MiscChargeModelList> miscMaster = [];
+      try {
+        miscMaster = await repo.fetchMiscMaster();
+      } catch (_) {
+        miscMaster = [];
+      }
+
       emit(
         state.copyWith(
           customers: customers,
           estimateNo: estimateNo,
           catalogue: catalogue,
           hsnMaster: hsnList,
+          miscMasterList: miscMaster,
+          // ensure UI has at least one empty row to start
           rows: [EstimateRow(localId: UniqueKey().toString())],
         ),
       );
@@ -285,23 +325,21 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
   void _onSelectCustomer(EstSelectCustomer e, Emitter<EstState> emit) =>
       emit(state.copyWith(selectedCustomer: e.c));
-
   void _onToggleCashSale(EstToggleCashSale e, Emitter<EstState> emit) {
     if (e.enabled) {
       emit(
         state.copyWith(
           cashSaleDefault: true,
-          selectedCustomer: CustomerModel(
-            id: "cash_sale",
-            name: "Cash Sale",
-            mobile: "",
-            billingAddress: "",
-            shippingAddress: "",
-          ),
+          selectedCustomer: null, // MUST CLEAR
         ),
       );
     } else {
-      emit(state.copyWith(cashSaleDefault: false, selectedCustomer: null));
+      emit(
+        state.copyWith(
+          cashSaleDefault: false,
+          // Do NOT set selectedCustomer here; UI will set when user picks
+        ),
+      );
     }
   }
 
@@ -484,6 +522,8 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
   // ------------------- MISC CHARGE HANDLERS -------------------
   void _onAddMiscCharge(EstAddMiscCharge e, Emitter<EstState> emit) {
+    // When adding from UI, user may select an item from master list or create custom.
+    // We'll accept the provided MiscChargeEntry as-is (it should already include gst/ledger if selected)
     emit(state.copyWith(miscCharges: [...state.miscCharges, e.m]));
     add(EstCalculate());
   }
@@ -541,7 +581,6 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     }
 
     // ------------------- MISC CHARGES (NEW) -------------------
-    // Each misc charge has gst value in misc.gst (0 if null)
     for (final m in state.miscCharges) {
       final gstRate = m.gst;
       if (m.taxIncluded) {
@@ -590,13 +629,13 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
       final mobile = isCash ? e.mobile : state.selectedCustomer?.mobile ?? "";
 
+      // Address — prefer selectedCustomer's addresses (autofill). If cash sale use provided fields.
       final billing = isCash
           ? e.billingAddress
-          : state.selectedCustomer?.billingAddress ?? "";
-
+          : state.selectedCustomer?.billingAddress ?? e.billingAddress;
       final shipping = isCash
           ? e.shippingAddress
-          : state.selectedCustomer?.shippingAddress ?? "";
+          : state.selectedCustomer?.shippingAddress ?? e.shippingAddress;
 
       // ---------------- ROWS ----------------
       final itemRows = <Map<String, dynamic>>[];
@@ -657,8 +696,13 @@ class EstBloc extends Bloc<EstEvent, EstState> {
       }).toList();
 
       // ---------------- MISC CHARGES (NEW) ----------------
+      // When saving, backend expects only name, amount, type (true => inclusive).
       final miscCharges = state.miscCharges.map((m) {
-        return {"name": m.name, "amount": m.amount, "type": m.taxIncluded};
+        return {
+          "name": m.name,
+          "amount": m.amount,
+          "type": m.taxIncluded, // send boolean or string as backend expects
+        };
       }).toList();
 
       // ---------------- FINAL PAYLOAD ----------------
@@ -687,11 +731,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         "auto_ro": state.autoRound,
         "totle_amo": state.totalAmount,
         "additional_charges": charges,
-        "misccharge": miscCharges, // NEW key as requested
+        "misccharge": miscCharges,
         "discount": discounts,
         "item_details": itemRows,
         "service_details": serviceRows,
       };
+
       if (itemRows.isEmpty && serviceRows.isEmpty) {
         showCustomSnackbarError(
           estimateNavigatorKey.currentContext!,
@@ -704,7 +749,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
           signatureFile: e.signatureImage != null
               ? XFile(e.signatureImage!.path)
               : null,
-          // updateId: "69313504c29133095f0c34f0",
+          updateId: e.updateId,
         );
 
         if (res?['status'] == true) {
@@ -750,15 +795,13 @@ extension EstimateRowCalc on EstimateRow {
 }
 
 /// ------------------- NEW: UI model for misc charges -------------------
-/// This model lives in the Bloc file for convenience. You may move it to
-/// a separate file if you prefer.
 class MiscChargeEntry {
   String id; // local id for UI
-  String miscId; // _id from server misc charge
+  String miscId; // _id from server misc master (if matched)
   String ledgerId;
   String name;
   String? hsn;
-  double gst; // gst rate (0 if null)
+  double gst; // gst rate (0 if unknown)
   double amount;
   bool taxIncluded;
 
@@ -784,4 +827,181 @@ class MiscChargeEntry {
       "inclusive": taxIncluded,
     };
   }
+}
+
+/// ------------------- PREFILL HELPER -------------------
+/// Map server EstimateData -> UI state; lookup misc master list for gst/ledger/hsn
+EstState _prefillEstimate(EstimateData data, EstState s) {
+  // find customer from loaded list (or create fallback)
+  final selectedCustomer = s.customers.firstWhere(
+    (c) => c.id == data.customerId,
+    orElse: () => CustomerModel(
+      id: data.customerId ?? "",
+      name: data.customerName,
+      mobile: data.mobile,
+      billingAddress: data.address0,
+      shippingAddress: data.address1,
+    ),
+  );
+
+  // ---------------- ADDITIONAL CHARGES ----------------
+  final mappedCharges = (data.additionalCharges)
+      .map(
+        (c) => AdditionalCharge(
+          id: c.id,
+          name: c.name,
+          amount: (c.amount).toDouble(),
+          taxPercent: 0,
+          taxIncluded: false,
+        ),
+      )
+      .toList();
+
+  // ---------------- DISCOUNTS ----------------
+  final mappedDiscounts = (data.discountLines)
+      .map(
+        (d) => DiscountLine(
+          id: d.id,
+          name: d.name,
+          amount: (d.amount).toDouble(),
+          isPercent: (d.type).toString().toLowerCase() == "percent",
+        ),
+      )
+      .toList();
+
+  // ---------------- MISC CHARGES (match by name with master) ----------------
+  final mappedMisc = <MiscChargeEntry>[];
+  for (final m in data.miscCharges) {
+    final nameFromEstimate = (m.name).trim().toLowerCase();
+    if (nameFromEstimate.isEmpty) continue;
+
+    // try to find in misc master list safely
+    MiscChargeModelList? match;
+    try {
+      match = s.miscMasterList.firstWhere(
+        (mx) => (mx.name).trim().toLowerCase() == nameFromEstimate,
+      );
+    } catch (_) {
+      match = null;
+    }
+
+    if (match == null) {
+      // Option chosen: SKIP misc charge if master not found.
+      // If you prefer to include anyway with defaults, replace continue with default mapping.
+      continue;
+    }
+
+    double gst = 0;
+    try {
+      gst = match.gst != null ? double.tryParse(match.gst.toString()) ?? 0 : 0;
+    } catch (_) {
+      gst = 0;
+    }
+    final ledgerId = match.ledgerId;
+    final hsn = match.hsn;
+
+    final taxIncluded =
+        (m.type == true) || (m.type.toString().toLowerCase() == "true");
+
+    mappedMisc.add(
+      MiscChargeEntry(
+        id: UniqueKey().toString(),
+        miscId: match.id,
+        ledgerId: ledgerId,
+        name: m.name,
+        hsn: hsn,
+        gst: gst,
+        amount: (m.amount).toDouble(),
+        taxIncluded: taxIncluded,
+      ),
+    );
+  }
+
+  // empty fallback item (if catalogue doesn't contain item/service)
+  ItemServiceModel emptyItem() {
+    return ItemServiceModel(
+      id: "",
+      type: ItemServiceType.item,
+      name: "",
+      hsn: "",
+      variantValue: '',
+      baseSalePrice: 0,
+      gstRate: 0,
+      gstIncluded: false,
+      baseUnit: '',
+      secondaryUnit: '',
+      conversion: 1,
+      variants: [],
+      itemNo: '',
+      group: '',
+    );
+  }
+
+  // Convert itemDetails -> EstimateRow
+  final itemRows = (data.itemDetails).map((i) {
+    final catalogItem = s.catalogue.firstWhere(
+      (c) => c.id == (i.itemId),
+      orElse: () => emptyItem(),
+    );
+
+    return EstimateRow(
+      localId: UniqueKey().toString(),
+      product: catalogItem,
+      selectedVariant: null,
+      qty: (i.qty).toInt(),
+      pricePerSelectedUnit: (i.price).toDouble(),
+      discountPercent: (i.discount).toDouble(),
+      hsnOverride: (i.hsn),
+      taxPercent: (i.gstRate).toDouble(),
+      gstInclusiveToggle: i.inclusive,
+      sellInBaseUnit: false,
+    ).recalc();
+  }).toList();
+
+  // Convert serviceDetails -> EstimateRow
+  final serviceRows = (data.serviceDetails).map((i) {
+    final catalogService = s.catalogue.firstWhere(
+      (c) => c.id == (i.serviceId),
+      orElse: () => emptyItem(),
+    );
+
+    return EstimateRow(
+      localId: UniqueKey().toString(),
+      product: catalogService,
+      selectedVariant: null,
+      qty: (i.qty).toInt(),
+      pricePerSelectedUnit: (i.price).toDouble(),
+      discountPercent: (i.discount).toDouble(),
+      hsnOverride: (i.hsn),
+      taxPercent: (i.gstRate).toDouble(),
+      gstInclusiveToggle: i.inclusive,
+      sellInBaseUnit: false,
+    ).recalc();
+  }).toList();
+
+  final rows = <EstimateRow>[
+    ...itemRows,
+    ...serviceRows,
+    if (itemRows.isEmpty && serviceRows.isEmpty)
+      EstimateRow(localId: UniqueKey().toString()),
+  ];
+
+  return s.copyWith(
+    customers: s.customers,
+    selectedCustomer: data.caseSale ? null : selectedCustomer,
+    prefix: data.prefix,
+    estimateNo: data.no.toString(),
+    rows: rows,
+    charges: mappedCharges,
+    discounts: mappedDiscounts,
+    miscCharges: mappedMisc,
+    subtotal: (data.subTotal).toDouble(),
+    totalGst: (data.subGst).toDouble(),
+    totalAmount: (data.totalAmount).toDouble(),
+    autoRound: data.autoRound,
+    estimateDate: data.estimateDate,
+    validityDate: data.estimateDate.add(Duration(days: data.paymentTerms)),
+    validForDays: data.paymentTerms,
+    cashSaleDefault: data.caseSale,
+  );
 }

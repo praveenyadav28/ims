@@ -20,21 +20,14 @@ class ShipToCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCashSale = state.cashSaleDefault;
-
-    /// ---------- BILLING ADDRESS ----------
-    final billingAddress = isCashSale
-        ? cashBillingController.text
-        : (state.selectedCustomer?.billingAddress ?? '');
-
-    final shippingAddress = isCashSale
-        ? cashShippingController.text
-        : (state.selectedCustomer?.shippingAddress ?? '');
+    // 👇 ALWAYS read from controllers — correct for all cases:
+    final billingAddress = cashBillingController.text;
+    final shippingAddress = cashShippingController.text;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Top header
+        // Header
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -68,7 +61,7 @@ class ShipToCard extends StatelessWidget {
 
         SizedBox(height: Sizes.height * .05),
 
-        /// ---------- BILLING ----------
+        // Billing
         Text(
           'Billing Address',
           style: GoogleFonts.inter(
@@ -80,15 +73,12 @@ class ShipToCard extends StatelessWidget {
         SizedBox(height: 5),
         Text(
           billingAddress,
-          style: GoogleFonts.roboto(
-            fontSize: 14,
-            color: const Color(0xff565D6D),
-          ),
+          style: GoogleFonts.roboto(fontSize: 14, color: Color(0xff565D6D)),
         ),
 
         SizedBox(height: Sizes.height * .03),
 
-        /// ---------- SHIPPING ----------
+        // Shipping
         Text(
           'Shipping Address',
           style: GoogleFonts.inter(
@@ -100,10 +90,7 @@ class ShipToCard extends StatelessWidget {
         SizedBox(height: 5),
         Text(
           shippingAddress,
-          style: GoogleFonts.roboto(
-            fontSize: 14,
-            color: const Color(0xff565D6D),
-          ),
+          style: GoogleFonts.roboto(fontSize: 14, color: Color(0xff565D6D)),
         ),
       ],
     );

@@ -1,3 +1,4 @@
+// create_estimate_fullscreen.dart
 import 'dart:io';
 
 import 'package:dotted_border/dotted_border.dart';
@@ -38,7 +39,8 @@ class CreateEstimateFullScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => EstBloc(repo: repo)..add(EstLoadInit()),
+      create: (_) =>
+          EstBloc(repo: repo)..add(EstLoadInit(existing: estimateData)),
       child: CreateEstimateView(estimateData: estimateData),
     );
   }
@@ -70,6 +72,67 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
   List<MiscChargeModelList> miscList = [];
+  @override
+  void initState() {
+    super.initState();
+
+    // NEW: If editing an existing estimate, prefill fields from the estimate payload.
+    if (widget.estimateData != null) {
+      final e = widget.estimateData!;
+
+      // always set payment terms field (so UI shows days)
+      validForController.text = e.paymentTerms.toString();
+
+      // Prefill names / mobile
+      cusNameController.text = e.customerName;
+      cashMobileController.text = e.mobile;
+
+      // IMPORTANT: For update we use the addresses that were saved with the ESTIMATE
+      // (i.e. data.address0 / data.address1). We DO NOT override these with
+      // customer master addresses here.
+      cashBillingController.text = e.address0;
+      cashShippingController.text = e.address1;
+
+      // set estimate dates & validity
+      pickedEstimateDate = e.estimateDate;
+      pickedValidityDate = e.estimateDate.add(Duration(days: e.paymentTerms));
+
+      selectedNotesList = e.notes;
+      selectedTermsList = e.terms;
+
+      // If the estimate is a cash sale, enable cash sale mode in BLoC.
+      if (e.caseSale == true) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.read<EstBloc>().add(EstToggleCashSale(true));
+        });
+      } else {
+        // Ensure BLoC reflects non-cash mode for editing
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.read<EstBloc>().add(EstToggleCashSale(false));
+          // also select the customer in BLoC (optional) if you want UI to show selection
+          // but don't change addresses here (we already used estimate addresses).
+          if (e.customerId != null && e.customerId!.isNotEmpty) {
+            // find customer from loaded list (may be empty until load completes)
+            final cands = context.read<EstBloc>().state.customers;
+            final found = cands.firstWhere(
+              (c) => c.id == e.customerId,
+              orElse: () => CustomerModel(
+                id: e.customerId ?? "",
+                name: e.customerName,
+                mobile: e.mobile,
+                billingAddress: e.address0,
+                shippingAddress: e.address1,
+              ),
+            );
+            context.read<EstBloc>().add(EstSelectCustomer(found));
+          }
+        });
+      }
+    }
+
+    // fetch misc etc.
+    fetchMiscCharges();
+  }
 
   @override
   void dispose() {
@@ -96,27 +159,16 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
       pickedValidityDate = days > 0
           ? date.add(Duration(days: days))
           : pickedValidityDate;
-      bloc.add(EstCalculate());
       bloc.emit(
         bloc.state.copyWith(
           estimateDate: date,
           validityDate: pickedValidityDate,
         ),
       );
+      bloc.add(EstCalculate());
+      setState(() {});
     }
   }
-
-  // ---------------- PICK IMAGE ----------------
-  Future<void> pickImage(String target) async {
-    final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-    setState(() {
-      final file = File(picked.path);
-      if (target == 'signature') signatureImage = file;
-    });
-  }
-
-  String signatureUrl = "";
 
   Future<void> _pickValidityDate(BuildContext ctx, EstBloc bloc) async {
     final date = await showDatePicker(
@@ -131,261 +183,310 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
           .difference(pickedEstimateDate)
           .inDays
           .toString();
-      bloc.add(EstCalculate());
       bloc.emit(
         bloc.state.copyWith(
           estimateDate: pickedEstimateDate,
           validityDate: pickedValidityDate,
         ),
       );
+      bloc.add(EstCalculate());
+      setState(() {});
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    fetchMiscCharges(); // <- YEHI CALL KARNA HAI
+  // ---------------- PICK IMAGE ----------------
+  Future<void> pickImage(String target) async {
+    final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+    setState(() {
+      final file = File(picked.path);
+      if (target == 'signature') signatureImage = file;
+    });
   }
 
+  // ---------------- misc fetch ----------------
+  Future<void> fetchMiscCharges() async {
+    final res = await ApiService.fetchData(
+      "get/misccharge",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    if (res != null && res["status"] == true) {
+      miscList = (res["data"] as List)
+          .map((e) => MiscChargeModelList.fromJson(e))
+          .toList();
+      setState(() {});
+    }
+  }
+
+  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<EstBloc>();
 
-    return Scaffold(
-      key: estimateNavigatorKey,
-      backgroundColor: AppColor.white,
-      appBar: AppBar(
+    return BlocListener<EstBloc, EstState>(
+      listenWhen: (previous, current) {
+        // Only listen when selectedCustomer or cashSaleDefault or estimateNo changes
+        return previous.selectedCustomer != current.selectedCustomer ||
+            previous.cashSaleDefault != current.cashSaleDefault ||
+            previous.estimateNo != current.estimateNo;
+      },
+      listener: (context, state) {
+        // When customer selected via dropdown, autofill name/mobile/address fields
+        bool isUpdateMode = widget.estimateData != null;
+
+        final customer = state.selectedCustomer;
+
+        // Only autofill addresses when user selects customer in CREATE mode
+        if (!isUpdateMode && customer != null && !state.cashSaleDefault) {
+          cusNameController.text = customer.name;
+          cashMobileController.text = customer.mobile;
+          cashBillingController.text = customer.billingAddress;
+          cashShippingController.text = customer.shippingAddress;
+        }
+        if (state.cashSaleDefault) {
+          // If a selectedCustomer existed earlier, use that name as default cash name
+          if (state.selectedCustomer != null) {
+            cusNameController.text = state.selectedCustomer!.name;
+            cashMobileController.text = state.selectedCustomer!.mobile;
+            cashBillingController.text = state.selectedCustomer!.billingAddress;
+            cashShippingController.text =
+                state.selectedCustomer!.shippingAddress;
+          }
+        }
+
+        // Sync estimate number if repo sets it after load
+        estimateNoController.text = state.estimateNo.toString();
+
+        // validity days sync (if BLoC has validForDays)
+        validForController.text = state.validForDays.toString();
+      },
+      child: Scaffold(
+        key: estimateNavigatorKey,
         backgroundColor: AppColor.white,
-        elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 18,
-            color: Colors.black87,
+        appBar: AppBar(
+          backgroundColor: AppColor.white,
+          elevation: 0.5,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 18,
+              color: Colors.black87,
+            ),
+            onPressed: () => Navigator.of(context).pop(),
           ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        titleSpacing: 0,
-        title: Text(
-          'Create Estimate',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColor.blackText,
+          titleSpacing: 0,
+          title: Text(
+            '${widget.estimateData == null ? "Create" : "Update"} Estimate',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColor.blackText,
+            ),
           ),
-        ),
-        actions: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              defaultButton(
-                buttonColor: const Color(0xffE11414),
-                text: "Cancel",
-                height: 40,
-                width: 93,
-                onTap: () => Navigator.of(context).pop(),
-              ),
-              const SizedBox(width: 18),
-              defaultButton(
-                buttonColor: const Color(0xff8947E5),
-                text: "Save Estimate",
-                height: 40,
-                width: 149,
-                onTap: () {
-                  bloc.add(
-                    EstSaveWithUIData(
-                      customerName: cusNameController.text,
-                      mobile: cashMobileController.text,
-                      billingAddress: cashBillingController.text,
-                      shippingAddress: cashShippingController.text,
-                      notes: selectedNotesList,
-                      terms: selectedTermsList,
-                      signatureImage: signatureImage,
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 18),
-            ],
-          ),
-        ],
-      ),
-      body: BlocBuilder<EstBloc, EstState>(
-        builder: (context, state) {
-          estimateNoController.text = state.estimateNo.toString();
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                EstimateHeaderCard(
-                  billTo: BillToCard(
-                    state: state,
-                    bloc: bloc,
-                    cusNameController: cusNameController,
-                    cashMobileController: cashMobileController,
-                    cashBillingController: cashBillingController,
-                    cashShippingController: cashShippingController,
-                    onCreateCustomer: () =>
-                        _showCreateCustomerDialog(context.read<EstBloc>()),
-                  ),
-                  shipTo: ShipToCard(
-                    state: state,
-                    cashBillingController: cashBillingController,
-                    cashShippingController: cashShippingController,
-                    onEditAddresses: () => _editAddresses(state, bloc),
-                  ),
-                  details: EstimateDetailsCard(
-                    prefixController: prefixController,
-                    estimateNoController: estimateNoController,
-                    validForController: validForController,
-                    pickedEstimateDate: pickedEstimateDate,
-                    pickedValidityDate: pickedValidityDate,
-                    onTapEstimateDate: () =>
-                        _pickEstimateDate(context, context.read<EstBloc>()),
-                    onTapValidityDate: () =>
-                        _pickValidityDate(context, context.read<EstBloc>()),
-                    onValidForChanged: (value) {
-                      final days = int.tryParse(value) ?? 0;
-                      pickedValidityDate = pickedEstimateDate.add(
-                        Duration(days: days),
-                      );
-                      bloc.add(EstCalculate());
-                    },
-                  ),
+                defaultButton(
+                  buttonColor: const Color(0xffE11414),
+                  text: "Cancel",
+                  height: 40,
+                  width: 93,
+                  onTap: () => Navigator.of(context).pop(),
                 ),
-                SizedBox(height: Sizes.height * .03),
-                ItemsTableSection(state: state, bloc: bloc),
-                SizedBox(height: Sizes.height * .02),
-
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 10,
-                      child: NotesSection(
-                        onNotesChanged: (list) => selectedNotesList = list,
-                        onTermsChanged: (list) => selectedTermsList = list,
+                const SizedBox(width: 18),
+                defaultButton(
+                  buttonColor: const Color(0xff8947E5),
+                  text: "Save Estimate",
+                  height: 40,
+                  width: 149,
+                  onTap: () {
+                    bloc.add(
+                      EstSaveWithUIData(
+                        customerName: cusNameController.text,
+                        mobile: cashMobileController.text,
+                        billingAddress: cashBillingController.text,
+                        shippingAddress: cashShippingController.text,
+                        notes: selectedNotesList,
+                        terms: selectedTermsList,
+                        signatureImage: signatureImage,
+                        updateId: widget.estimateData?.id,
                       ),
-                    ),
-
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 9,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SummaryCard(
-                            state: state,
-                            bloc: bloc,
-                            miscList: miscList,
-                          ),
-                          SizedBox(height: Sizes.height * .02),
-                          Row(
-                            children: [
-                              Text(
-                                "Authorized signatory for ",
-                                style: GoogleFonts.roboto(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  color: AppColor.text,
-                                ),
-                              ),
-                              Text(
-                                "Business Name",
-                                style: GoogleFonts.roboto(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColor.text,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 10),
-                          GestureDetector(
-                            onTap: () => pickImage('signature'),
-                            child: SizedBox(
-                              width: double.infinity,
-                              height: 110,
-                              child: DottedBorder(
-                                options: RoundedRectDottedBorderOptions(
-                                  strokeWidth: 1.6,
-                                  radius: Radius.circular(6),
-                                  dashPattern: [5, 3],
-                                  color: AppColor.textLightBlack,
-                                ),
-                                child:
-                                    (signatureImage == null &&
-                                        signatureUrl.isEmpty)
-                                    ? Center(
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.add,
-                                              size: 30,
-                                              color: AppColor.primary,
-                                            ),
-                                            SizedBox(height: 12),
-                                            Text(
-                                              "Add Signature",
-                                              style: GoogleFonts.roboto(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w500,
-                                                color: AppColor.primary,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      )
-                                    : ClipRRect(
-                                        borderRadius: BorderRadius.circular(6),
-                                        child: signatureImage != null
-                                            ? Image.file(
-                                                signatureImage!,
-                                                fit: BoxFit.cover,
-                                                width: double.infinity,
-                                                height: 125,
-                                              )
-                                            : Image.network(
-                                                signatureUrl,
-                                                fit: BoxFit.cover,
-                                                width: double.infinity,
-                                                height: 125,
-                                                errorBuilder: (_, __, ___) =>
-                                                    Center(
-                                                      child: Column(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .center,
-                                                        children: const [
-                                                          Icon(
-                                                            Icons.add,
-                                                            size: 30,
-                                                          ),
-                                                          SizedBox(height: 12),
-                                                          Text(
-                                                            "+ Add Signature",
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                              ),
-                                      ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(width: 18),
               ],
             ),
-          );
-        },
+          ],
+        ),
+        body: BlocBuilder<EstBloc, EstState>(
+          builder: (context, state) {
+            // keep estimate number in sync (repo may set it)
+            estimateNoController.text = state.estimateNo.toString();
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  EstimateHeaderCard(
+                    billTo: BillToCard(
+                      state: state,
+                      bloc: bloc,
+                      cusNameController: cusNameController,
+                      cashMobileController: cashMobileController,
+                      cashBillingController: cashBillingController,
+                      cashShippingController: cashShippingController,
+                      onCreateCustomer: () =>
+                          _showCreateCustomerDialog(context.read<EstBloc>()),
+                    ),
+                    shipTo: ShipToCard(
+                      state: state,
+                      cashBillingController: cashBillingController,
+                      cashShippingController: cashShippingController,
+                      onEditAddresses: () => _editAddresses(state, bloc),
+                    ),
+                    details: EstimateDetailsCard(
+                      prefixController: prefixController,
+                      estimateNoController: estimateNoController,
+                      validForController: validForController,
+                      pickedEstimateDate: pickedEstimateDate,
+                      pickedValidityDate: pickedValidityDate,
+                      onTapEstimateDate: () =>
+                          _pickEstimateDate(context, context.read<EstBloc>()),
+                      onTapValidityDate: () =>
+                          _pickValidityDate(context, context.read<EstBloc>()),
+                      onValidForChanged: (value) {
+                        final days = int.tryParse(value) ?? 0;
+                        pickedValidityDate = pickedEstimateDate.add(
+                          Duration(days: days),
+                        );
+                        // inform bloc about validForDays (keep state consistent)
+                        bloc.emit(
+                          state.copyWith(
+                            validForDays: days,
+                            validityDate: pickedValidityDate,
+                          ),
+                        );
+                        bloc.add(EstCalculate());
+                        setState(() {});
+                      },
+                    ),
+                  ),
+
+                  SizedBox(height: Sizes.height * .03),
+                  ItemsTableSection(state: state, bloc: bloc),
+                  SizedBox(height: Sizes.height * .02),
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 10,
+                        child: NotesSection(
+                          // pass initial lists so notes/terms show preselected values
+                          initialNotes: selectedNotesList,
+                          initialTerms: selectedTermsList,
+                          onNotesChanged: (list) => selectedNotesList = list,
+                          onTermsChanged: (list) => selectedTermsList = list,
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 9,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SummaryCard(
+                              state: state,
+                              bloc: bloc,
+                              miscList: miscList,
+                            ),
+                            SizedBox(height: Sizes.height * .02),
+                            Row(
+                              children: [
+                                Text(
+                                  "Authorized signatory for ",
+                                  style: GoogleFonts.roboto(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    color: AppColor.text,
+                                  ),
+                                ),
+                                Text(
+                                  "Business Name",
+                                  style: GoogleFonts.roboto(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColor.text,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: () => pickImage('signature'),
+                              child: SizedBox(
+                                width: double.infinity,
+                                height: 110,
+                                child: DottedBorder(
+                                  options: RoundedRectDottedBorderOptions(
+                                    strokeWidth: 1.6,
+                                    radius: Radius.circular(6),
+                                    dashPattern: [5, 3],
+                                    color: AppColor.textLightBlack,
+                                  ),
+                                  child: (signatureImage == null)
+                                      ? Center(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.add,
+                                                size: 30,
+                                                color: AppColor.primary,
+                                              ),
+                                              SizedBox(height: 12),
+                                              Text(
+                                                "Add Signature",
+                                                style: GoogleFonts.roboto(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: AppColor.primary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          child: Image.file(
+                                            signatureImage!,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: 125,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -427,7 +528,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
               }, licenceNo: Preference.getint(PrefKeys.licenseNo));
               if (res != null && res['status'] == true) {
                 showCustomSnackbarSuccess(context, 'Customer created');
-                bloc.add(EstLoadInit());
+                bloc.add(
+                  EstLoadInit(),
+                ); // reload state so new customer is available
                 Navigator.pop(context);
               } else {
                 showCustomSnackbarError(context, res?['message'] ?? 'Failed');
@@ -446,7 +549,6 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
           ? cashBillingController.text
           : state.selectedCustomer?.billingAddress ?? '',
     );
-
     final shipping = TextEditingController(
       text: state.cashSaleDefault
           ? cashShippingController.text
@@ -484,7 +586,6 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 final index = state.customers.indexWhere(
                   (c) => c.id == state.selectedCustomer!.id,
                 );
-
                 final updatedList = List<CustomerModel>.from(state.customers);
                 updatedList[index] = CustomerModel(
                   id: state.selectedCustomer!.id,
@@ -493,7 +594,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                   billingAddress: billing.text,
                   shippingAddress: shipping.text,
                 );
-
+                // emit updated customers + selectedCustomer
                 bloc.emit(
                   state.copyWith(
                     customers: updatedList,
@@ -501,7 +602,6 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                   ),
                 );
               }
-
               setState(() {});
               Navigator.pop(context);
             },
@@ -510,19 +610,5 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
         ],
       ),
     );
-  }
-
-  Future<void> fetchMiscCharges() async {
-    final res = await ApiService.fetchData(
-      "get/misccharge",
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-
-    if (res["status"] == true) {
-      miscList = (res["data"] as List)
-          .map((e) => MiscChargeModelList.fromJson(e))
-          .toList();
-      setState(() {});
-    }
   }
 }
