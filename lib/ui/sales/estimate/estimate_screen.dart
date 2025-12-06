@@ -65,6 +65,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   final validForController = TextEditingController();
   DateTime pickedEstimateDate = DateTime.now();
   DateTime? pickedValidityDate;
+  String signatureImageUrl = '';
 
   File? signatureImage;
   final ImagePicker picker = ImagePicker();
@@ -99,6 +100,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
+      signatureImageUrl = e.signature;
 
       // If the estimate is a cash sale, enable cash sale mode in BLoC.
       if (e.caseSale == true) {

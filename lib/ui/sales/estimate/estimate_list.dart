@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/component/side_menu.dart';
+import 'package:ims/ui/sales/estimate/widgets/estimate_pdf.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/textfield.dart';
@@ -343,7 +344,10 @@ class _EstimateListScreenState extends State<EstimateListScreen> {
 
             if (selected) ...[
               const SizedBox(width: 12),
-              _actionBtn(Icons.visibility, Colors.blue, () {}),
+              _actionBtn(Icons.visibility, Colors.blue, () {
+                print(e.customerName);
+                generateEstimatePdf(e);
+              }),
               const SizedBox(width: 6),
               _actionBtn(Icons.edit, Colors.orange, () {
                 pushTo(CreateEstimateFullScreen(estimateData: e));
