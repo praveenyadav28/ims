@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/onboarding/login.dart';
-import 'package:ims/ui/sales/estimate/estimate_screen.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/navigation.dart';
 

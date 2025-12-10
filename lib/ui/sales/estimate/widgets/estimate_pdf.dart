@@ -1,11 +1,10 @@
 // estimate_pdf_generator.dart
 import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:ims/ui/sales/models/estimate_data.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-
-import 'package:ims/ui/sales/estimate/models/estimateget_model.dart';
 
 enum PdfLayoutMode { exact, professional, hybrid }
 

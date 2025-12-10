@@ -1,4 +1,3 @@
-// estimate_bloc.dart
 import 'dart:convert';
 import 'dart:io';
 
@@ -6,127 +5,127 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
-import 'package:ims/ui/sales/models/estimate_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
+import 'package:ims/ui/sales/models/purchaseorder_model.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:intl/intl.dart';
 
 /// ------------------- EVENTS -------------------
-abstract class EstEvent {}
+abstract class PurchaseOrderEvent {}
 
-class EstLoadInit extends EstEvent {
-  final EstimateData? existing;
-  EstLoadInit({this.existing});
+class PurchaseOrderLoadInit extends PurchaseOrderEvent {
+  final PurchaseOrderData? existing;
+  PurchaseOrderLoadInit({this.existing});
 }
 
-class EstSelectCustomer extends EstEvent {
+class PurchaseOrderSelectCustomer extends PurchaseOrderEvent {
   final CustomerModel? c;
-  EstSelectCustomer(this.c);
+  PurchaseOrderSelectCustomer(this.c);
 }
 
-class EstToggleCashSale extends EstEvent {
+class PurchaseOrderToggleCashSale extends PurchaseOrderEvent {
   final bool enabled;
-  EstToggleCashSale(this.enabled);
+  PurchaseOrderToggleCashSale(this.enabled);
 }
 
-class EstAddRow extends EstEvent {}
+class PurchaseOrderAddRow extends PurchaseOrderEvent {}
 
-class EstRemoveRow extends EstEvent {
+class PurchaseOrderRemoveRow extends PurchaseOrderEvent {
   final String id;
-  EstRemoveRow(this.id);
+  PurchaseOrderRemoveRow(this.id);
 }
 
-class EstUpdateRow extends EstEvent {
+class PurchaseOrderUpdateRow extends PurchaseOrderEvent {
   final GlobalItemRow row;
-  EstUpdateRow(this.row);
+  PurchaseOrderUpdateRow(this.row);
 }
 
-class EstSelectCatalogForRow extends EstEvent {
+class PurchaseOrderSelectCatalogForRow extends PurchaseOrderEvent {
   final String rowId;
   final ItemServiceModel item;
-  EstSelectCatalogForRow(this.rowId, this.item);
+  PurchaseOrderSelectCatalogForRow(this.rowId, this.item);
 }
 
-class EstSelectVariantForRow extends EstEvent {
+class PurchaseOrderSelectVariantForRow extends PurchaseOrderEvent {
   final String rowId;
   final VariantModel variant;
-  EstSelectVariantForRow(this.rowId, this.variant);
+  PurchaseOrderSelectVariantForRow(this.rowId, this.variant);
 }
 
-class EstToggleUnitForRow extends EstEvent {
+class PurchaseOrderToggleUnitForRow extends PurchaseOrderEvent {
   final String rowId;
   final bool sellInBase;
-  EstToggleUnitForRow(this.rowId, this.sellInBase);
+  PurchaseOrderToggleUnitForRow(this.rowId, this.sellInBase);
 }
 
-class EstApplyHsnToRow extends EstEvent {
+class PurchaseOrderApplyHsnToRow extends PurchaseOrderEvent {
   final String rowId;
   final HsnModel hsn;
-  EstApplyHsnToRow(this.rowId, this.hsn);
+  PurchaseOrderApplyHsnToRow(this.rowId, this.hsn);
 }
 
-class EstAddCharge extends EstEvent {
+class PurchaseOrderAddCharge extends PurchaseOrderEvent {
   final AdditionalCharge charge;
-  EstAddCharge(this.charge);
+  PurchaseOrderAddCharge(this.charge);
 }
 
-class EstRemoveCharge extends EstEvent {
+class PurchaseOrderRemoveCharge extends PurchaseOrderEvent {
   final String id;
-  EstRemoveCharge(this.id);
+  PurchaseOrderRemoveCharge(this.id);
 }
 
-class EstUpdateCharge extends EstEvent {
+class PurchaseOrderUpdateCharge extends PurchaseOrderEvent {
   final AdditionalCharge charge;
-  EstUpdateCharge(this.charge);
+  PurchaseOrderUpdateCharge(this.charge);
 }
 
-class EstAddDiscount extends EstEvent {
+class PurchaseOrderAddDiscount extends PurchaseOrderEvent {
   final DiscountLine d;
-  EstAddDiscount(this.d);
+  PurchaseOrderAddDiscount(this.d);
 }
 
-class EstRemoveDiscount extends EstEvent {
+class PurchaseOrderRemoveDiscount extends PurchaseOrderEvent {
   final String id;
-  EstRemoveDiscount(this.id);
+  PurchaseOrderRemoveDiscount(this.id);
 }
 
 /// ---------- NEW: misc charges events ----------
-class EstAddMiscCharge extends EstEvent {
+class PurchaseOrderAddMiscCharge extends PurchaseOrderEvent {
   final GlobalMiscChargeEntry m;
-  EstAddMiscCharge(this.m);
+  PurchaseOrderAddMiscCharge(this.m);
 }
 
-class EstRemoveMiscCharge extends EstEvent {
+class PurchaseOrderRemoveMiscCharge extends PurchaseOrderEvent {
   final String id;
-  EstRemoveMiscCharge(this.id);
+  PurchaseOrderRemoveMiscCharge(this.id);
 }
 
-class EstUpdateMiscCharge extends EstEvent {
+class PurchaseOrderUpdateMiscCharge extends PurchaseOrderEvent {
   final GlobalMiscChargeEntry m;
-  EstUpdateMiscCharge(this.m);
+  PurchaseOrderUpdateMiscCharge(this.m);
 }
 
 /// ----------------------------------------------
-class EstCalculate extends EstEvent {}
+class PurchaseOrderCalculate extends PurchaseOrderEvent {}
 
-class EstSave extends EstEvent {}
+class PurchaseOrderSave extends PurchaseOrderEvent {}
 
-class EstToggleRoundOff extends EstEvent {
+class PurchaseOrderToggleRoundOff extends PurchaseOrderEvent {
   final bool value;
-  EstToggleRoundOff(this.value);
+  PurchaseOrderToggleRoundOff(this.value);
 }
 
 /// ------------------- STATE -------------------
-class EstState {
+class PurchaseOrderState {
   final List<CustomerModel> customers;
   final CustomerModel? selectedCustomer;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
-  final String estimateNo;
-  final DateTime? estimateDate;
+  final String purchaseOrderNo;
+  final DateTime? purchaseOrderDate;
   final DateTime? validityDate;
   final int validForDays;
   final List<ItemServiceModel> catalogue;
@@ -148,14 +147,14 @@ class EstState {
   final List<String> notes;
   final List<String> terms;
 
-  EstState({
+  PurchaseOrderState({
     this.customers = const [],
     this.selectedCustomer,
     this.cashSaleDefault = false,
-    this.prefix = 'EST',
-    this.estimateNo = '',
+    this.prefix = 'PO',
+    this.purchaseOrderNo = '',
     this.hsnMaster = const [],
-    this.estimateDate,
+    this.purchaseOrderDate,
     this.validityDate,
     this.validForDays = 0,
     this.catalogue = const [],
@@ -174,13 +173,13 @@ class EstState {
     this.terms = const [],
   });
 
-  EstState copyWith({
+  PurchaseOrderState copyWith({
     List<CustomerModel>? customers,
     CustomerModel? selectedCustomer,
     bool? cashSaleDefault,
     String? prefix,
-    String? estimateNo,
-    DateTime? estimateDate,
+    String? purchaseOrderNo,
+    DateTime? purchaseOrderDate,
     List<HsnModel>? hsnMaster,
     DateTime? validityDate,
     int? validForDays,
@@ -199,13 +198,13 @@ class EstState {
     List<String>? notes,
     List<String>? terms,
   }) {
-    return EstState(
+    return PurchaseOrderState(
       customers: customers ?? this.customers,
       selectedCustomer: selectedCustomer ?? this.selectedCustomer,
       cashSaleDefault: cashSaleDefault ?? this.cashSaleDefault,
       prefix: prefix ?? this.prefix,
-      estimateNo: estimateNo ?? this.estimateNo,
-      estimateDate: estimateDate ?? this.estimateDate,
+      purchaseOrderNo: purchaseOrderNo ?? this.purchaseOrderNo,
+      purchaseOrderDate: purchaseOrderDate ?? this.purchaseOrderDate,
       hsnMaster: hsnMaster ?? this.hsnMaster,
       validityDate: validityDate ?? this.validityDate,
       validForDays: validForDays ?? this.validForDays,
@@ -228,8 +227,8 @@ class EstState {
 }
 
 /// ------------------- SAVE EVENT (UI) -------------------
-class EstSaveWithUIData extends EstEvent {
-  final String customerName;
+class PurchaseOrderSaveWithUIData extends PurchaseOrderEvent {
+  final String supplierName;
   final String? updateId;
   final String mobile;
   final String billingAddress;
@@ -238,8 +237,8 @@ class EstSaveWithUIData extends EstEvent {
   final List<String> terms;
   final File? signatureImage; // NEW
 
-  EstSaveWithUIData({
-    required this.customerName,
+  PurchaseOrderSaveWithUIData({
+    required this.supplierName,
     required this.mobile,
     required this.billingAddress,
     required this.shippingAddress,
@@ -250,51 +249,54 @@ class EstSaveWithUIData extends EstEvent {
   });
 }
 
-final GlobalKey<NavigatorState> estimateNavigatorKey =
+final GlobalKey<NavigatorState> purchaseOrderNavigatorKey =
     GlobalKey<NavigatorState>();
 
 /// ------------------- BLOC -------------------
-class EstBloc extends Bloc<EstEvent, EstState> {
+class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   final GLobalRepository repo;
-  EstBloc({required this.repo}) : super(EstState()) {
-    on<EstLoadInit>((event, emit) async {
+  PurchaseOrderBloc({required this.repo}) : super(PurchaseOrderState()) {
+    on<PurchaseOrderLoadInit>((event, emit) async {
       await _onLoad(event, emit);
 
       if (event.existing != null) {
-        emit(_prefillEstimate(event.existing!, state));
-        add(EstCalculate());
+        emit(_prefillPurchaseOrder(event.existing!, state));
+        add(PurchaseOrderCalculate());
       }
     });
-    on<EstSelectCustomer>(_onSelectCustomer);
-    on<EstToggleCashSale>(_onToggleCashSale);
-    on<EstAddRow>(_onAddRow);
-    on<EstRemoveRow>(_onRemoveRow);
-    on<EstUpdateRow>(_onUpdateRow);
-    on<EstSelectCatalogForRow>(_onSelectCatalogForRow);
-    on<EstSelectVariantForRow>(_onSelectVariantForRow);
-    on<EstToggleUnitForRow>(_onToggleUnitForRow);
-    on<EstSaveWithUIData>(_onSaveWithUIData);
-    on<EstApplyHsnToRow>(_onApplyHsnToRow);
-    on<EstAddCharge>(_onAddCharge);
-    on<EstRemoveCharge>(_onRemoveCharge);
-    on<EstUpdateCharge>(_onUpdateCharge);
-    on<EstAddDiscount>(_onAddDiscount);
-    on<EstRemoveDiscount>(_onRemoveDiscount);
+    on<PurchaseOrderSelectCustomer>(_onSelectCustomer);
+    on<PurchaseOrderToggleCashSale>(_onToggleCashSale);
+    on<PurchaseOrderAddRow>(_onAddRow);
+    on<PurchaseOrderRemoveRow>(_onRemoveRow);
+    on<PurchaseOrderUpdateRow>(_onUpdateRow);
+    on<PurchaseOrderSelectCatalogForRow>(_onSelectCatalogForRow);
+    on<PurchaseOrderSelectVariantForRow>(_onSelectVariantForRow);
+    on<PurchaseOrderToggleUnitForRow>(_onToggleUnitForRow);
+    on<PurchaseOrderSaveWithUIData>(_onSaveWithUIData);
+    on<PurchaseOrderApplyHsnToRow>(_onApplyHsnToRow);
+    on<PurchaseOrderAddCharge>(_onAddCharge);
+    on<PurchaseOrderRemoveCharge>(_onRemoveCharge);
+    on<PurchaseOrderUpdateCharge>(_onUpdateCharge);
+    on<PurchaseOrderAddDiscount>(_onAddDiscount);
+    on<PurchaseOrderRemoveDiscount>(_onRemoveDiscount);
 
     // misc
-    on<EstAddMiscCharge>(_onAddMiscCharge);
-    on<EstRemoveMiscCharge>(_onRemoveMiscCharge);
-    on<EstUpdateMiscCharge>(_onUpdateMiscCharge);
+    on<PurchaseOrderAddMiscCharge>(_onAddMiscCharge);
+    on<PurchaseOrderRemoveMiscCharge>(_onRemoveMiscCharge);
+    on<PurchaseOrderUpdateMiscCharge>(_onUpdateMiscCharge);
 
-    on<EstToggleRoundOff>(_onToggleRoundOff);
-    on<EstCalculate>(_onCalculate);
+    on<PurchaseOrderToggleRoundOff>(_onToggleRoundOff);
+    on<PurchaseOrderCalculate>(_onCalculate);
   }
 
-  Future<void> _onLoad(EstLoadInit e, Emitter<EstState> emit) async {
+  Future<void> _onLoad(
+    PurchaseOrderLoadInit e,
+    Emitter<PurchaseOrderState> emit,
+  ) async {
     try {
-      final customers = await repo.fetchCustomers();
-      final estimateNo = await repo.fetchEstimateNo();
-      final catalogue = await repo.fetchCatalogue();
+      final customers = await repo.fetchSupplier();
+      final purchaseOrderNo = await repo.fetchPurchaseOrderNo();
+      final catalogue = await repo.fetchOnyItem();
       final hsnList = await repo.fetchHsnList();
 
       // fetch misc master list
@@ -308,7 +310,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
       emit(
         state.copyWith(
           customers: customers,
-          estimateNo: estimateNo,
+          purchaseOrderNo: purchaseOrderNo,
           catalogue: catalogue,
           hsnMaster: hsnList,
           miscMasterList: miscMaster,
@@ -317,15 +319,20 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         ),
       );
 
-      add(EstCalculate());
+      add(PurchaseOrderCalculate());
     } catch (err) {
       print("❌ Load error: $err");
     }
   }
 
-  void _onSelectCustomer(EstSelectCustomer e, Emitter<EstState> emit) =>
-      emit(state.copyWith(selectedCustomer: e.c));
-  void _onToggleCashSale(EstToggleCashSale e, Emitter<EstState> emit) {
+  void _onSelectCustomer(
+    PurchaseOrderSelectCustomer e,
+    Emitter<PurchaseOrderState> emit,
+  ) => emit(state.copyWith(selectedCustomer: e.c));
+  void _onToggleCashSale(
+    PurchaseOrderToggleCashSale e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     if (e.enabled) {
       emit(
         state.copyWith(
@@ -343,7 +350,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     }
   }
 
-  void _onAddRow(EstAddRow e, Emitter<EstState> emit) {
+  void _onAddRow(PurchaseOrderAddRow e, Emitter<PurchaseOrderState> emit) {
     emit(
       state.copyWith(
         rows: [
@@ -354,14 +361,20 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     );
   }
 
-  void _onRemoveRow(EstRemoveRow e, Emitter<EstState> emit) {
+  void _onRemoveRow(
+    PurchaseOrderRemoveRow e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     emit(
       state.copyWith(rows: state.rows.where((r) => r.localId != e.id).toList()),
     );
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
-  void _onUpdateRow(EstUpdateRow e, Emitter<EstState> emit) {
+  void _onUpdateRow(
+    PurchaseOrderUpdateRow e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -370,12 +383,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
   void _onSelectCatalogForRow(
-    EstSelectCatalogForRow e,
-    Emitter<EstState> emit,
+    PurchaseOrderSelectCatalogForRow e,
+    Emitter<PurchaseOrderState> emit,
   ) {
     emit(
       state.copyWith(
@@ -404,12 +417,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
   void _onSelectVariantForRow(
-    EstSelectVariantForRow e,
-    Emitter<EstState> emit,
+    PurchaseOrderSelectVariantForRow e,
+    Emitter<PurchaseOrderState> emit,
   ) {
     emit(
       state.copyWith(
@@ -428,10 +441,13 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
-  void _onToggleUnitForRow(EstToggleUnitForRow e, Emitter<EstState> emit) {
+  void _onToggleUnitForRow(
+    PurchaseOrderToggleUnitForRow e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -452,10 +468,13 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
-  void _onApplyHsnToRow(EstApplyHsnToRow e, Emitter<EstState> emit) {
+  void _onApplyHsnToRow(
+    PurchaseOrderApplyHsnToRow e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -472,24 +491,33 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
-  void _onAddCharge(EstAddCharge e, Emitter<EstState> emit) {
+  void _onAddCharge(
+    PurchaseOrderAddCharge e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     emit(state.copyWith(charges: [...state.charges, e.charge]));
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
-  void _onRemoveCharge(EstRemoveCharge e, Emitter<EstState> emit) {
+  void _onRemoveCharge(
+    PurchaseOrderRemoveCharge e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     emit(
       state.copyWith(
         charges: state.charges.where((c) => c.id != e.id).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
-  void _onUpdateCharge(EstUpdateCharge e, Emitter<EstState> emit) {
+  void _onUpdateCharge(
+    PurchaseOrderUpdateCharge e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     emit(
       state.copyWith(
         charges: state.charges.map((c) {
@@ -498,46 +526,64 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
-  void _onAddDiscount(EstAddDiscount e, Emitter<EstState> emit) {
+  void _onAddDiscount(
+    PurchaseOrderAddDiscount e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     emit(state.copyWith(discounts: [...state.discounts, e.d]));
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
-  void _onRemoveDiscount(EstRemoveDiscount e, Emitter<EstState> emit) {
+  void _onRemoveDiscount(
+    PurchaseOrderRemoveDiscount e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     emit(
       state.copyWith(
         discounts: state.discounts.where((d) => d.id != e.id).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
-  void _onToggleRoundOff(EstToggleRoundOff e, Emitter<EstState> emit) {
+  void _onToggleRoundOff(
+    PurchaseOrderToggleRoundOff e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     emit(state.copyWith(autoRound: e.value));
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
   // ------------------- MISC CHARGE HANDLERS -------------------
-  void _onAddMiscCharge(EstAddMiscCharge e, Emitter<EstState> emit) {
+  void _onAddMiscCharge(
+    PurchaseOrderAddMiscCharge e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     // When adding from UI, user may select an item from master list or create custom.
     // We'll accept the provided MiscChargeEntry as-is (it should already include gst/ledger if selected)
     emit(state.copyWith(miscCharges: [...state.miscCharges, e.m]));
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
-  void _onRemoveMiscCharge(EstRemoveMiscCharge e, Emitter<EstState> emit) {
+  void _onRemoveMiscCharge(
+    PurchaseOrderRemoveMiscCharge e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     emit(
       state.copyWith(
         miscCharges: state.miscCharges.where((m) => m.id != e.id).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
-  void _onUpdateMiscCharge(EstUpdateMiscCharge e, Emitter<EstState> emit) {
+  void _onUpdateMiscCharge(
+    PurchaseOrderUpdateMiscCharge e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     emit(
       state.copyWith(
         miscCharges: state.miscCharges.map((m) {
@@ -546,11 +592,14 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PurchaseOrderCalculate());
   }
 
   // ------------------- CALCULATION -------------------
-  void _onCalculate(EstCalculate e, Emitter<EstState> emit) {
+  void _onCalculate(
+    PurchaseOrderCalculate e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
     final updatedRows = state.rows.map((r) => r.recalc()).toList();
 
     double subtotal = 0;
@@ -612,8 +661,8 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
   // ------------------- SAVE -------------------
   Future<void> _onSaveWithUIData(
-    EstSaveWithUIData e,
-    Emitter<EstState> emit,
+    PurchaseOrderSaveWithUIData e,
+    Emitter<PurchaseOrderState> emit,
   ) async {
     try {
       final state = this.state;
@@ -621,10 +670,10 @@ class EstBloc extends Bloc<EstEvent, EstState> {
       final bool isCash = state.cashSaleDefault;
 
       // ---------------- CUSTOMER ----------------
-      final customerId = isCash ? null : state.selectedCustomer?.id;
+      final supplierId = isCash ? null : state.selectedCustomer?.id;
 
-      final customerName = isCash
-          ? e.customerName
+      final supplierName = isCash
+          ? e.supplierName
           : state.selectedCustomer?.name ?? "";
 
       final mobile = isCash ? e.mobile : state.selectedCustomer?.mobile ?? "";
@@ -639,46 +688,25 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
       // ---------------- ROWS ----------------
       final itemRows = <Map<String, dynamic>>[];
-      final serviceRows = <Map<String, dynamic>>[];
 
       for (final r in state.rows) {
         if (r.product == null) continue;
 
-        if (r.product!.type == ItemServiceType.item) {
-          itemRows.add({
-            "item_id": r.product!.id,
-            "item_name": r.product!.name,
-            "item_no": r.product!.itemNo,
-            "price": r.pricePerSelectedUnit,
-            "hsn_code": r.hsnOverride.isNotEmpty
-                ? r.hsnOverride
-                : r.product!.hsn,
-            "gst_tax_rate": r.taxPercent,
-            "measuring_unit": r.sellInBaseUnit
-                ? r.product!.baseUnit
-                : r.product!.secondaryUnit,
-            "qty": r.qty,
-            "amount": r.gross,
-            "discount": r.discountPercent,
-            "in_ex": r.gstInclusiveToggle,
-          });
-        } else {
-          serviceRows.add({
-            "service_id": r.product!.id,
-            "service_name": r.product!.name,
-            "service_no": r.product!.itemNo,
-            "amount": r.gross,
-            "price": r.pricePerSelectedUnit,
-            "hsn_code": r.hsnOverride.isNotEmpty
-                ? r.hsnOverride
-                : r.product!.hsn,
-            "measuring_unit": r.product!.baseUnit,
-            "gst_tax_rate": r.taxPercent,
-            "qty": r.qty,
-            "discount": r.discountPercent,
-            "in_ex": r.gstInclusiveToggle,
-          });
-        }
+        itemRows.add({
+          "item_id": r.product!.id,
+          "item_name": r.product!.name,
+          "item_no": r.product!.itemNo,
+          "price": r.pricePerSelectedUnit,
+          "hsn_code": r.hsnOverride.isNotEmpty ? r.hsnOverride : r.product!.hsn,
+          "gst_tax_rate": r.taxPercent,
+          "measuring_unit": r.sellInBaseUnit
+              ? r.product!.baseUnit
+              : r.product!.secondaryUnit,
+          "qty": r.qty,
+          "amount": r.gross,
+          "discount": r.discountPercent,
+          "in_ex": r.gstInclusiveToggle,
+        });
       }
 
       // ---------------- DISCOUNTS ----------------
@@ -710,16 +738,16 @@ class EstBloc extends Bloc<EstEvent, EstState> {
       Map<String, dynamic> payload = {
         "licence_no": Preference.getint(PrefKeys.licenseNo),
         "branch_id": Preference.getString(PrefKeys.locationId),
-        "customer_id": customerId,
-        "customer_name": customerName,
+        "supplier_id": supplierId,
+        "supplier_name": supplierName,
         "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
         "prefix": state.prefix,
-        "no": int.tryParse(state.estimateNo),
-        "estimate_date": DateFormat(
+        "no": int.tryParse(state.purchaseOrderNo),
+        "purchaseoder_date": DateFormat(
           'yyyy-MM-dd',
-        ).format(state.estimateDate ?? DateTime.now()),
+        ).format(state.purchaseOrderDate ?? DateTime.now()),
         "payment_terms": state.validForDays,
         if (state.validityDate != null)
           "due_date": DateFormat('yyyy-MM-dd').format(state.validityDate!),
@@ -734,17 +762,16 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         "misccharge": miscCharges,
         "discount": discounts,
         "item_details": itemRows,
-        "service_details": serviceRows,
       };
 
-      if (itemRows.isEmpty && serviceRows.isEmpty) {
+      if (itemRows.isEmpty) {
         showCustomSnackbarError(
-          estimateNavigatorKey.currentContext!,
-          "Add atleast one item or service",
+          purchaseOrderNavigatorKey.currentContext!,
+          "Add atleast one item",
         );
         return;
       } else {
-        final res = await repo.saveEstimate(
+        final res = await repo.savePurchaseOrder(
           payload: payload,
           signatureFile: e.signatureImage != null
               ? XFile(e.signatureImage!.path)
@@ -754,19 +781,19 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
         if (res?['status'] == true) {
           showCustomSnackbarSuccess(
-            estimateNavigatorKey.currentContext!,
+            purchaseOrderNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
         } else {
           showCustomSnackbarError(
-            estimateNavigatorKey.currentContext!,
+            purchaseOrderNavigatorKey.currentContext!,
             res?['message'] ?? "Save failed",
           );
         }
       }
     } catch (err) {
       showCustomSnackbarError(
-        estimateNavigatorKey.currentContext!,
+        purchaseOrderNavigatorKey.currentContext!,
         err.toString(),
       );
     }
@@ -795,14 +822,16 @@ extension GlobalItemRowCalc on GlobalItemRow {
 }
 
 /// ------------------- PREFILL HELPER -------------------
-/// Map server EstimateData -> UI state; lookup misc master list for gst/ledger/hsn
-EstState _prefillEstimate(EstimateData data, EstState s) {
+PurchaseOrderState _prefillPurchaseOrder(
+  PurchaseOrderData data,
+  PurchaseOrderState s,
+) {
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
-    (c) => c.id == data.customerId,
+    (c) => c.id == data.supplierId,
     orElse: () => CustomerModel(
-      id: data.customerId ?? "",
-      name: data.customerName,
+      id: data.supplierId ?? "",
+      name: data.supplierName,
       mobile: data.mobile,
       billingAddress: data.address0,
       shippingAddress: data.address1,
@@ -837,14 +866,14 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
   // ---------------- MISC CHARGES (match by name with master) ----------------
   final mappedMisc = <GlobalMiscChargeEntry>[];
   for (final m in data.miscCharges) {
-    final nameFromEstimate = (m.name).trim().toLowerCase();
-    if (nameFromEstimate.isEmpty) continue;
+    final nameFromPurchaseOrder = (m.name).trim().toLowerCase();
+    if (nameFromPurchaseOrder.isEmpty) continue;
 
     // try to find in misc master list safely
     MiscChargeModelList? match;
     try {
       match = s.miscMasterList.firstWhere(
-        (mx) => (mx.name).trim().toLowerCase() == nameFromEstimate,
+        (mx) => (mx.name).trim().toLowerCase() == nameFromPurchaseOrder,
       );
     } catch (_) {
       match = null;
@@ -923,39 +952,16 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
     ).recalc();
   }).toList();
 
-  // Convert serviceDetails -> GlobalItemRow
-  final serviceRows = (data.serviceDetails).map((i) {
-    final catalogService = s.catalogue.firstWhere(
-      (c) => c.id == (i.serviceId),
-      orElse: () => emptyItem(),
-    );
-
-    return GlobalItemRow(
-      localId: UniqueKey().toString(),
-      product: catalogService,
-      selectedVariant: null,
-      qty: (i.qty).toInt(),
-      pricePerSelectedUnit: (i.price).toDouble(),
-      discountPercent: (i.discount).toDouble(),
-      hsnOverride: (i.hsn),
-      taxPercent: (i.gstRate).toDouble(),
-      gstInclusiveToggle: i.inclusive,
-      sellInBaseUnit: false,
-    ).recalc();
-  }).toList();
-
   final rows = <GlobalItemRow>[
     ...itemRows,
-    ...serviceRows,
-    if (itemRows.isEmpty && serviceRows.isEmpty)
-      GlobalItemRow(localId: UniqueKey().toString()),
+    if (itemRows.isEmpty) GlobalItemRow(localId: UniqueKey().toString()),
   ];
 
   return s.copyWith(
     customers: s.customers,
     selectedCustomer: data.caseSale ? null : selectedCustomer,
     prefix: data.prefix,
-    estimateNo: data.no.toString(),
+    purchaseOrderNo: data.no.toString(),
     rows: rows,
     charges: mappedCharges,
     discounts: mappedDiscounts,
@@ -964,8 +970,8 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
     totalGst: (data.subGst).toDouble(),
     totalAmount: (data.totalAmount).toDouble(),
     autoRound: data.autoRound,
-    estimateDate: data.estimateDate,
-    validityDate: data.estimateDate.add(Duration(days: data.paymentTerms)),
+    purchaseOrderDate: data.purchaseOrderDate,
+    validityDate: data.purchaseOrderDate.add(Duration(days: data.paymentTerms)),
     validForDays: data.paymentTerms,
     cashSaleDefault: data.caseSale,
   );

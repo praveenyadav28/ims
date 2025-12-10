@@ -1,4 +1,3 @@
-// create_estimate_fullscreen.dart
 import 'dart:io';
 
 import 'package:dotted_border/dotted_border.dart';
@@ -7,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
+import 'package:ims/ui/purchase/credit_note/state/credit_note_bloc.dart';
+import 'package:ims/ui/purchase/credit_note/widgets/credit_note_details.dart';
 import 'package:ims/ui/sales/data/global_additionalcharge.dart';
 import 'package:ims/ui/sales/data/global_billto.dart';
 import 'package:ims/ui/sales/data/global_discount.dart';
@@ -16,10 +17,8 @@ import 'package:ims/ui/sales/data/global_shipto.dart';
 import 'package:ims/ui/sales/data/globalheader.dart';
 import 'package:ims/ui/sales/data/globalnotes_section.dart';
 import 'package:ims/ui/sales/data/globalmisc_charge.dart';
-import 'package:ims/ui/sales/models/estimate_data.dart';
+import 'package:ims/ui/sales/models/credit_note_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
-import 'package:ims/ui/sales/estimate/state/estimate_bloc.dart';
-import 'package:ims/ui/sales/estimate/widgets/estimate_details_card.dart';
 import 'package:ims/ui/sales/data/globalsummary_card.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
@@ -28,46 +27,44 @@ import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
 
-class CreateEstimateFullScreen extends StatelessWidget {
+class CreateCreditNoteFullScreen extends StatelessWidget {
   final GLobalRepository repo;
-  final EstimateData? estimateData;
+  final CreditNoteData? creditNoteData;
 
-  CreateEstimateFullScreen({
-    Key? key,
+  CreateCreditNoteFullScreen({
+    super.key,
     GLobalRepository? repo,
-    this.estimateData,
-  }) : repo = repo ?? GLobalRepository(),
-       super(key: key);
+    this.creditNoteData,
+  }) : repo = repo ?? GLobalRepository();
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) =>
-          EstBloc(repo: repo)..add(EstLoadInit(existing: estimateData)),
-      child: CreateEstimateView(estimateData: estimateData),
+          CreditNoteBloc(repo: repo)
+            ..add(CreditNoteLoadInit(existing: creditNoteData)),
+      child: CreateCreditNoteView(creditNoteData: creditNoteData),
     );
   }
 }
 
-class CreateEstimateView extends StatefulWidget {
-  final EstimateData? estimateData;
+class CreateCreditNoteView extends StatefulWidget {
+  final CreditNoteData? creditNoteData;
 
-  const CreateEstimateView({Key? key, this.estimateData}) : super(key: key);
+  const CreateCreditNoteView({super.key, this.creditNoteData});
 
   @override
-  State<CreateEstimateView> createState() => _CreateEstimateViewState();
+  State<CreateCreditNoteView> createState() => _CreateCreditNoteViewState();
 }
 
-class _CreateEstimateViewState extends State<CreateEstimateView> {
-  final prefixController = TextEditingController(text: 'EST');
-  final estimateNoController = TextEditingController();
+class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
+  final prefixController = TextEditingController(text: 'PO');
+  final creditNoteNoController = TextEditingController();
   final cusNameController = TextEditingController();
   final cashMobileController = TextEditingController();
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
-  final validForController = TextEditingController();
-  DateTime pickedEstimateDate = DateTime.now();
-  DateTime? pickedValidityDate;
+  DateTime pickedCreditNoteDate = DateTime.now();
   String signatureImageUrl = '';
 
   File? signatureImage;
@@ -80,53 +77,44 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   void initState() {
     super.initState();
 
-    // NEW: If editing an existing estimate, prefill fields from the estimate payload.
-    if (widget.estimateData != null) {
-      final e = widget.estimateData!;
-
-      // always set payment terms field (so UI shows days)
-      validForController.text = e.paymentTerms.toString();
+    if (widget.creditNoteData != null) {
+      final e = widget.creditNoteData!;
 
       // Prefill names / mobile
-      cusNameController.text = e.customerName;
+      cusNameController.text = e.supplierName;
       cashMobileController.text = e.mobile;
 
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
 
-      // set estimate dates & validity
-      pickedEstimateDate = e.estimateDate;
-      pickedValidityDate = e.estimateDate.add(Duration(days: e.paymentTerms));
+      pickedCreditNoteDate = e.creditNoteDate;
 
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
       signatureImageUrl = e.signature;
 
-      // If the estimate is a cash sale, enable cash sale mode in BLoC.
       if (e.caseSale == true) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.read<EstBloc>().add(EstToggleCashSale(true));
+          context.read<CreditNoteBloc>().add(CreditNoteToggleCashSale(true));
         });
       } else {
         // Ensure BLoC reflects non-cash mode for editing
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.read<EstBloc>().add(EstToggleCashSale(false));
-          // also select the customer in BLoC (optional) if you want UI to show selection
-          // but don't change addresses here (we already used estimate addresses).
-          if (e.customerId != null && e.customerId!.isNotEmpty) {
+          context.read<CreditNoteBloc>().add(CreditNoteToggleCashSale(false));
+          if (e.supplierId != null && e.supplierId!.isNotEmpty) {
             // find customer from loaded list (may be empty until load completes)
-            final cands = context.read<EstBloc>().state.customers;
+            final cands = context.read<CreditNoteBloc>().state.customers;
             final found = cands.firstWhere(
-              (c) => c.id == e.customerId,
+              (c) => c.id == e.supplierId,
               orElse: () => CustomerModel(
-                id: e.customerId ?? "",
-                name: e.customerName,
+                id: e.supplierId ?? "",
+                name: e.supplierName,
                 mobile: e.mobile,
                 billingAddress: e.address0,
                 shippingAddress: e.address1,
               ),
             );
-            context.read<EstBloc>().add(EstSelectCustomer(found));
+            context.read<CreditNoteBloc>().add(CreditNoteSelectCustomer(found));
           }
         });
       }
@@ -139,59 +127,29 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   @override
   void dispose() {
     prefixController.dispose();
-    estimateNoController.dispose();
+    creditNoteNoController.dispose();
     cusNameController.dispose();
     cashMobileController.dispose();
     cashBillingController.dispose();
     cashShippingController.dispose();
-    validForController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickEstimateDate(BuildContext ctx, EstBloc bloc) async {
+  Future<void> _pickCreditNotereditNoteDate(
+    BuildContext ctx,
+    CreditNoteBloc bloc,
+  ) async {
     final date = await showDatePicker(
       context: ctx,
-      initialDate: pickedEstimateDate,
+      initialDate: pickedCreditNoteDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
     if (date != null) {
-      pickedEstimateDate = date;
-      final days = int.tryParse(validForController.text) ?? 0;
-      pickedValidityDate = days > 0
-          ? date.add(Duration(days: days))
-          : pickedValidityDate;
-      bloc.emit(
-        bloc.state.copyWith(
-          estimateDate: date,
-          validityDate: pickedValidityDate,
-        ),
-      );
-      bloc.add(EstCalculate());
-      setState(() {});
-    }
-  }
+      pickedCreditNoteDate = date;
 
-  Future<void> _pickValidityDate(BuildContext ctx, EstBloc bloc) async {
-    final date = await showDatePicker(
-      context: ctx,
-      initialDate: pickedValidityDate ?? pickedEstimateDate,
-      firstDate: pickedEstimateDate,
-      lastDate: DateTime(2100),
-    );
-    if (date != null) {
-      pickedValidityDate = date;
-      validForController.text = date
-          .difference(pickedEstimateDate)
-          .inDays
-          .toString();
-      bloc.emit(
-        bloc.state.copyWith(
-          estimateDate: pickedEstimateDate,
-          validityDate: pickedValidityDate,
-        ),
-      );
-      bloc.add(EstCalculate());
+      bloc.emit(bloc.state.copyWith(creditNoteDate: date));
+      bloc.add(CreditNoteCalculate());
       setState(() {});
     }
   }
@@ -224,18 +182,18 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
-    final bloc = context.read<EstBloc>();
+    final bloc = context.read<CreditNoteBloc>();
 
-    return BlocListener<EstBloc, EstState>(
+    return BlocListener<CreditNoteBloc, CreditNoteState>(
       listenWhen: (previous, current) {
-        // Only listen when selectedCustomer or cashSaleDefault or estimateNo changes
+        // Only listen when selectedCustomer or cashSaleDefault or creditNoteNo changes
         return previous.selectedCustomer != current.selectedCustomer ||
             previous.cashSaleDefault != current.cashSaleDefault ||
-            previous.estimateNo != current.estimateNo;
+            previous.creditNoteNo != current.creditNoteNo;
       },
       listener: (context, state) {
         // When customer selected via dropdown, autofill name/mobile/address fields
-        bool isUpdateMode = widget.estimateData != null;
+        bool isUpdateMode = widget.creditNoteData != null;
 
         final customer = state.selectedCustomer;
 
@@ -257,14 +215,10 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
           }
         }
 
-        // Sync estimate number if repo sets it after load
-        estimateNoController.text = state.estimateNo.toString();
-
-        // validity days sync (if BLoC has validForDays)
-        validForController.text = state.validForDays.toString();
+        creditNoteNoController.text = state.creditNoteNo.toString();
       },
       child: Scaffold(
-        key: estimateNavigatorKey,
+        key: creditNoteNavigatorKey,
         backgroundColor: AppColor.white,
         appBar: AppBar(
           backgroundColor: AppColor.white,
@@ -279,7 +233,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
           ),
           titleSpacing: 0,
           title: Text(
-            '${widget.estimateData == null ? "Create" : "Update"} Estimate',
+            '${widget.creditNoteData == null ? "Create" : "Update"} Credit Note',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -300,20 +254,20 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Estimate",
+                  text: "Save Credit Note",
                   height: 40,
-                  width: 149,
+                  width: 189,
                   onTap: () {
                     bloc.add(
-                      EstSaveWithUIData(
-                        customerName: cusNameController.text,
+                      CreditNoteSaveWithUIData(
+                        supplierName: cusNameController.text,
                         mobile: cashMobileController.text,
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
                         signatureImage: signatureImage,
-                        updateId: widget.estimateData?.id,
+                        updateId: widget.creditNoteData?.id,
                       ),
                     );
                   },
@@ -323,10 +277,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
             ),
           ],
         ),
-        body: BlocBuilder<EstBloc, EstState>(
+        body: BlocBuilder<CreditNoteBloc, CreditNoteState>(
           builder: (context, state) {
-            // keep estimate number in sync (repo may set it)
-            estimateNoController.text = state.estimateNo.toString();
+            creditNoteNoController.text = state.creditNoteNo.toString();
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -335,7 +288,6 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 children: [
                   GlobalHeaderCard(
                     billTo: GlobalBillToCard(
-                      ispurchase: false,
                       isCashSale: state.cashSaleDefault,
                       customers: state.customers,
                       selectedCustomer: state.selectedCustomer,
@@ -346,7 +298,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       shippingController: cashShippingController,
 
                       onToggleCashSale: () {
-                        bloc.add(EstToggleCashSale(!state.cashSaleDefault));
+                        bloc.add(
+                          CreditNoteToggleCashSale(!state.cashSaleDefault),
+                        );
 
                         if (state.cashSaleDefault) {
                           cusNameController.clear();
@@ -357,14 +311,16 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       },
 
                       onCustomerSelected: (customer) {
-                        bloc.add(EstSelectCustomer(customer));
+                        bloc.add(CreditNoteSelectCustomer(customer));
                         cashMobileController.text = customer.mobile;
                         cashBillingController.text = customer.billingAddress;
                         cashShippingController.text = customer.shippingAddress;
                       },
 
-                      onCreateCustomer: () =>
-                          _showCreateCustomerDialog(context.read<EstBloc>()),
+                      onCreateCustomer: () => _showCreateCustomerDialog(
+                        context.read<CreditNoteBloc>(),
+                      ),
+                      ispurchase: true,
                     ),
 
                     shipTo: GlobalShipToCard(
@@ -373,31 +329,14 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       onEditAddresses: () => _editAddresses(state, bloc),
                     ),
 
-                    details: EstimateDetailsCard(
+                    details: CreditNoteDetailsCard(
                       prefixController: prefixController,
-                      estimateNoController: estimateNoController,
-                      validForController: validForController,
-                      pickedEstimateDate: pickedEstimateDate,
-                      pickedValidityDate: pickedValidityDate,
-                      onTapEstimateDate: () =>
-                          _pickEstimateDate(context, context.read<EstBloc>()),
-                      onTapValidityDate: () =>
-                          _pickValidityDate(context, context.read<EstBloc>()),
-                      onValidForChanged: (value) {
-                        final days = int.tryParse(value) ?? 0;
-                        pickedValidityDate = pickedEstimateDate.add(
-                          Duration(days: days),
-                        );
-                        // inform bloc about validForDays (keep state consistent)
-                        bloc.emit(
-                          state.copyWith(
-                            validForDays: days,
-                            validityDate: pickedValidityDate,
-                          ),
-                        );
-                        bloc.add(EstCalculate());
-                        setState(() {});
-                      },
+                      creditNoteNoController: creditNoteNoController,
+                      pickedCreditNoteDate: pickedCreditNoteDate,
+                      onTapCreditNoteDate: () => _pickCreditNotereditNoteDate(
+                        context,
+                        context.read<CreditNoteBloc>(),
+                      ),
                     ),
                   ),
 
@@ -406,15 +345,15 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                     rows: state.rows,
                     catalogue: state.catalogue,
                     hsnList: state.hsnMaster,
-                    onAddRow: () => bloc.add(EstAddRow()),
-                    onRemoveRow: (id) => bloc.add(EstRemoveRow(id)),
-                    onUpdateRow: (row) => bloc.add(EstUpdateRow(row)),
+                    onAddRow: () => bloc.add(CreditNoteAddRow()),
+                    onRemoveRow: (id) => bloc.add(CreditNoteRemoveRow(id)),
+                    onUpdateRow: (row) => bloc.add(CreditNoteUpdateRow(row)),
                     onSelectCatalog: (id, item) =>
-                        bloc.add(EstSelectCatalogForRow(id, item)),
+                        bloc.add(CreditNoteSelectCatalogForRow(id, item)),
                     onSelectHsn: (id, hsn) =>
-                        bloc.add(EstApplyHsnToRow(id, hsn)),
+                        bloc.add(CreditNoteApplyHsnToRow(id, hsn)),
                     onToggleUnit: (id, value) =>
-                        bloc.add(EstToggleUnitForRow(id, value)),
+                        bloc.add(CreditNoteToggleUnitForRow(id, value)),
                   ),
                   SizedBox(height: Sizes.height * .02),
 
@@ -446,31 +385,32 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
                               autoRound: state.autoRound,
                               onToggleRound: (v) =>
-                                  bloc.add(EstToggleRoundOff(v)),
+                                  bloc.add(CreditNoteToggleRoundOff(v)),
 
                               additionalChargesSection:
                                   GlobalAdditionalChargesSection(
                                     charges: state.charges,
                                     onAddCharge: (c) =>
-                                        bloc.add(EstAddCharge(c)),
+                                        bloc.add(CreditNoteAddCharge(c)),
                                     onRemoveCharge: (id) =>
-                                        bloc.add(EstRemoveCharge(id)),
+                                        bloc.add(CreditNoteRemoveCharge(id)),
                                   ),
 
                               miscChargesSection: GlobalMiscChargesSection(
                                 miscCharges: state.miscCharges,
                                 miscList: miscList,
-                                onAddMisc: (m) => bloc.add(EstAddMiscCharge(m)),
+                                onAddMisc: (m) =>
+                                    bloc.add(CreditNoteAddMiscCharge(m)),
                                 onRemoveMisc: (id) =>
-                                    bloc.add(EstRemoveMiscCharge(id)),
+                                    bloc.add(CreditNoteRemoveMiscCharge(id)),
                               ),
 
                               discountSection: GlobalDiscountsSection(
                                 discounts: state.discounts,
                                 onAddDiscount: (d) =>
-                                    bloc.add(EstAddDiscount(d)),
+                                    bloc.add(CreditNoteAddDiscount(d)),
                                 onRemoveDiscount: (id) =>
-                                    bloc.add(EstRemoveDiscount(id)),
+                                    bloc.add(CreditNoteRemoveDiscount(id)),
                               ),
                             ),
 
@@ -560,13 +500,13 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
     );
   }
 
-  void _showCreateCustomerDialog(EstBloc bloc) {
+  void _showCreateCustomerDialog(CreditNoteBloc bloc) {
     final nameCtrl = TextEditingController();
     final mobileCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Create Customer'),
+        title: const Text('Create Supplier'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -588,7 +528,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
           ElevatedButton(
             onPressed: () async {
               if (nameCtrl.text.trim().isEmpty) return;
-              final res = await ApiService.postData('customer', {
+              final res = await ApiService.postData('supplier', {
                 "customer_type": "Individual",
                 'company_name': nameCtrl.text.trim(),
                 'mobile': mobileCtrl.text.trim(),
@@ -596,9 +536,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 'branch_id': Preference.getString(PrefKeys.locationId),
               }, licenceNo: Preference.getint(PrefKeys.licenseNo));
               if (res != null && res['status'] == true) {
-                showCustomSnackbarSuccess(context, 'Customer created');
+                showCustomSnackbarSuccess(context, 'Supplier created');
                 bloc.add(
-                  EstLoadInit(),
+                  CreditNoteLoadInit(),
                 ); // reload state so new customer is available
                 Navigator.pop(context);
               } else {
@@ -612,7 +552,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
     );
   }
 
-  void _editAddresses(EstState state, EstBloc bloc) {
+  void _editAddresses(CreditNoteState state, CreditNoteBloc bloc) {
     final billing = TextEditingController(
       text: state.cashSaleDefault
           ? cashBillingController.text

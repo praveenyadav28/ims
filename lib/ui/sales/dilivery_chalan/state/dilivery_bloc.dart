@@ -1,4 +1,3 @@
-// estimate_bloc.dart
 import 'dart:convert';
 import 'dart:io';
 
@@ -6,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
-import 'package:ims/ui/sales/models/estimate_data.dart';
+import 'package:ims/ui/sales/models/dilivery_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/utils/prefence.dart';
@@ -14,119 +13,119 @@ import 'package:ims/utils/snackbar.dart';
 import 'package:intl/intl.dart';
 
 /// ------------------- EVENTS -------------------
-abstract class EstEvent {}
+abstract class DiliveryChallanEvent {}
 
-class EstLoadInit extends EstEvent {
-  final EstimateData? existing;
-  EstLoadInit({this.existing});
+class DiliveryChallanLoadInit extends DiliveryChallanEvent {
+  final DiliveryChallanData? existing;
+  DiliveryChallanLoadInit({this.existing});
 }
 
-class EstSelectCustomer extends EstEvent {
+class DiliveryChallanSelectCustomer extends DiliveryChallanEvent {
   final CustomerModel? c;
-  EstSelectCustomer(this.c);
+  DiliveryChallanSelectCustomer(this.c);
 }
 
-class EstToggleCashSale extends EstEvent {
+class DiliveryChallanToggleCashSale extends DiliveryChallanEvent {
   final bool enabled;
-  EstToggleCashSale(this.enabled);
+  DiliveryChallanToggleCashSale(this.enabled);
 }
 
-class EstAddRow extends EstEvent {}
+class DiliveryChallanAddRow extends DiliveryChallanEvent {}
 
-class EstRemoveRow extends EstEvent {
+class DiliveryChallanRemoveRow extends DiliveryChallanEvent {
   final String id;
-  EstRemoveRow(this.id);
+  DiliveryChallanRemoveRow(this.id);
 }
 
-class EstUpdateRow extends EstEvent {
+class DiliveryChallanUpdateRow extends DiliveryChallanEvent {
   final GlobalItemRow row;
-  EstUpdateRow(this.row);
+  DiliveryChallanUpdateRow(this.row);
 }
 
-class EstSelectCatalogForRow extends EstEvent {
+class DiliveryChallanSelectCatalogForRow extends DiliveryChallanEvent {
   final String rowId;
   final ItemServiceModel item;
-  EstSelectCatalogForRow(this.rowId, this.item);
+  DiliveryChallanSelectCatalogForRow(this.rowId, this.item);
 }
 
-class EstSelectVariantForRow extends EstEvent {
+class DiliveryChallanSelectVariantForRow extends DiliveryChallanEvent {
   final String rowId;
   final VariantModel variant;
-  EstSelectVariantForRow(this.rowId, this.variant);
+  DiliveryChallanSelectVariantForRow(this.rowId, this.variant);
 }
 
-class EstToggleUnitForRow extends EstEvent {
+class DiliveryChallanToggleUnitForRow extends DiliveryChallanEvent {
   final String rowId;
   final bool sellInBase;
-  EstToggleUnitForRow(this.rowId, this.sellInBase);
+  DiliveryChallanToggleUnitForRow(this.rowId, this.sellInBase);
 }
 
-class EstApplyHsnToRow extends EstEvent {
+class DiliveryChallanApplyHsnToRow extends DiliveryChallanEvent {
   final String rowId;
   final HsnModel hsn;
-  EstApplyHsnToRow(this.rowId, this.hsn);
+  DiliveryChallanApplyHsnToRow(this.rowId, this.hsn);
 }
 
-class EstAddCharge extends EstEvent {
+class DiliveryChallanAddCharge extends DiliveryChallanEvent {
   final AdditionalCharge charge;
-  EstAddCharge(this.charge);
+  DiliveryChallanAddCharge(this.charge);
 }
 
-class EstRemoveCharge extends EstEvent {
+class DiliveryChallanRemoveCharge extends DiliveryChallanEvent {
   final String id;
-  EstRemoveCharge(this.id);
+  DiliveryChallanRemoveCharge(this.id);
 }
 
-class EstUpdateCharge extends EstEvent {
+class DiliveryChallanUpdateCharge extends DiliveryChallanEvent {
   final AdditionalCharge charge;
-  EstUpdateCharge(this.charge);
+  DiliveryChallanUpdateCharge(this.charge);
 }
 
-class EstAddDiscount extends EstEvent {
+class DiliveryChallanAddDiscount extends DiliveryChallanEvent {
   final DiscountLine d;
-  EstAddDiscount(this.d);
+  DiliveryChallanAddDiscount(this.d);
 }
 
-class EstRemoveDiscount extends EstEvent {
+class DiliveryChallanRemoveDiscount extends DiliveryChallanEvent {
   final String id;
-  EstRemoveDiscount(this.id);
+  DiliveryChallanRemoveDiscount(this.id);
 }
 
 /// ---------- NEW: misc charges events ----------
-class EstAddMiscCharge extends EstEvent {
+class DiliveryChallanAddMiscCharge extends DiliveryChallanEvent {
   final GlobalMiscChargeEntry m;
-  EstAddMiscCharge(this.m);
+  DiliveryChallanAddMiscCharge(this.m);
 }
 
-class EstRemoveMiscCharge extends EstEvent {
+class DiliveryChallanRemoveMiscCharge extends DiliveryChallanEvent {
   final String id;
-  EstRemoveMiscCharge(this.id);
+  DiliveryChallanRemoveMiscCharge(this.id);
 }
 
-class EstUpdateMiscCharge extends EstEvent {
+class DiliveryChallanUpdateMiscCharge extends DiliveryChallanEvent {
   final GlobalMiscChargeEntry m;
-  EstUpdateMiscCharge(this.m);
+  DiliveryChallanUpdateMiscCharge(this.m);
 }
 
 /// ----------------------------------------------
-class EstCalculate extends EstEvent {}
+class DiliveryChallanCalculate extends DiliveryChallanEvent {}
 
-class EstSave extends EstEvent {}
+class DiliveryChallanSave extends DiliveryChallanEvent {}
 
-class EstToggleRoundOff extends EstEvent {
+class DiliveryChallanToggleRoundOff extends DiliveryChallanEvent {
   final bool value;
-  EstToggleRoundOff(this.value);
+  DiliveryChallanToggleRoundOff(this.value);
 }
 
 /// ------------------- STATE -------------------
-class EstState {
+class DiliveryChallanState {
   final List<CustomerModel> customers;
   final CustomerModel? selectedCustomer;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
-  final String estimateNo;
-  final DateTime? estimateDate;
+  final String diliveryChallanNo;
+  final DateTime? diliveryChallanDate;
   final DateTime? validityDate;
   final int validForDays;
   final List<ItemServiceModel> catalogue;
@@ -148,14 +147,14 @@ class EstState {
   final List<String> notes;
   final List<String> terms;
 
-  EstState({
+  DiliveryChallanState({
     this.customers = const [],
     this.selectedCustomer,
     this.cashSaleDefault = false,
-    this.prefix = 'EST',
-    this.estimateNo = '',
+    this.prefix = '',
+    this.diliveryChallanNo = '',
     this.hsnMaster = const [],
-    this.estimateDate,
+    this.diliveryChallanDate,
     this.validityDate,
     this.validForDays = 0,
     this.catalogue = const [],
@@ -174,13 +173,13 @@ class EstState {
     this.terms = const [],
   });
 
-  EstState copyWith({
+  DiliveryChallanState copyWith({
     List<CustomerModel>? customers,
     CustomerModel? selectedCustomer,
     bool? cashSaleDefault,
     String? prefix,
-    String? estimateNo,
-    DateTime? estimateDate,
+    String? diliveryChallanNo,
+    DateTime? diliveryChallanDate,
     List<HsnModel>? hsnMaster,
     DateTime? validityDate,
     int? validForDays,
@@ -199,13 +198,13 @@ class EstState {
     List<String>? notes,
     List<String>? terms,
   }) {
-    return EstState(
+    return DiliveryChallanState(
       customers: customers ?? this.customers,
       selectedCustomer: selectedCustomer ?? this.selectedCustomer,
       cashSaleDefault: cashSaleDefault ?? this.cashSaleDefault,
       prefix: prefix ?? this.prefix,
-      estimateNo: estimateNo ?? this.estimateNo,
-      estimateDate: estimateDate ?? this.estimateDate,
+      diliveryChallanNo: diliveryChallanNo ?? this.diliveryChallanNo,
+      diliveryChallanDate: diliveryChallanDate ?? this.diliveryChallanDate,
       hsnMaster: hsnMaster ?? this.hsnMaster,
       validityDate: validityDate ?? this.validityDate,
       validForDays: validForDays ?? this.validForDays,
@@ -228,7 +227,7 @@ class EstState {
 }
 
 /// ------------------- SAVE EVENT (UI) -------------------
-class EstSaveWithUIData extends EstEvent {
+class DiliveryChallanSaveWithUIData extends DiliveryChallanEvent {
   final String customerName;
   final String? updateId;
   final String mobile;
@@ -238,7 +237,7 @@ class EstSaveWithUIData extends EstEvent {
   final List<String> terms;
   final File? signatureImage; // NEW
 
-  EstSaveWithUIData({
+  DiliveryChallanSaveWithUIData({
     required this.customerName,
     required this.mobile,
     required this.billingAddress,
@@ -250,50 +249,54 @@ class EstSaveWithUIData extends EstEvent {
   });
 }
 
-final GlobalKey<NavigatorState> estimateNavigatorKey =
+final GlobalKey<NavigatorState> diliveryChallanNavigatorKey =
     GlobalKey<NavigatorState>();
 
 /// ------------------- BLOC -------------------
-class EstBloc extends Bloc<EstEvent, EstState> {
+class DiliveryChallanBloc
+    extends Bloc<DiliveryChallanEvent, DiliveryChallanState> {
   final GLobalRepository repo;
-  EstBloc({required this.repo}) : super(EstState()) {
-    on<EstLoadInit>((event, emit) async {
+  DiliveryChallanBloc({required this.repo}) : super(DiliveryChallanState()) {
+    on<DiliveryChallanLoadInit>((event, emit) async {
       await _onLoad(event, emit);
 
       if (event.existing != null) {
-        emit(_prefillEstimate(event.existing!, state));
-        add(EstCalculate());
+        emit(_prefillDiliveryChallan(event.existing!, state));
+        add(DiliveryChallanCalculate());
       }
     });
-    on<EstSelectCustomer>(_onSelectCustomer);
-    on<EstToggleCashSale>(_onToggleCashSale);
-    on<EstAddRow>(_onAddRow);
-    on<EstRemoveRow>(_onRemoveRow);
-    on<EstUpdateRow>(_onUpdateRow);
-    on<EstSelectCatalogForRow>(_onSelectCatalogForRow);
-    on<EstSelectVariantForRow>(_onSelectVariantForRow);
-    on<EstToggleUnitForRow>(_onToggleUnitForRow);
-    on<EstSaveWithUIData>(_onSaveWithUIData);
-    on<EstApplyHsnToRow>(_onApplyHsnToRow);
-    on<EstAddCharge>(_onAddCharge);
-    on<EstRemoveCharge>(_onRemoveCharge);
-    on<EstUpdateCharge>(_onUpdateCharge);
-    on<EstAddDiscount>(_onAddDiscount);
-    on<EstRemoveDiscount>(_onRemoveDiscount);
+    on<DiliveryChallanSelectCustomer>(_onSelectCustomer);
+    on<DiliveryChallanToggleCashSale>(_onToggleCashSale);
+    on<DiliveryChallanAddRow>(_onAddRow);
+    on<DiliveryChallanRemoveRow>(_onRemoveRow);
+    on<DiliveryChallanUpdateRow>(_onUpdateRow);
+    on<DiliveryChallanSelectCatalogForRow>(_onSelectCatalogForRow);
+    on<DiliveryChallanSelectVariantForRow>(_onSelectVariantForRow);
+    on<DiliveryChallanToggleUnitForRow>(_onToggleUnitForRow);
+    on<DiliveryChallanSaveWithUIData>(_onSaveWithUIData);
+    on<DiliveryChallanApplyHsnToRow>(_onApplyHsnToRow);
+    on<DiliveryChallanAddCharge>(_onAddCharge);
+    on<DiliveryChallanRemoveCharge>(_onRemoveCharge);
+    on<DiliveryChallanUpdateCharge>(_onUpdateCharge);
+    on<DiliveryChallanAddDiscount>(_onAddDiscount);
+    on<DiliveryChallanRemoveDiscount>(_onRemoveDiscount);
 
     // misc
-    on<EstAddMiscCharge>(_onAddMiscCharge);
-    on<EstRemoveMiscCharge>(_onRemoveMiscCharge);
-    on<EstUpdateMiscCharge>(_onUpdateMiscCharge);
+    on<DiliveryChallanAddMiscCharge>(_onAddMiscCharge);
+    on<DiliveryChallanRemoveMiscCharge>(_onRemoveMiscCharge);
+    on<DiliveryChallanUpdateMiscCharge>(_onUpdateMiscCharge);
 
-    on<EstToggleRoundOff>(_onToggleRoundOff);
-    on<EstCalculate>(_onCalculate);
+    on<DiliveryChallanToggleRoundOff>(_onToggleRoundOff);
+    on<DiliveryChallanCalculate>(_onCalculate);
   }
 
-  Future<void> _onLoad(EstLoadInit e, Emitter<EstState> emit) async {
+  Future<void> _onLoad(
+    DiliveryChallanLoadInit e,
+    Emitter<DiliveryChallanState> emit,
+  ) async {
     try {
       final customers = await repo.fetchCustomers();
-      final estimateNo = await repo.fetchEstimateNo();
+      final diliveryChallanNo = await repo.fetchDiliveryChallanNo();
       final catalogue = await repo.fetchCatalogue();
       final hsnList = await repo.fetchHsnList();
 
@@ -308,7 +311,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
       emit(
         state.copyWith(
           customers: customers,
-          estimateNo: estimateNo,
+          diliveryChallanNo: diliveryChallanNo,
           catalogue: catalogue,
           hsnMaster: hsnList,
           miscMasterList: miscMaster,
@@ -317,15 +320,20 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         ),
       );
 
-      add(EstCalculate());
+      add(DiliveryChallanCalculate());
     } catch (err) {
       print("❌ Load error: $err");
     }
   }
 
-  void _onSelectCustomer(EstSelectCustomer e, Emitter<EstState> emit) =>
-      emit(state.copyWith(selectedCustomer: e.c));
-  void _onToggleCashSale(EstToggleCashSale e, Emitter<EstState> emit) {
+  void _onSelectCustomer(
+    DiliveryChallanSelectCustomer e,
+    Emitter<DiliveryChallanState> emit,
+  ) => emit(state.copyWith(selectedCustomer: e.c));
+  void _onToggleCashSale(
+    DiliveryChallanToggleCashSale e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     if (e.enabled) {
       emit(
         state.copyWith(
@@ -343,7 +351,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     }
   }
 
-  void _onAddRow(EstAddRow e, Emitter<EstState> emit) {
+  void _onAddRow(DiliveryChallanAddRow e, Emitter<DiliveryChallanState> emit) {
     emit(
       state.copyWith(
         rows: [
@@ -354,14 +362,20 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     );
   }
 
-  void _onRemoveRow(EstRemoveRow e, Emitter<EstState> emit) {
+  void _onRemoveRow(
+    DiliveryChallanRemoveRow e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     emit(
       state.copyWith(rows: state.rows.where((r) => r.localId != e.id).toList()),
     );
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
-  void _onUpdateRow(EstUpdateRow e, Emitter<EstState> emit) {
+  void _onUpdateRow(
+    DiliveryChallanUpdateRow e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -370,12 +384,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
   void _onSelectCatalogForRow(
-    EstSelectCatalogForRow e,
-    Emitter<EstState> emit,
+    DiliveryChallanSelectCatalogForRow e,
+    Emitter<DiliveryChallanState> emit,
   ) {
     emit(
       state.copyWith(
@@ -404,12 +418,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
   void _onSelectVariantForRow(
-    EstSelectVariantForRow e,
-    Emitter<EstState> emit,
+    DiliveryChallanSelectVariantForRow e,
+    Emitter<DiliveryChallanState> emit,
   ) {
     emit(
       state.copyWith(
@@ -428,10 +442,13 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
-  void _onToggleUnitForRow(EstToggleUnitForRow e, Emitter<EstState> emit) {
+  void _onToggleUnitForRow(
+    DiliveryChallanToggleUnitForRow e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -452,10 +469,13 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
-  void _onApplyHsnToRow(EstApplyHsnToRow e, Emitter<EstState> emit) {
+  void _onApplyHsnToRow(
+    DiliveryChallanApplyHsnToRow e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -472,24 +492,33 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
-  void _onAddCharge(EstAddCharge e, Emitter<EstState> emit) {
+  void _onAddCharge(
+    DiliveryChallanAddCharge e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     emit(state.copyWith(charges: [...state.charges, e.charge]));
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
-  void _onRemoveCharge(EstRemoveCharge e, Emitter<EstState> emit) {
+  void _onRemoveCharge(
+    DiliveryChallanRemoveCharge e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     emit(
       state.copyWith(
         charges: state.charges.where((c) => c.id != e.id).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
-  void _onUpdateCharge(EstUpdateCharge e, Emitter<EstState> emit) {
+  void _onUpdateCharge(
+    DiliveryChallanUpdateCharge e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     emit(
       state.copyWith(
         charges: state.charges.map((c) {
@@ -498,46 +527,64 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
-  void _onAddDiscount(EstAddDiscount e, Emitter<EstState> emit) {
+  void _onAddDiscount(
+    DiliveryChallanAddDiscount e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     emit(state.copyWith(discounts: [...state.discounts, e.d]));
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
-  void _onRemoveDiscount(EstRemoveDiscount e, Emitter<EstState> emit) {
+  void _onRemoveDiscount(
+    DiliveryChallanRemoveDiscount e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     emit(
       state.copyWith(
         discounts: state.discounts.where((d) => d.id != e.id).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
-  void _onToggleRoundOff(EstToggleRoundOff e, Emitter<EstState> emit) {
+  void _onToggleRoundOff(
+    DiliveryChallanToggleRoundOff e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     emit(state.copyWith(autoRound: e.value));
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
   // ------------------- MISC CHARGE HANDLERS -------------------
-  void _onAddMiscCharge(EstAddMiscCharge e, Emitter<EstState> emit) {
+  void _onAddMiscCharge(
+    DiliveryChallanAddMiscCharge e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     // When adding from UI, user may select an item from master list or create custom.
-    // We'll accept the provided MiscChargeEntry as-is (it should already include gst/ledger if selected)
+    // We'll accept the provided GlobalMiscChargeEntry as-is (it should already include gst/ledger if selected)
     emit(state.copyWith(miscCharges: [...state.miscCharges, e.m]));
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
-  void _onRemoveMiscCharge(EstRemoveMiscCharge e, Emitter<EstState> emit) {
+  void _onRemoveMiscCharge(
+    DiliveryChallanRemoveMiscCharge e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     emit(
       state.copyWith(
         miscCharges: state.miscCharges.where((m) => m.id != e.id).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
-  void _onUpdateMiscCharge(EstUpdateMiscCharge e, Emitter<EstState> emit) {
+  void _onUpdateMiscCharge(
+    DiliveryChallanUpdateMiscCharge e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     emit(
       state.copyWith(
         miscCharges: state.miscCharges.map((m) {
@@ -546,11 +593,14 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DiliveryChallanCalculate());
   }
 
   // ------------------- CALCULATION -------------------
-  void _onCalculate(EstCalculate e, Emitter<EstState> emit) {
+  void _onCalculate(
+    DiliveryChallanCalculate e,
+    Emitter<DiliveryChallanState> emit,
+  ) {
     final updatedRows = state.rows.map((r) => r.recalc()).toList();
 
     double subtotal = 0;
@@ -612,8 +662,8 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
   // ------------------- SAVE -------------------
   Future<void> _onSaveWithUIData(
-    EstSaveWithUIData e,
-    Emitter<EstState> emit,
+    DiliveryChallanSaveWithUIData e,
+    Emitter<DiliveryChallanState> emit,
   ) async {
     try {
       final state = this.state;
@@ -716,13 +766,10 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         "address_0": billing,
         "address_1": shipping,
         "prefix": state.prefix,
-        "no": int.tryParse(state.estimateNo),
-        "estimate_date": DateFormat(
+        "no": int.tryParse(state.diliveryChallanNo),
+        "dilvery_date": DateFormat(
           'yyyy-MM-dd',
-        ).format(state.estimateDate ?? DateTime.now()),
-        "payment_terms": state.validForDays,
-        if (state.validityDate != null)
-          "due_date": DateFormat('yyyy-MM-dd').format(state.validityDate!),
+        ).format(state.diliveryChallanDate ?? DateTime.now()),
         "case_sale": isCash,
         "add_note": jsonEncode(e.notes),
         "te_co": jsonEncode(e.terms),
@@ -739,12 +786,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
       if (itemRows.isEmpty && serviceRows.isEmpty) {
         showCustomSnackbarError(
-          estimateNavigatorKey.currentContext!,
+          diliveryChallanNavigatorKey.currentContext!,
           "Add atleast one item or service",
         );
         return;
       } else {
-        final res = await repo.saveEstimate(
+        final res = await repo.saveDiliveryChallan(
           payload: payload,
           signatureFile: e.signatureImage != null
               ? XFile(e.signatureImage!.path)
@@ -754,19 +801,19 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
         if (res?['status'] == true) {
           showCustomSnackbarSuccess(
-            estimateNavigatorKey.currentContext!,
+            diliveryChallanNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
         } else {
           showCustomSnackbarError(
-            estimateNavigatorKey.currentContext!,
+            diliveryChallanNavigatorKey.currentContext!,
             res?['message'] ?? "Save failed",
           );
         }
       }
     } catch (err) {
       showCustomSnackbarError(
-        estimateNavigatorKey.currentContext!,
+        diliveryChallanNavigatorKey.currentContext!,
         err.toString(),
       );
     }
@@ -794,9 +841,10 @@ extension GlobalItemRowCalc on GlobalItemRow {
   }
 }
 
-/// ------------------- PREFILL HELPER -------------------
-/// Map server EstimateData -> UI state; lookup misc master list for gst/ledger/hsn
-EstState _prefillEstimate(EstimateData data, EstState s) {
+DiliveryChallanState _prefillDiliveryChallan(
+  DiliveryChallanData data,
+  DiliveryChallanState s,
+) {
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.customerId,
@@ -837,14 +885,14 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
   // ---------------- MISC CHARGES (match by name with master) ----------------
   final mappedMisc = <GlobalMiscChargeEntry>[];
   for (final m in data.miscCharges) {
-    final nameFromEstimate = (m.name).trim().toLowerCase();
-    if (nameFromEstimate.isEmpty) continue;
+    final nameFromDiliveryChallan = (m.name).trim().toLowerCase();
+    if (nameFromDiliveryChallan.isEmpty) continue;
 
     // try to find in misc master list safely
     MiscChargeModelList? match;
     try {
       match = s.miscMasterList.firstWhere(
-        (mx) => (mx.name).trim().toLowerCase() == nameFromEstimate,
+        (mx) => (mx.name).trim().toLowerCase() == nameFromDiliveryChallan,
       );
     } catch (_) {
       match = null;
@@ -955,7 +1003,7 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
     customers: s.customers,
     selectedCustomer: data.caseSale ? null : selectedCustomer,
     prefix: data.prefix,
-    estimateNo: data.no.toString(),
+    diliveryChallanNo: data.no.toString(),
     rows: rows,
     charges: mappedCharges,
     discounts: mappedDiscounts,
@@ -964,9 +1012,7 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
     totalGst: (data.subGst).toDouble(),
     totalAmount: (data.totalAmount).toDouble(),
     autoRound: data.autoRound,
-    estimateDate: data.estimateDate,
-    validityDate: data.estimateDate.add(Duration(days: data.paymentTerms)),
-    validForDays: data.paymentTerms,
+    diliveryChallanDate: data.diliveryChallanDate,
     cashSaleDefault: data.caseSale,
   );
 }

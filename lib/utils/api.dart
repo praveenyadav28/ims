@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
-
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
@@ -17,7 +15,7 @@ class ApiException implements Exception {
 }
 
 class ApiService {
-  static String baseurl = "http://192.168.1.18:4000/api";
+  static String baseurl = "http://10.36.223.186:4000/api";
   static final Dio dio = Dio(
     BaseOptions(
       baseUrl: baseurl,

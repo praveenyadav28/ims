@@ -1,4 +1,3 @@
-// create_estimate_fullscreen.dart
 import 'dart:io';
 
 import 'package:dotted_border/dotted_border.dart';
@@ -13,14 +12,14 @@ import 'package:ims/ui/sales/data/global_discount.dart';
 import 'package:ims/ui/sales/data/global_item_table.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/data/global_shipto.dart';
-import 'package:ims/ui/sales/data/globalheader.dart';
-import 'package:ims/ui/sales/data/globalnotes_section.dart';
 import 'package:ims/ui/sales/data/globalmisc_charge.dart';
-import 'package:ims/ui/sales/models/estimate_data.dart';
-import 'package:ims/ui/sales/models/global_models.dart';
-import 'package:ims/ui/sales/estimate/state/estimate_bloc.dart';
-import 'package:ims/ui/sales/estimate/widgets/estimate_details_card.dart';
+import 'package:ims/ui/sales/data/globalnotes_section.dart';
 import 'package:ims/ui/sales/data/globalsummary_card.dart';
+import 'package:ims/ui/sales/models/global_models.dart';
+import 'package:ims/ui/sales/models/performa_data.dart';
+import 'package:ims/ui/sales/performa_invoice/state/performa_bloc.dart';
+import 'package:ims/ui/sales/data/globalheader.dart';
+import 'package:ims/ui/sales/performa_invoice/widgets/perfroma_details.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -28,14 +27,14 @@ import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
 
-class CreateEstimateFullScreen extends StatelessWidget {
+class CreatePerformaFullScreen extends StatelessWidget {
   final GLobalRepository repo;
-  final EstimateData? estimateData;
+  final PerformaData? performaData;
 
-  CreateEstimateFullScreen({
+  CreatePerformaFullScreen({
     Key? key,
     GLobalRepository? repo,
-    this.estimateData,
+    this.performaData,
   }) : repo = repo ?? GLobalRepository(),
        super(key: key);
 
@@ -43,31 +42,30 @@ class CreateEstimateFullScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) =>
-          EstBloc(repo: repo)..add(EstLoadInit(existing: estimateData)),
-      child: CreateEstimateView(estimateData: estimateData),
+          PerformaBloc(repo: repo)
+            ..add(PerformaLoadInit(existing: performaData)),
+      child: CreatePerformaView(performaData: performaData),
     );
   }
 }
 
-class CreateEstimateView extends StatefulWidget {
-  final EstimateData? estimateData;
+class CreatePerformaView extends StatefulWidget {
+  final PerformaData? performaData;
 
-  const CreateEstimateView({Key? key, this.estimateData}) : super(key: key);
+  const CreatePerformaView({Key? key, this.performaData}) : super(key: key);
 
   @override
-  State<CreateEstimateView> createState() => _CreateEstimateViewState();
+  State<CreatePerformaView> createState() => _CreatePerformaViewState();
 }
 
-class _CreateEstimateViewState extends State<CreateEstimateView> {
-  final prefixController = TextEditingController(text: 'EST');
-  final estimateNoController = TextEditingController();
+class _CreatePerformaViewState extends State<CreatePerformaView> {
+  final prefixController = TextEditingController();
+  final perfromaNoController = TextEditingController();
   final cusNameController = TextEditingController();
   final cashMobileController = TextEditingController();
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
-  final validForController = TextEditingController();
-  DateTime pickedEstimateDate = DateTime.now();
-  DateTime? pickedValidityDate;
+  DateTime pickedPerformaDate = DateTime.now();
   String signatureImageUrl = '';
 
   File? signatureImage;
@@ -80,42 +78,28 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   void initState() {
     super.initState();
 
-    // NEW: If editing an existing estimate, prefill fields from the estimate payload.
-    if (widget.estimateData != null) {
-      final e = widget.estimateData!;
-
-      // always set payment terms field (so UI shows days)
-      validForController.text = e.paymentTerms.toString();
-
-      // Prefill names / mobile
+    if (widget.performaData != null) {
+      final e = widget.performaData!;
       cusNameController.text = e.customerName;
       cashMobileController.text = e.mobile;
-
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
-
-      // set estimate dates & validity
-      pickedEstimateDate = e.estimateDate;
-      pickedValidityDate = e.estimateDate.add(Duration(days: e.paymentTerms));
-
+      pickedPerformaDate = e.performaDate;
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
       signatureImageUrl = e.signature;
 
-      // If the estimate is a cash sale, enable cash sale mode in BLoC.
       if (e.caseSale == true) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.read<EstBloc>().add(EstToggleCashSale(true));
+          context.read<PerformaBloc>().add(PerformaToggleCashSale(true));
         });
       } else {
         // Ensure BLoC reflects non-cash mode for editing
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.read<EstBloc>().add(EstToggleCashSale(false));
-          // also select the customer in BLoC (optional) if you want UI to show selection
-          // but don't change addresses here (we already used estimate addresses).
+          context.read<PerformaBloc>().add(PerformaToggleCashSale(false));
           if (e.customerId != null && e.customerId!.isNotEmpty) {
             // find customer from loaded list (may be empty until load completes)
-            final cands = context.read<EstBloc>().state.customers;
+            final cands = context.read<PerformaBloc>().state.customers;
             final found = cands.firstWhere(
               (c) => c.id == e.customerId,
               orElse: () => CustomerModel(
@@ -126,7 +110,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 shippingAddress: e.address1,
               ),
             );
-            context.read<EstBloc>().add(EstSelectCustomer(found));
+            context.read<PerformaBloc>().add(PerfromaSelectCustomer(found));
           }
         });
       }
@@ -139,59 +123,24 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   @override
   void dispose() {
     prefixController.dispose();
-    estimateNoController.dispose();
+    perfromaNoController.dispose();
     cusNameController.dispose();
     cashMobileController.dispose();
     cashBillingController.dispose();
     cashShippingController.dispose();
-    validForController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickEstimateDate(BuildContext ctx, EstBloc bloc) async {
+  Future<void> _pickPerformaDate(BuildContext ctx, PerformaBloc bloc) async {
     final date = await showDatePicker(
       context: ctx,
-      initialDate: pickedEstimateDate,
+      initialDate: pickedPerformaDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
     if (date != null) {
-      pickedEstimateDate = date;
-      final days = int.tryParse(validForController.text) ?? 0;
-      pickedValidityDate = days > 0
-          ? date.add(Duration(days: days))
-          : pickedValidityDate;
-      bloc.emit(
-        bloc.state.copyWith(
-          estimateDate: date,
-          validityDate: pickedValidityDate,
-        ),
-      );
-      bloc.add(EstCalculate());
-      setState(() {});
-    }
-  }
-
-  Future<void> _pickValidityDate(BuildContext ctx, EstBloc bloc) async {
-    final date = await showDatePicker(
-      context: ctx,
-      initialDate: pickedValidityDate ?? pickedEstimateDate,
-      firstDate: pickedEstimateDate,
-      lastDate: DateTime(2100),
-    );
-    if (date != null) {
-      pickedValidityDate = date;
-      validForController.text = date
-          .difference(pickedEstimateDate)
-          .inDays
-          .toString();
-      bloc.emit(
-        bloc.state.copyWith(
-          estimateDate: pickedEstimateDate,
-          validityDate: pickedValidityDate,
-        ),
-      );
-      bloc.add(EstCalculate());
+      pickedPerformaDate = date;
+      bloc.add(PerfromaCalculate());
       setState(() {});
     }
   }
@@ -224,18 +173,18 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
-    final bloc = context.read<EstBloc>();
+    final bloc = context.read<PerformaBloc>();
 
-    return BlocListener<EstBloc, EstState>(
+    return BlocListener<PerformaBloc, PerformaState>(
       listenWhen: (previous, current) {
-        // Only listen when selectedCustomer or cashSaleDefault or estimateNo changes
+        // Only listen when selectedCustomer or cashSaleDefault or performaNo changes
         return previous.selectedCustomer != current.selectedCustomer ||
             previous.cashSaleDefault != current.cashSaleDefault ||
-            previous.estimateNo != current.estimateNo;
+            previous.performaNo != current.performaNo;
       },
       listener: (context, state) {
         // When customer selected via dropdown, autofill name/mobile/address fields
-        bool isUpdateMode = widget.estimateData != null;
+        bool isUpdateMode = widget.performaData != null;
 
         final customer = state.selectedCustomer;
 
@@ -257,14 +206,10 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
           }
         }
 
-        // Sync estimate number if repo sets it after load
-        estimateNoController.text = state.estimateNo.toString();
-
-        // validity days sync (if BLoC has validForDays)
-        validForController.text = state.validForDays.toString();
+        perfromaNoController.text = state.performaNo.toString();
       },
       child: Scaffold(
-        key: estimateNavigatorKey,
+        key: perfromaNavigatorKey,
         backgroundColor: AppColor.white,
         appBar: AppBar(
           backgroundColor: AppColor.white,
@@ -279,7 +224,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
           ),
           titleSpacing: 0,
           title: Text(
-            '${widget.estimateData == null ? "Create" : "Update"} Estimate',
+            '${widget.performaData == null ? "Create" : "Update"} Performa Invoice',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -300,12 +245,12 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Estimate",
+                  text: "Save Proforma  Invoice",
                   height: 40,
-                  width: 149,
+                  width: 179,
                   onTap: () {
                     bloc.add(
-                      EstSaveWithUIData(
+                      PerfromaSaveWithUIData(
                         customerName: cusNameController.text,
                         mobile: cashMobileController.text,
                         billingAddress: cashBillingController.text,
@@ -313,7 +258,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                         notes: selectedNotesList,
                         terms: selectedTermsList,
                         signatureImage: signatureImage,
-                        updateId: widget.estimateData?.id,
+                        updateId: widget.performaData?.id,
                       ),
                     );
                   },
@@ -323,10 +268,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
             ),
           ],
         ),
-        body: BlocBuilder<EstBloc, EstState>(
+        body: BlocBuilder<PerformaBloc, PerformaState>(
           builder: (context, state) {
-            // keep estimate number in sync (repo may set it)
-            estimateNoController.text = state.estimateNo.toString();
+            perfromaNoController.text = state.performaNo.toString();
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -336,19 +280,25 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                   GlobalHeaderCard(
                     billTo: GlobalBillToCard(
                       ispurchase: false,
+                      // --------- STATE VALUES ---------
                       isCashSale: state.cashSaleDefault,
                       customers: state.customers,
                       selectedCustomer: state.selectedCustomer,
 
+                      // --------- CONTROLLERS ---------
                       cusNameController: cusNameController,
                       mobileController: cashMobileController,
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
 
+                      // --------- LOGIC CALLBACKS ---------
                       onToggleCashSale: () {
-                        bloc.add(EstToggleCashSale(!state.cashSaleDefault));
+                        bloc.add(
+                          PerformaToggleCashSale(!state.cashSaleDefault),
+                        );
 
                         if (state.cashSaleDefault) {
+                          // clearing when disabling cash sale
                           cusNameController.clear();
                           cashMobileController.clear();
                           cashBillingController.clear();
@@ -357,64 +307,53 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       },
 
                       onCustomerSelected: (customer) {
-                        bloc.add(EstSelectCustomer(customer));
+                        bloc.add(PerfromaSelectCustomer(customer));
+
                         cashMobileController.text = customer.mobile;
                         cashBillingController.text = customer.billingAddress;
                         cashShippingController.text = customer.shippingAddress;
                       },
 
-                      onCreateCustomer: () =>
-                          _showCreateCustomerDialog(context.read<EstBloc>()),
+                      onCreateCustomer: () => _showCreateCustomerDialog(
+                        context.read<PerformaBloc>(),
+                      ),
                     ),
-
                     shipTo: GlobalShipToCard(
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
                       onEditAddresses: () => _editAddresses(state, bloc),
                     ),
-
-                    details: EstimateDetailsCard(
+                    details: PerformaDetailsCard(
                       prefixController: prefixController,
-                      estimateNoController: estimateNoController,
-                      validForController: validForController,
-                      pickedEstimateDate: pickedEstimateDate,
-                      pickedValidityDate: pickedValidityDate,
-                      onTapEstimateDate: () =>
-                          _pickEstimateDate(context, context.read<EstBloc>()),
-                      onTapValidityDate: () =>
-                          _pickValidityDate(context, context.read<EstBloc>()),
-                      onValidForChanged: (value) {
-                        final days = int.tryParse(value) ?? 0;
-                        pickedValidityDate = pickedEstimateDate.add(
-                          Duration(days: days),
-                        );
-                        // inform bloc about validForDays (keep state consistent)
-                        bloc.emit(
-                          state.copyWith(
-                            validForDays: days,
-                            validityDate: pickedValidityDate,
-                          ),
-                        );
-                        bloc.add(EstCalculate());
-                        setState(() {});
-                      },
+                      perfromaNoController: perfromaNoController,
+                      pickedPerformaDate: pickedPerformaDate,
+                      onTapPerfromaDate: () => _pickPerformaDate(
+                        context,
+                        context.read<PerformaBloc>(),
+                      ),
                     ),
                   ),
 
                   SizedBox(height: Sizes.height * .03),
                   GlobalItemsTableSection(
-                    rows: state.rows,
-                    catalogue: state.catalogue,
-                    hsnList: state.hsnMaster,
-                    onAddRow: () => bloc.add(EstAddRow()),
-                    onRemoveRow: (id) => bloc.add(EstRemoveRow(id)),
-                    onUpdateRow: (row) => bloc.add(EstUpdateRow(row)),
-                    onSelectCatalog: (id, item) =>
-                        bloc.add(EstSelectCatalogForRow(id, item)),
-                    onSelectHsn: (id, hsn) =>
-                        bloc.add(EstApplyHsnToRow(id, hsn)),
-                    onToggleUnit: (id, value) =>
-                        bloc.add(EstToggleUnitForRow(id, value)),
+                    rows: state.rows, // list of GlobalItemRow
+                    catalogue: state.catalogue, // list of ItemServiceModel
+                    hsnList: state.hsnMaster, // list of HsnModel
+
+                    onAddRow: () => bloc.add(PerformaAddRow()),
+
+                    onRemoveRow: (id) => bloc.add(PerfromaRemoveRow(id)),
+
+                    onUpdateRow: (row) => bloc.add(PerformaUpdateRow(row)),
+
+                    onSelectCatalog: (rowId, item) =>
+                        bloc.add(PerfromaSelectCatalogForRow(rowId, item)),
+
+                    onSelectHsn: (rowId, hsn) =>
+                        bloc.add(PerfromaApplyHsnToRow(rowId, hsn)),
+
+                    onToggleUnit: (rowId, value) =>
+                        bloc.add(PerfromaToggleUnitForRow(rowId, value)),
                   ),
                   SizedBox(height: Sizes.height * .02),
 
@@ -446,31 +385,32 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
                               autoRound: state.autoRound,
                               onToggleRound: (v) =>
-                                  bloc.add(EstToggleRoundOff(v)),
+                                  bloc.add(PerfromaToggleRoundOff(v)),
 
                               additionalChargesSection:
                                   GlobalAdditionalChargesSection(
                                     charges: state.charges,
                                     onAddCharge: (c) =>
-                                        bloc.add(EstAddCharge(c)),
+                                        bloc.add(PerfromaAddCharge(c)),
                                     onRemoveCharge: (id) =>
-                                        bloc.add(EstRemoveCharge(id)),
+                                        bloc.add(PerfromaRemoveCharge(id)),
                                   ),
 
                               miscChargesSection: GlobalMiscChargesSection(
                                 miscCharges: state.miscCharges,
                                 miscList: miscList,
-                                onAddMisc: (m) => bloc.add(EstAddMiscCharge(m)),
+                                onAddMisc: (m) =>
+                                    bloc.add(PerformaAddMiscCharge(m)),
                                 onRemoveMisc: (id) =>
-                                    bloc.add(EstRemoveMiscCharge(id)),
+                                    bloc.add(PerfromaRemoveMiscCharge(id)),
                               ),
 
                               discountSection: GlobalDiscountsSection(
                                 discounts: state.discounts,
                                 onAddDiscount: (d) =>
-                                    bloc.add(EstAddDiscount(d)),
+                                    bloc.add(PerformaAddDiscount(d)),
                                 onRemoveDiscount: (id) =>
-                                    bloc.add(EstRemoveDiscount(id)),
+                                    bloc.add(PerformaRemoveDiscount(id)),
                               ),
                             ),
 
@@ -560,7 +500,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
     );
   }
 
-  void _showCreateCustomerDialog(EstBloc bloc) {
+  void _showCreateCustomerDialog(PerformaBloc bloc) {
     final nameCtrl = TextEditingController();
     final mobileCtrl = TextEditingController();
     showDialog(
@@ -598,7 +538,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
               if (res != null && res['status'] == true) {
                 showCustomSnackbarSuccess(context, 'Customer created');
                 bloc.add(
-                  EstLoadInit(),
+                  PerformaLoadInit(),
                 ); // reload state so new customer is available
                 Navigator.pop(context);
               } else {
@@ -612,7 +552,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
     );
   }
 
-  void _editAddresses(EstState state, EstBloc bloc) {
+  void _editAddresses(PerformaState state, PerformaBloc bloc) {
     final billing = TextEditingController(
       text: state.cashSaleDefault
           ? cashBillingController.text

@@ -1,4 +1,3 @@
-// create_estimate_fullscreen.dart
 import 'dart:io';
 
 import 'package:dotted_border/dotted_border.dart';
@@ -7,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
+import 'package:ims/ui/purchase/purchase_order/state/purchase_order_bloc.dart';
+import 'package:ims/ui/purchase/purchase_order/widgets/purchase_order_details.dart';
 import 'package:ims/ui/sales/data/global_additionalcharge.dart';
 import 'package:ims/ui/sales/data/global_billto.dart';
 import 'package:ims/ui/sales/data/global_discount.dart';
@@ -16,11 +17,9 @@ import 'package:ims/ui/sales/data/global_shipto.dart';
 import 'package:ims/ui/sales/data/globalheader.dart';
 import 'package:ims/ui/sales/data/globalnotes_section.dart';
 import 'package:ims/ui/sales/data/globalmisc_charge.dart';
-import 'package:ims/ui/sales/models/estimate_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
-import 'package:ims/ui/sales/estimate/state/estimate_bloc.dart';
-import 'package:ims/ui/sales/estimate/widgets/estimate_details_card.dart';
 import 'package:ims/ui/sales/data/globalsummary_card.dart';
+import 'package:ims/ui/sales/models/purchaseorder_model.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -28,14 +27,14 @@ import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
 
-class CreateEstimateFullScreen extends StatelessWidget {
+class CreatePurchaseOrderFullScreen extends StatelessWidget {
   final GLobalRepository repo;
-  final EstimateData? estimateData;
+  final PurchaseOrderData? purchaseOrderData;
 
-  CreateEstimateFullScreen({
+  CreatePurchaseOrderFullScreen({
     Key? key,
     GLobalRepository? repo,
-    this.estimateData,
+    this.purchaseOrderData,
   }) : repo = repo ?? GLobalRepository(),
        super(key: key);
 
@@ -43,30 +42,33 @@ class CreateEstimateFullScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) =>
-          EstBloc(repo: repo)..add(EstLoadInit(existing: estimateData)),
-      child: CreateEstimateView(estimateData: estimateData),
+          PurchaseOrderBloc(repo: repo)
+            ..add(PurchaseOrderLoadInit(existing: purchaseOrderData)),
+      child: CreatePurchaseOrderView(purchaseOrderData: purchaseOrderData),
     );
   }
 }
 
-class CreateEstimateView extends StatefulWidget {
-  final EstimateData? estimateData;
+class CreatePurchaseOrderView extends StatefulWidget {
+  final PurchaseOrderData? purchaseOrderData;
 
-  const CreateEstimateView({Key? key, this.estimateData}) : super(key: key);
+  const CreatePurchaseOrderView({Key? key, this.purchaseOrderData})
+    : super(key: key);
 
   @override
-  State<CreateEstimateView> createState() => _CreateEstimateViewState();
+  State<CreatePurchaseOrderView> createState() =>
+      _CreatePurchaseOrderViewState();
 }
 
-class _CreateEstimateViewState extends State<CreateEstimateView> {
-  final prefixController = TextEditingController(text: 'EST');
-  final estimateNoController = TextEditingController();
+class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
+  final prefixController = TextEditingController(text: 'PO');
+  final purchaseOrderNoController = TextEditingController();
   final cusNameController = TextEditingController();
   final cashMobileController = TextEditingController();
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
   final validForController = TextEditingController();
-  DateTime pickedEstimateDate = DateTime.now();
+  DateTime pickedPurchaseOrderDate = DateTime.now();
   DateTime? pickedValidityDate;
   String signatureImageUrl = '';
 
@@ -80,53 +82,56 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   void initState() {
     super.initState();
 
-    // NEW: If editing an existing estimate, prefill fields from the estimate payload.
-    if (widget.estimateData != null) {
-      final e = widget.estimateData!;
+    if (widget.purchaseOrderData != null) {
+      final e = widget.purchaseOrderData!;
 
       // always set payment terms field (so UI shows days)
       validForController.text = e.paymentTerms.toString();
 
       // Prefill names / mobile
-      cusNameController.text = e.customerName;
+      cusNameController.text = e.supplierName;
       cashMobileController.text = e.mobile;
 
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
 
-      // set estimate dates & validity
-      pickedEstimateDate = e.estimateDate;
-      pickedValidityDate = e.estimateDate.add(Duration(days: e.paymentTerms));
+      pickedPurchaseOrderDate = e.purchaseOrderDate;
+      pickedValidityDate = e.purchaseOrderDate.add(
+        Duration(days: e.paymentTerms),
+      );
 
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
       signatureImageUrl = e.signature;
 
-      // If the estimate is a cash sale, enable cash sale mode in BLoC.
       if (e.caseSale == true) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.read<EstBloc>().add(EstToggleCashSale(true));
+          context.read<PurchaseOrderBloc>().add(
+            PurchaseOrderToggleCashSale(true),
+          );
         });
       } else {
         // Ensure BLoC reflects non-cash mode for editing
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.read<EstBloc>().add(EstToggleCashSale(false));
-          // also select the customer in BLoC (optional) if you want UI to show selection
-          // but don't change addresses here (we already used estimate addresses).
-          if (e.customerId != null && e.customerId!.isNotEmpty) {
+          context.read<PurchaseOrderBloc>().add(
+            PurchaseOrderToggleCashSale(false),
+          );
+          if (e.supplierId != null && e.supplierId!.isNotEmpty) {
             // find customer from loaded list (may be empty until load completes)
-            final cands = context.read<EstBloc>().state.customers;
+            final cands = context.read<PurchaseOrderBloc>().state.customers;
             final found = cands.firstWhere(
-              (c) => c.id == e.customerId,
+              (c) => c.id == e.supplierId,
               orElse: () => CustomerModel(
-                id: e.customerId ?? "",
-                name: e.customerName,
+                id: e.supplierId ?? "",
+                name: e.supplierName,
                 mobile: e.mobile,
                 billingAddress: e.address0,
                 shippingAddress: e.address1,
               ),
             );
-            context.read<EstBloc>().add(EstSelectCustomer(found));
+            context.read<PurchaseOrderBloc>().add(
+              PurchaseOrderSelectCustomer(found),
+            );
           }
         });
       }
@@ -139,7 +144,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   @override
   void dispose() {
     prefixController.dispose();
-    estimateNoController.dispose();
+    purchaseOrderNoController.dispose();
     cusNameController.dispose();
     cashMobileController.dispose();
     cashBillingController.dispose();
@@ -148,50 +153,56 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
     super.dispose();
   }
 
-  Future<void> _pickEstimateDate(BuildContext ctx, EstBloc bloc) async {
+  Future<void> _pickPurchaseOrderDate(
+    BuildContext ctx,
+    PurchaseOrderBloc bloc,
+  ) async {
     final date = await showDatePicker(
       context: ctx,
-      initialDate: pickedEstimateDate,
+      initialDate: pickedPurchaseOrderDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
     if (date != null) {
-      pickedEstimateDate = date;
+      pickedPurchaseOrderDate = date;
       final days = int.tryParse(validForController.text) ?? 0;
       pickedValidityDate = days > 0
           ? date.add(Duration(days: days))
           : pickedValidityDate;
       bloc.emit(
         bloc.state.copyWith(
-          estimateDate: date,
+          purchaseOrderDate: date,
           validityDate: pickedValidityDate,
         ),
       );
-      bloc.add(EstCalculate());
+      bloc.add(PurchaseOrderCalculate());
       setState(() {});
     }
   }
 
-  Future<void> _pickValidityDate(BuildContext ctx, EstBloc bloc) async {
+  Future<void> _pickValidityDate(
+    BuildContext ctx,
+    PurchaseOrderBloc bloc,
+  ) async {
     final date = await showDatePicker(
       context: ctx,
-      initialDate: pickedValidityDate ?? pickedEstimateDate,
-      firstDate: pickedEstimateDate,
+      initialDate: pickedValidityDate ?? pickedPurchaseOrderDate,
+      firstDate: pickedPurchaseOrderDate,
       lastDate: DateTime(2100),
     );
     if (date != null) {
       pickedValidityDate = date;
       validForController.text = date
-          .difference(pickedEstimateDate)
+          .difference(pickedPurchaseOrderDate)
           .inDays
           .toString();
       bloc.emit(
         bloc.state.copyWith(
-          estimateDate: pickedEstimateDate,
+          purchaseOrderDate: pickedPurchaseOrderDate,
           validityDate: pickedValidityDate,
         ),
       );
-      bloc.add(EstCalculate());
+      bloc.add(PurchaseOrderCalculate());
       setState(() {});
     }
   }
@@ -224,18 +235,18 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
-    final bloc = context.read<EstBloc>();
+    final bloc = context.read<PurchaseOrderBloc>();
 
-    return BlocListener<EstBloc, EstState>(
+    return BlocListener<PurchaseOrderBloc, PurchaseOrderState>(
       listenWhen: (previous, current) {
-        // Only listen when selectedCustomer or cashSaleDefault or estimateNo changes
+        // Only listen when selectedCustomer or cashSaleDefault or purchaseOrderNo changes
         return previous.selectedCustomer != current.selectedCustomer ||
             previous.cashSaleDefault != current.cashSaleDefault ||
-            previous.estimateNo != current.estimateNo;
+            previous.purchaseOrderNo != current.purchaseOrderNo;
       },
       listener: (context, state) {
         // When customer selected via dropdown, autofill name/mobile/address fields
-        bool isUpdateMode = widget.estimateData != null;
+        bool isUpdateMode = widget.purchaseOrderData != null;
 
         final customer = state.selectedCustomer;
 
@@ -257,14 +268,13 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
           }
         }
 
-        // Sync estimate number if repo sets it after load
-        estimateNoController.text = state.estimateNo.toString();
+        purchaseOrderNoController.text = state.purchaseOrderNo.toString();
 
         // validity days sync (if BLoC has validForDays)
         validForController.text = state.validForDays.toString();
       },
       child: Scaffold(
-        key: estimateNavigatorKey,
+        key: purchaseOrderNavigatorKey,
         backgroundColor: AppColor.white,
         appBar: AppBar(
           backgroundColor: AppColor.white,
@@ -279,7 +289,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
           ),
           titleSpacing: 0,
           title: Text(
-            '${widget.estimateData == null ? "Create" : "Update"} Estimate',
+            '${widget.purchaseOrderData == null ? "Create" : "Update"} Purchase Order',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -300,20 +310,20 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Estimate",
+                  text: "Save Purchase Order",
                   height: 40,
-                  width: 149,
+                  width: 189,
                   onTap: () {
                     bloc.add(
-                      EstSaveWithUIData(
-                        customerName: cusNameController.text,
+                      PurchaseOrderSaveWithUIData(
+                        supplierName: cusNameController.text,
                         mobile: cashMobileController.text,
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
                         signatureImage: signatureImage,
-                        updateId: widget.estimateData?.id,
+                        updateId: widget.purchaseOrderData?.id,
                       ),
                     );
                   },
@@ -323,10 +333,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
             ),
           ],
         ),
-        body: BlocBuilder<EstBloc, EstState>(
+        body: BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
           builder: (context, state) {
-            // keep estimate number in sync (repo may set it)
-            estimateNoController.text = state.estimateNo.toString();
+            purchaseOrderNoController.text = state.purchaseOrderNo.toString();
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -335,7 +344,6 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 children: [
                   GlobalHeaderCard(
                     billTo: GlobalBillToCard(
-                      ispurchase: false,
                       isCashSale: state.cashSaleDefault,
                       customers: state.customers,
                       selectedCustomer: state.selectedCustomer,
@@ -345,8 +353,11 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
 
+                      ispurchase: true,
                       onToggleCashSale: () {
-                        bloc.add(EstToggleCashSale(!state.cashSaleDefault));
+                        bloc.add(
+                          PurchaseOrderToggleCashSale(!state.cashSaleDefault),
+                        );
 
                         if (state.cashSaleDefault) {
                           cusNameController.clear();
@@ -357,14 +368,15 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       },
 
                       onCustomerSelected: (customer) {
-                        bloc.add(EstSelectCustomer(customer));
+                        bloc.add(PurchaseOrderSelectCustomer(customer));
                         cashMobileController.text = customer.mobile;
                         cashBillingController.text = customer.billingAddress;
                         cashShippingController.text = customer.shippingAddress;
                       },
 
-                      onCreateCustomer: () =>
-                          _showCreateCustomerDialog(context.read<EstBloc>()),
+                      onCreateCustomer: () => _showCreateCustomerDialog(
+                        context.read<PurchaseOrderBloc>(),
+                      ),
                     ),
 
                     shipTo: GlobalShipToCard(
@@ -373,19 +385,23 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       onEditAddresses: () => _editAddresses(state, bloc),
                     ),
 
-                    details: EstimateDetailsCard(
+                    details: PurchaseOrderDetailsCard(
                       prefixController: prefixController,
-                      estimateNoController: estimateNoController,
+                      purchaseOrderNoController: purchaseOrderNoController,
                       validForController: validForController,
-                      pickedEstimateDate: pickedEstimateDate,
+                      pickedPurchaseOrderDate: pickedPurchaseOrderDate,
                       pickedValidityDate: pickedValidityDate,
-                      onTapEstimateDate: () =>
-                          _pickEstimateDate(context, context.read<EstBloc>()),
-                      onTapValidityDate: () =>
-                          _pickValidityDate(context, context.read<EstBloc>()),
+                      onTapPurchaseOrderDate: () => _pickPurchaseOrderDate(
+                        context,
+                        context.read<PurchaseOrderBloc>(),
+                      ),
+                      onTapValidityDate: () => _pickValidityDate(
+                        context,
+                        context.read<PurchaseOrderBloc>(),
+                      ),
                       onValidForChanged: (value) {
                         final days = int.tryParse(value) ?? 0;
-                        pickedValidityDate = pickedEstimateDate.add(
+                        pickedValidityDate = pickedPurchaseOrderDate.add(
                           Duration(days: days),
                         );
                         // inform bloc about validForDays (keep state consistent)
@@ -395,7 +411,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                             validityDate: pickedValidityDate,
                           ),
                         );
-                        bloc.add(EstCalculate());
+                        bloc.add(PurchaseOrderCalculate());
                         setState(() {});
                       },
                     ),
@@ -406,15 +422,15 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                     rows: state.rows,
                     catalogue: state.catalogue,
                     hsnList: state.hsnMaster,
-                    onAddRow: () => bloc.add(EstAddRow()),
-                    onRemoveRow: (id) => bloc.add(EstRemoveRow(id)),
-                    onUpdateRow: (row) => bloc.add(EstUpdateRow(row)),
+                    onAddRow: () => bloc.add(PurchaseOrderAddRow()),
+                    onRemoveRow: (id) => bloc.add(PurchaseOrderRemoveRow(id)),
+                    onUpdateRow: (row) => bloc.add(PurchaseOrderUpdateRow(row)),
                     onSelectCatalog: (id, item) =>
-                        bloc.add(EstSelectCatalogForRow(id, item)),
+                        bloc.add(PurchaseOrderSelectCatalogForRow(id, item)),
                     onSelectHsn: (id, hsn) =>
-                        bloc.add(EstApplyHsnToRow(id, hsn)),
+                        bloc.add(PurchaseOrderApplyHsnToRow(id, hsn)),
                     onToggleUnit: (id, value) =>
-                        bloc.add(EstToggleUnitForRow(id, value)),
+                        bloc.add(PurchaseOrderToggleUnitForRow(id, value)),
                   ),
                   SizedBox(height: Sizes.height * .02),
 
@@ -446,31 +462,32 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
                               autoRound: state.autoRound,
                               onToggleRound: (v) =>
-                                  bloc.add(EstToggleRoundOff(v)),
+                                  bloc.add(PurchaseOrderToggleRoundOff(v)),
 
                               additionalChargesSection:
                                   GlobalAdditionalChargesSection(
                                     charges: state.charges,
                                     onAddCharge: (c) =>
-                                        bloc.add(EstAddCharge(c)),
+                                        bloc.add(PurchaseOrderAddCharge(c)),
                                     onRemoveCharge: (id) =>
-                                        bloc.add(EstRemoveCharge(id)),
+                                        bloc.add(PurchaseOrderRemoveCharge(id)),
                                   ),
 
                               miscChargesSection: GlobalMiscChargesSection(
                                 miscCharges: state.miscCharges,
                                 miscList: miscList,
-                                onAddMisc: (m) => bloc.add(EstAddMiscCharge(m)),
+                                onAddMisc: (m) =>
+                                    bloc.add(PurchaseOrderAddMiscCharge(m)),
                                 onRemoveMisc: (id) =>
-                                    bloc.add(EstRemoveMiscCharge(id)),
+                                    bloc.add(PurchaseOrderRemoveMiscCharge(id)),
                               ),
 
                               discountSection: GlobalDiscountsSection(
                                 discounts: state.discounts,
                                 onAddDiscount: (d) =>
-                                    bloc.add(EstAddDiscount(d)),
+                                    bloc.add(PurchaseOrderAddDiscount(d)),
                                 onRemoveDiscount: (id) =>
-                                    bloc.add(EstRemoveDiscount(id)),
+                                    bloc.add(PurchaseOrderRemoveDiscount(id)),
                               ),
                             ),
 
@@ -560,13 +577,13 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
     );
   }
 
-  void _showCreateCustomerDialog(EstBloc bloc) {
+  void _showCreateCustomerDialog(PurchaseOrderBloc bloc) {
     final nameCtrl = TextEditingController();
     final mobileCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Create Customer'),
+        title: const Text('Create Supplier'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -588,7 +605,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
           ElevatedButton(
             onPressed: () async {
               if (nameCtrl.text.trim().isEmpty) return;
-              final res = await ApiService.postData('customer', {
+              final res = await ApiService.postData('supplier', {
                 "customer_type": "Individual",
                 'company_name': nameCtrl.text.trim(),
                 'mobile': mobileCtrl.text.trim(),
@@ -596,9 +613,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 'branch_id': Preference.getString(PrefKeys.locationId),
               }, licenceNo: Preference.getint(PrefKeys.licenseNo));
               if (res != null && res['status'] == true) {
-                showCustomSnackbarSuccess(context, 'Customer created');
+                showCustomSnackbarSuccess(context, 'Supplier created');
                 bloc.add(
-                  EstLoadInit(),
+                  PurchaseOrderLoadInit(),
                 ); // reload state so new customer is available
                 Navigator.pop(context);
               } else {
@@ -612,7 +629,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
     );
   }
 
-  void _editAddresses(EstState state, EstBloc bloc) {
+  void _editAddresses(PurchaseOrderState state, PurchaseOrderBloc bloc) {
     final billing = TextEditingController(
       text: state.cashSaleDefault
           ? cashBillingController.text

@@ -1,4 +1,3 @@
-// estimate_bloc.dart
 import 'dart:convert';
 import 'dart:io';
 
@@ -6,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
-import 'package:ims/ui/sales/models/estimate_data.dart';
+import 'package:ims/ui/sales/models/debitnote_model.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/utils/prefence.dart';
@@ -14,119 +13,119 @@ import 'package:ims/utils/snackbar.dart';
 import 'package:intl/intl.dart';
 
 /// ------------------- EVENTS -------------------
-abstract class EstEvent {}
+abstract class DebitNoteEvent {}
 
-class EstLoadInit extends EstEvent {
-  final EstimateData? existing;
-  EstLoadInit({this.existing});
+class DebitNoteLoadInit extends DebitNoteEvent {
+  final DebitNoteData? existing;
+  DebitNoteLoadInit({this.existing});
 }
 
-class EstSelectCustomer extends EstEvent {
+class DebitNoteSelectCustomer extends DebitNoteEvent {
   final CustomerModel? c;
-  EstSelectCustomer(this.c);
+  DebitNoteSelectCustomer(this.c);
 }
 
-class EstToggleCashSale extends EstEvent {
+class DebitNoteToggleCashSale extends DebitNoteEvent {
   final bool enabled;
-  EstToggleCashSale(this.enabled);
+  DebitNoteToggleCashSale(this.enabled);
 }
 
-class EstAddRow extends EstEvent {}
+class DebitNoteAddRow extends DebitNoteEvent {}
 
-class EstRemoveRow extends EstEvent {
+class DebitNoteRemoveRow extends DebitNoteEvent {
   final String id;
-  EstRemoveRow(this.id);
+  DebitNoteRemoveRow(this.id);
 }
 
-class EstUpdateRow extends EstEvent {
+class DebitNoteUpdateRow extends DebitNoteEvent {
   final GlobalItemRow row;
-  EstUpdateRow(this.row);
+  DebitNoteUpdateRow(this.row);
 }
 
-class EstSelectCatalogForRow extends EstEvent {
+class DebitNoteSelectCatalogForRow extends DebitNoteEvent {
   final String rowId;
   final ItemServiceModel item;
-  EstSelectCatalogForRow(this.rowId, this.item);
+  DebitNoteSelectCatalogForRow(this.rowId, this.item);
 }
 
-class EstSelectVariantForRow extends EstEvent {
+class DebitNoteSelectVariantForRow extends DebitNoteEvent {
   final String rowId;
   final VariantModel variant;
-  EstSelectVariantForRow(this.rowId, this.variant);
+  DebitNoteSelectVariantForRow(this.rowId, this.variant);
 }
 
-class EstToggleUnitForRow extends EstEvent {
+class DebitNoteToggleUnitForRow extends DebitNoteEvent {
   final String rowId;
   final bool sellInBase;
-  EstToggleUnitForRow(this.rowId, this.sellInBase);
+  DebitNoteToggleUnitForRow(this.rowId, this.sellInBase);
 }
 
-class EstApplyHsnToRow extends EstEvent {
+class DebitNoteApplyHsnToRow extends DebitNoteEvent {
   final String rowId;
   final HsnModel hsn;
-  EstApplyHsnToRow(this.rowId, this.hsn);
+  DebitNoteApplyHsnToRow(this.rowId, this.hsn);
 }
 
-class EstAddCharge extends EstEvent {
+class DebitNoteAddCharge extends DebitNoteEvent {
   final AdditionalCharge charge;
-  EstAddCharge(this.charge);
+  DebitNoteAddCharge(this.charge);
 }
 
-class EstRemoveCharge extends EstEvent {
+class DebitNoteRemoveCharge extends DebitNoteEvent {
   final String id;
-  EstRemoveCharge(this.id);
+  DebitNoteRemoveCharge(this.id);
 }
 
-class EstUpdateCharge extends EstEvent {
+class DebitNoteUpdateCharge extends DebitNoteEvent {
   final AdditionalCharge charge;
-  EstUpdateCharge(this.charge);
+  DebitNoteUpdateCharge(this.charge);
 }
 
-class EstAddDiscount extends EstEvent {
+class DebitNoteAddDiscount extends DebitNoteEvent {
   final DiscountLine d;
-  EstAddDiscount(this.d);
+  DebitNoteAddDiscount(this.d);
 }
 
-class EstRemoveDiscount extends EstEvent {
+class DebitNoteRemoveDiscount extends DebitNoteEvent {
   final String id;
-  EstRemoveDiscount(this.id);
+  DebitNoteRemoveDiscount(this.id);
 }
 
 /// ---------- NEW: misc charges events ----------
-class EstAddMiscCharge extends EstEvent {
+class DebitNoteAddMiscCharge extends DebitNoteEvent {
   final GlobalMiscChargeEntry m;
-  EstAddMiscCharge(this.m);
+  DebitNoteAddMiscCharge(this.m);
 }
 
-class EstRemoveMiscCharge extends EstEvent {
+class DebitNoteRemoveMiscCharge extends DebitNoteEvent {
   final String id;
-  EstRemoveMiscCharge(this.id);
+  DebitNoteRemoveMiscCharge(this.id);
 }
 
-class EstUpdateMiscCharge extends EstEvent {
+class DebitNoteUpdateMiscCharge extends DebitNoteEvent {
   final GlobalMiscChargeEntry m;
-  EstUpdateMiscCharge(this.m);
+  DebitNoteUpdateMiscCharge(this.m);
 }
 
 /// ----------------------------------------------
-class EstCalculate extends EstEvent {}
+class DebitNoteCalculate extends DebitNoteEvent {}
 
-class EstSave extends EstEvent {}
+class DebitNoteSave extends DebitNoteEvent {}
 
-class EstToggleRoundOff extends EstEvent {
+class DebitNoteToggleRoundOff extends DebitNoteEvent {
   final bool value;
-  EstToggleRoundOff(this.value);
+  DebitNoteToggleRoundOff(this.value);
 }
 
 /// ------------------- STATE -------------------
-class EstState {
+class DebitNoteState {
   final List<CustomerModel> customers;
   final CustomerModel? selectedCustomer;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
-  final String estimateNo;
-  final DateTime? estimateDate;
+  final String debitNoteNo;
+  final DateTime? debitNoteDate;
   final DateTime? validityDate;
   final int validForDays;
   final List<ItemServiceModel> catalogue;
@@ -148,14 +147,14 @@ class EstState {
   final List<String> notes;
   final List<String> terms;
 
-  EstState({
+  DebitNoteState({
     this.customers = const [],
     this.selectedCustomer,
     this.cashSaleDefault = false,
-    this.prefix = 'EST',
-    this.estimateNo = '',
+    this.prefix = '',
+    this.debitNoteNo = '',
     this.hsnMaster = const [],
-    this.estimateDate,
+    this.debitNoteDate,
     this.validityDate,
     this.validForDays = 0,
     this.catalogue = const [],
@@ -174,13 +173,13 @@ class EstState {
     this.terms = const [],
   });
 
-  EstState copyWith({
+  DebitNoteState copyWith({
     List<CustomerModel>? customers,
     CustomerModel? selectedCustomer,
     bool? cashSaleDefault,
     String? prefix,
-    String? estimateNo,
-    DateTime? estimateDate,
+    String? debitNoteNo,
+    DateTime? debitNoteDate,
     List<HsnModel>? hsnMaster,
     DateTime? validityDate,
     int? validForDays,
@@ -199,13 +198,13 @@ class EstState {
     List<String>? notes,
     List<String>? terms,
   }) {
-    return EstState(
+    return DebitNoteState(
       customers: customers ?? this.customers,
       selectedCustomer: selectedCustomer ?? this.selectedCustomer,
       cashSaleDefault: cashSaleDefault ?? this.cashSaleDefault,
       prefix: prefix ?? this.prefix,
-      estimateNo: estimateNo ?? this.estimateNo,
-      estimateDate: estimateDate ?? this.estimateDate,
+      debitNoteNo: debitNoteNo ?? this.debitNoteNo,
+      debitNoteDate: debitNoteDate ?? this.debitNoteDate,
       hsnMaster: hsnMaster ?? this.hsnMaster,
       validityDate: validityDate ?? this.validityDate,
       validForDays: validForDays ?? this.validForDays,
@@ -228,7 +227,7 @@ class EstState {
 }
 
 /// ------------------- SAVE EVENT (UI) -------------------
-class EstSaveWithUIData extends EstEvent {
+class DebitNoteSaveWithUIData extends DebitNoteEvent {
   final String customerName;
   final String? updateId;
   final String mobile;
@@ -238,7 +237,7 @@ class EstSaveWithUIData extends EstEvent {
   final List<String> terms;
   final File? signatureImage; // NEW
 
-  EstSaveWithUIData({
+  DebitNoteSaveWithUIData({
     required this.customerName,
     required this.mobile,
     required this.billingAddress,
@@ -250,50 +249,53 @@ class EstSaveWithUIData extends EstEvent {
   });
 }
 
-final GlobalKey<NavigatorState> estimateNavigatorKey =
+final GlobalKey<NavigatorState> debitNoteNavigatorKey =
     GlobalKey<NavigatorState>();
 
 /// ------------------- BLOC -------------------
-class EstBloc extends Bloc<EstEvent, EstState> {
+class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
   final GLobalRepository repo;
-  EstBloc({required this.repo}) : super(EstState()) {
-    on<EstLoadInit>((event, emit) async {
+  DebitNoteBloc({required this.repo}) : super(DebitNoteState()) {
+    on<DebitNoteLoadInit>((event, emit) async {
       await _onLoad(event, emit);
 
       if (event.existing != null) {
-        emit(_prefillEstimate(event.existing!, state));
-        add(EstCalculate());
+        emit(_prefillDebitNote(event.existing!, state));
+        add(DebitNoteCalculate());
       }
     });
-    on<EstSelectCustomer>(_onSelectCustomer);
-    on<EstToggleCashSale>(_onToggleCashSale);
-    on<EstAddRow>(_onAddRow);
-    on<EstRemoveRow>(_onRemoveRow);
-    on<EstUpdateRow>(_onUpdateRow);
-    on<EstSelectCatalogForRow>(_onSelectCatalogForRow);
-    on<EstSelectVariantForRow>(_onSelectVariantForRow);
-    on<EstToggleUnitForRow>(_onToggleUnitForRow);
-    on<EstSaveWithUIData>(_onSaveWithUIData);
-    on<EstApplyHsnToRow>(_onApplyHsnToRow);
-    on<EstAddCharge>(_onAddCharge);
-    on<EstRemoveCharge>(_onRemoveCharge);
-    on<EstUpdateCharge>(_onUpdateCharge);
-    on<EstAddDiscount>(_onAddDiscount);
-    on<EstRemoveDiscount>(_onRemoveDiscount);
+    on<DebitNoteSelectCustomer>(_onSelectCustomer);
+    on<DebitNoteToggleCashSale>(_onToggleCashSale);
+    on<DebitNoteAddRow>(_onAddRow);
+    on<DebitNoteRemoveRow>(_onRemoveRow);
+    on<DebitNoteUpdateRow>(_onUpdateRow);
+    on<DebitNoteSelectCatalogForRow>(_onSelectCatalogForRow);
+    on<DebitNoteSelectVariantForRow>(_onSelectVariantForRow);
+    on<DebitNoteToggleUnitForRow>(_onToggleUnitForRow);
+    on<DebitNoteSaveWithUIData>(_onSaveWithUIData);
+    on<DebitNoteApplyHsnToRow>(_onApplyHsnToRow);
+    on<DebitNoteAddCharge>(_onAddCharge);
+    on<DebitNoteRemoveCharge>(_onRemoveCharge);
+    on<DebitNoteUpdateCharge>(_onUpdateCharge);
+    on<DebitNoteAddDiscount>(_onAddDiscount);
+    on<DebitNoteRemoveDiscount>(_onRemoveDiscount);
 
     // misc
-    on<EstAddMiscCharge>(_onAddMiscCharge);
-    on<EstRemoveMiscCharge>(_onRemoveMiscCharge);
-    on<EstUpdateMiscCharge>(_onUpdateMiscCharge);
+    on<DebitNoteAddMiscCharge>(_onAddMiscCharge);
+    on<DebitNoteRemoveMiscCharge>(_onRemoveMiscCharge);
+    on<DebitNoteUpdateMiscCharge>(_onUpdateMiscCharge);
 
-    on<EstToggleRoundOff>(_onToggleRoundOff);
-    on<EstCalculate>(_onCalculate);
+    on<DebitNoteToggleRoundOff>(_onToggleRoundOff);
+    on<DebitNoteCalculate>(_onCalculate);
   }
 
-  Future<void> _onLoad(EstLoadInit e, Emitter<EstState> emit) async {
+  Future<void> _onLoad(
+    DebitNoteLoadInit e,
+    Emitter<DebitNoteState> emit,
+  ) async {
     try {
       final customers = await repo.fetchCustomers();
-      final estimateNo = await repo.fetchEstimateNo();
+      final debitNoteNo = await repo.fetchDebitNoteNo();
       final catalogue = await repo.fetchCatalogue();
       final hsnList = await repo.fetchHsnList();
 
@@ -308,7 +310,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
       emit(
         state.copyWith(
           customers: customers,
-          estimateNo: estimateNo,
+          debitNoteNo: debitNoteNo,
           catalogue: catalogue,
           hsnMaster: hsnList,
           miscMasterList: miscMaster,
@@ -317,15 +319,20 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         ),
       );
 
-      add(EstCalculate());
+      add(DebitNoteCalculate());
     } catch (err) {
       print("❌ Load error: $err");
     }
   }
 
-  void _onSelectCustomer(EstSelectCustomer e, Emitter<EstState> emit) =>
-      emit(state.copyWith(selectedCustomer: e.c));
-  void _onToggleCashSale(EstToggleCashSale e, Emitter<EstState> emit) {
+  void _onSelectCustomer(
+    DebitNoteSelectCustomer e,
+    Emitter<DebitNoteState> emit,
+  ) => emit(state.copyWith(selectedCustomer: e.c));
+  void _onToggleCashSale(
+    DebitNoteToggleCashSale e,
+    Emitter<DebitNoteState> emit,
+  ) {
     if (e.enabled) {
       emit(
         state.copyWith(
@@ -343,7 +350,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     }
   }
 
-  void _onAddRow(EstAddRow e, Emitter<EstState> emit) {
+  void _onAddRow(DebitNoteAddRow e, Emitter<DebitNoteState> emit) {
     emit(
       state.copyWith(
         rows: [
@@ -354,14 +361,14 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     );
   }
 
-  void _onRemoveRow(EstRemoveRow e, Emitter<EstState> emit) {
+  void _onRemoveRow(DebitNoteRemoveRow e, Emitter<DebitNoteState> emit) {
     emit(
       state.copyWith(rows: state.rows.where((r) => r.localId != e.id).toList()),
     );
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
-  void _onUpdateRow(EstUpdateRow e, Emitter<EstState> emit) {
+  void _onUpdateRow(DebitNoteUpdateRow e, Emitter<DebitNoteState> emit) {
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -370,12 +377,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
   void _onSelectCatalogForRow(
-    EstSelectCatalogForRow e,
-    Emitter<EstState> emit,
+    DebitNoteSelectCatalogForRow e,
+    Emitter<DebitNoteState> emit,
   ) {
     emit(
       state.copyWith(
@@ -404,12 +411,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
   void _onSelectVariantForRow(
-    EstSelectVariantForRow e,
-    Emitter<EstState> emit,
+    DebitNoteSelectVariantForRow e,
+    Emitter<DebitNoteState> emit,
   ) {
     emit(
       state.copyWith(
@@ -428,10 +435,13 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
-  void _onToggleUnitForRow(EstToggleUnitForRow e, Emitter<EstState> emit) {
+  void _onToggleUnitForRow(
+    DebitNoteToggleUnitForRow e,
+    Emitter<DebitNoteState> emit,
+  ) {
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -452,10 +462,13 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
-  void _onApplyHsnToRow(EstApplyHsnToRow e, Emitter<EstState> emit) {
+  void _onApplyHsnToRow(
+    DebitNoteApplyHsnToRow e,
+    Emitter<DebitNoteState> emit,
+  ) {
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -472,24 +485,24 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
-  void _onAddCharge(EstAddCharge e, Emitter<EstState> emit) {
+  void _onAddCharge(DebitNoteAddCharge e, Emitter<DebitNoteState> emit) {
     emit(state.copyWith(charges: [...state.charges, e.charge]));
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
-  void _onRemoveCharge(EstRemoveCharge e, Emitter<EstState> emit) {
+  void _onRemoveCharge(DebitNoteRemoveCharge e, Emitter<DebitNoteState> emit) {
     emit(
       state.copyWith(
         charges: state.charges.where((c) => c.id != e.id).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
-  void _onUpdateCharge(EstUpdateCharge e, Emitter<EstState> emit) {
+  void _onUpdateCharge(DebitNoteUpdateCharge e, Emitter<DebitNoteState> emit) {
     emit(
       state.copyWith(
         charges: state.charges.map((c) {
@@ -498,46 +511,61 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
-  void _onAddDiscount(EstAddDiscount e, Emitter<EstState> emit) {
+  void _onAddDiscount(DebitNoteAddDiscount e, Emitter<DebitNoteState> emit) {
     emit(state.copyWith(discounts: [...state.discounts, e.d]));
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
-  void _onRemoveDiscount(EstRemoveDiscount e, Emitter<EstState> emit) {
+  void _onRemoveDiscount(
+    DebitNoteRemoveDiscount e,
+    Emitter<DebitNoteState> emit,
+  ) {
     emit(
       state.copyWith(
         discounts: state.discounts.where((d) => d.id != e.id).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
-  void _onToggleRoundOff(EstToggleRoundOff e, Emitter<EstState> emit) {
+  void _onToggleRoundOff(
+    DebitNoteToggleRoundOff e,
+    Emitter<DebitNoteState> emit,
+  ) {
     emit(state.copyWith(autoRound: e.value));
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
   // ------------------- MISC CHARGE HANDLERS -------------------
-  void _onAddMiscCharge(EstAddMiscCharge e, Emitter<EstState> emit) {
+  void _onAddMiscCharge(
+    DebitNoteAddMiscCharge e,
+    Emitter<DebitNoteState> emit,
+  ) {
     // When adding from UI, user may select an item from master list or create custom.
-    // We'll accept the provided MiscChargeEntry as-is (it should already include gst/ledger if selected)
+    // We'll accept the provided GlobalMiscChargeEntry as-is (it should already include gst/ledger if selected)
     emit(state.copyWith(miscCharges: [...state.miscCharges, e.m]));
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
-  void _onRemoveMiscCharge(EstRemoveMiscCharge e, Emitter<EstState> emit) {
+  void _onRemoveMiscCharge(
+    DebitNoteRemoveMiscCharge e,
+    Emitter<DebitNoteState> emit,
+  ) {
     emit(
       state.copyWith(
         miscCharges: state.miscCharges.where((m) => m.id != e.id).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
-  void _onUpdateMiscCharge(EstUpdateMiscCharge e, Emitter<EstState> emit) {
+  void _onUpdateMiscCharge(
+    DebitNoteUpdateMiscCharge e,
+    Emitter<DebitNoteState> emit,
+  ) {
     emit(
       state.copyWith(
         miscCharges: state.miscCharges.map((m) {
@@ -546,11 +574,11 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(DebitNoteCalculate());
   }
 
   // ------------------- CALCULATION -------------------
-  void _onCalculate(EstCalculate e, Emitter<EstState> emit) {
+  void _onCalculate(DebitNoteCalculate e, Emitter<DebitNoteState> emit) {
     final updatedRows = state.rows.map((r) => r.recalc()).toList();
 
     double subtotal = 0;
@@ -612,8 +640,8 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
   // ------------------- SAVE -------------------
   Future<void> _onSaveWithUIData(
-    EstSaveWithUIData e,
-    Emitter<EstState> emit,
+    DebitNoteSaveWithUIData e,
+    Emitter<DebitNoteState> emit,
   ) async {
     try {
       final state = this.state;
@@ -716,14 +744,13 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         "address_0": billing,
         "address_1": shipping,
         "prefix": state.prefix,
-        "no": int.tryParse(state.estimateNo),
-        "estimate_date": DateFormat(
+        "no": int.tryParse(state.debitNoteNo),
+        "debitnote_date": DateFormat(
           'yyyy-MM-dd',
-        ).format(state.estimateDate ?? DateTime.now()),
-        "payment_terms": state.validForDays,
-        if (state.validityDate != null)
-          "due_date": DateFormat('yyyy-MM-dd').format(state.validityDate!),
+        ).format(state.debitNoteDate ?? DateTime.now()),
         "case_sale": isCash,
+        // "invoice_no": 1,
+        // "invoice_id": "6937ccd3e69951d95725956a",
         "add_note": jsonEncode(e.notes),
         "te_co": jsonEncode(e.terms),
         "sub_totle": state.subtotal,
@@ -739,12 +766,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
       if (itemRows.isEmpty && serviceRows.isEmpty) {
         showCustomSnackbarError(
-          estimateNavigatorKey.currentContext!,
+          debitNoteNavigatorKey.currentContext!,
           "Add atleast one item or service",
         );
         return;
       } else {
-        final res = await repo.saveEstimate(
+        final res = await repo.saveDebitNote(
           payload: payload,
           signatureFile: e.signatureImage != null
               ? XFile(e.signatureImage!.path)
@@ -754,19 +781,19 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
         if (res?['status'] == true) {
           showCustomSnackbarSuccess(
-            estimateNavigatorKey.currentContext!,
+            debitNoteNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
         } else {
           showCustomSnackbarError(
-            estimateNavigatorKey.currentContext!,
+            debitNoteNavigatorKey.currentContext!,
             res?['message'] ?? "Save failed",
           );
         }
       }
     } catch (err) {
       showCustomSnackbarError(
-        estimateNavigatorKey.currentContext!,
+        debitNoteNavigatorKey.currentContext!,
         err.toString(),
       );
     }
@@ -794,9 +821,7 @@ extension GlobalItemRowCalc on GlobalItemRow {
   }
 }
 
-/// ------------------- PREFILL HELPER -------------------
-/// Map server EstimateData -> UI state; lookup misc master list for gst/ledger/hsn
-EstState _prefillEstimate(EstimateData data, EstState s) {
+DebitNoteState _prefillDebitNote(DebitNoteData data, DebitNoteState s) {
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.customerId,
@@ -837,14 +862,14 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
   // ---------------- MISC CHARGES (match by name with master) ----------------
   final mappedMisc = <GlobalMiscChargeEntry>[];
   for (final m in data.miscCharges) {
-    final nameFromEstimate = (m.name).trim().toLowerCase();
-    if (nameFromEstimate.isEmpty) continue;
+    final nameFromDebitNote = (m.name).trim().toLowerCase();
+    if (nameFromDebitNote.isEmpty) continue;
 
     // try to find in misc master list safely
     MiscChargeModelList? match;
     try {
       match = s.miscMasterList.firstWhere(
-        (mx) => (mx.name).trim().toLowerCase() == nameFromEstimate,
+        (mx) => (mx.name).trim().toLowerCase() == nameFromDebitNote,
       );
     } catch (_) {
       match = null;
@@ -955,7 +980,7 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
     customers: s.customers,
     selectedCustomer: data.caseSale ? null : selectedCustomer,
     prefix: data.prefix,
-    estimateNo: data.no.toString(),
+    debitNoteNo: data.no.toString(),
     rows: rows,
     charges: mappedCharges,
     discounts: mappedDiscounts,
@@ -964,9 +989,7 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
     totalGst: (data.subGst).toDouble(),
     totalAmount: (data.totalAmount).toDouble(),
     autoRound: data.autoRound,
-    estimateDate: data.estimateDate,
-    validityDate: data.estimateDate.add(Duration(days: data.paymentTerms)),
-    validForDays: data.paymentTerms,
+    debitNoteDate: data.debitNoteDate,
     cashSaleDefault: data.caseSale,
   );
 }

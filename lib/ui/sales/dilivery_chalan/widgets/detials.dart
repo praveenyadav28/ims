@@ -1,0 +1,91 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:ims/ui/sales/dilivery_chalan/state/dilivery_bloc.dart';
+import 'package:ims/utils/sizes.dart';
+import 'package:ims/utils/textfield.dart';
+import 'package:intl/intl.dart';
+
+class DiliveryChallanDetailsCard extends StatelessWidget {
+  const DiliveryChallanDetailsCard({
+    super.key,
+    required this.prefixController,
+    required this.invoiceNoController,
+    required this.pickedInvoiceDate,
+    required this.onTapInvoiceDate,
+  });
+
+  final TextEditingController prefixController;
+  final TextEditingController invoiceNoController;
+  final DateTime? pickedInvoiceDate;
+  final VoidCallback onTapInvoiceDate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        nameField(
+          text: "Dilivery Challan No.",
+          child: Row(
+            children: [
+              Expanded(
+                child: CommonTextField(
+                  controller: prefixController,
+                  hintText: 'Prefix',
+                  onChanged: (value) {
+                    DiliveryChallanBloc bloc = context
+                        .read<DiliveryChallanBloc>();
+                    bloc.emit(
+                      bloc.state.copyWith(
+                        diliveryChallanNo: invoiceNoController.text,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: CommonTextField(
+                  controller: invoiceNoController,
+                  hintText: 'Invoice No',
+                  onChanged: (value) {
+                    DiliveryChallanBloc bloc = context
+                        .read<DiliveryChallanBloc>();
+                    bloc.emit(
+                      bloc.state.copyWith(
+                        diliveryChallanNo: invoiceNoController.text,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          flix: 30,
+        ),
+
+        SizedBox(height: Sizes.height * .03),
+        nameField(
+          text: "Challan Date",
+          child: Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: CommonTextField(
+                  onTap: onTapInvoiceDate,
+                  controller: TextEditingController(
+                    text: pickedInvoiceDate == null
+                        ? 'Select Date'
+                        : DateFormat('yyyy-MM-dd').format(pickedInvoiceDate!),
+                  ),
+                ),
+              ),
+              Spacer(flex: 2),
+            ],
+          ),
+          flix: 30,
+        ),
+      ],
+    );
+  }
+}

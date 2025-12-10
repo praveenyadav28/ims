@@ -1,4 +1,4 @@
-// estimate_bloc.dart
+// performa_bloc.dart
 import 'dart:convert';
 import 'dart:io';
 
@@ -6,127 +6,127 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
-import 'package:ims/ui/sales/models/estimate_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
+import 'package:ims/ui/sales/models/performa_data.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:intl/intl.dart';
 
 /// ------------------- EVENTS -------------------
-abstract class EstEvent {}
+abstract class PerformaEvent {}
 
-class EstLoadInit extends EstEvent {
-  final EstimateData? existing;
-  EstLoadInit({this.existing});
+class PerformaLoadInit extends PerformaEvent {
+  final PerformaData? existing;
+  PerformaLoadInit({this.existing});
 }
 
-class EstSelectCustomer extends EstEvent {
+class PerfromaSelectCustomer extends PerformaEvent {
   final CustomerModel? c;
-  EstSelectCustomer(this.c);
+  PerfromaSelectCustomer(this.c);
 }
 
-class EstToggleCashSale extends EstEvent {
+class PerformaToggleCashSale extends PerformaEvent {
   final bool enabled;
-  EstToggleCashSale(this.enabled);
+  PerformaToggleCashSale(this.enabled);
 }
 
-class EstAddRow extends EstEvent {}
+class PerformaAddRow extends PerformaEvent {}
 
-class EstRemoveRow extends EstEvent {
+class PerfromaRemoveRow extends PerformaEvent {
   final String id;
-  EstRemoveRow(this.id);
+  PerfromaRemoveRow(this.id);
 }
 
-class EstUpdateRow extends EstEvent {
+class PerformaUpdateRow extends PerformaEvent {
   final GlobalItemRow row;
-  EstUpdateRow(this.row);
+  PerformaUpdateRow(this.row);
 }
 
-class EstSelectCatalogForRow extends EstEvent {
+class PerfromaSelectCatalogForRow extends PerformaEvent {
   final String rowId;
   final ItemServiceModel item;
-  EstSelectCatalogForRow(this.rowId, this.item);
+  PerfromaSelectCatalogForRow(this.rowId, this.item);
 }
 
-class EstSelectVariantForRow extends EstEvent {
+class PerfromaSelectVariantForRow extends PerformaEvent {
   final String rowId;
   final VariantModel variant;
-  EstSelectVariantForRow(this.rowId, this.variant);
+  PerfromaSelectVariantForRow(this.rowId, this.variant);
 }
 
-class EstToggleUnitForRow extends EstEvent {
+class PerfromaToggleUnitForRow extends PerformaEvent {
   final String rowId;
   final bool sellInBase;
-  EstToggleUnitForRow(this.rowId, this.sellInBase);
+  PerfromaToggleUnitForRow(this.rowId, this.sellInBase);
 }
 
-class EstApplyHsnToRow extends EstEvent {
+class PerfromaApplyHsnToRow extends PerformaEvent {
   final String rowId;
   final HsnModel hsn;
-  EstApplyHsnToRow(this.rowId, this.hsn);
+  PerfromaApplyHsnToRow(this.rowId, this.hsn);
 }
 
-class EstAddCharge extends EstEvent {
+class PerfromaAddCharge extends PerformaEvent {
   final AdditionalCharge charge;
-  EstAddCharge(this.charge);
+  PerfromaAddCharge(this.charge);
 }
 
-class EstRemoveCharge extends EstEvent {
+class PerfromaRemoveCharge extends PerformaEvent {
   final String id;
-  EstRemoveCharge(this.id);
+  PerfromaRemoveCharge(this.id);
 }
 
-class EstUpdateCharge extends EstEvent {
+class PerformaUpdateCharge extends PerformaEvent {
   final AdditionalCharge charge;
-  EstUpdateCharge(this.charge);
+  PerformaUpdateCharge(this.charge);
 }
 
-class EstAddDiscount extends EstEvent {
+class PerformaAddDiscount extends PerformaEvent {
   final DiscountLine d;
-  EstAddDiscount(this.d);
+  PerformaAddDiscount(this.d);
 }
 
-class EstRemoveDiscount extends EstEvent {
+class PerformaRemoveDiscount extends PerformaEvent {
   final String id;
-  EstRemoveDiscount(this.id);
+  PerformaRemoveDiscount(this.id);
 }
 
 /// ---------- NEW: misc charges events ----------
-class EstAddMiscCharge extends EstEvent {
+class PerformaAddMiscCharge extends PerformaEvent {
   final GlobalMiscChargeEntry m;
-  EstAddMiscCharge(this.m);
+  PerformaAddMiscCharge(this.m);
 }
 
-class EstRemoveMiscCharge extends EstEvent {
+class PerfromaRemoveMiscCharge extends PerformaEvent {
   final String id;
-  EstRemoveMiscCharge(this.id);
+  PerfromaRemoveMiscCharge(this.id);
 }
 
-class EstUpdateMiscCharge extends EstEvent {
+class PerformaUpdateMiscCharge extends PerformaEvent {
   final GlobalMiscChargeEntry m;
-  EstUpdateMiscCharge(this.m);
+  PerformaUpdateMiscCharge(this.m);
 }
 
 /// ----------------------------------------------
-class EstCalculate extends EstEvent {}
+class PerfromaCalculate extends PerformaEvent {}
 
-class EstSave extends EstEvent {}
+class PerfromaSave extends PerformaEvent {}
 
-class EstToggleRoundOff extends EstEvent {
+class PerfromaToggleRoundOff extends PerformaEvent {
   final bool value;
-  EstToggleRoundOff(this.value);
+  PerfromaToggleRoundOff(this.value);
 }
 
 /// ------------------- STATE -------------------
-class EstState {
+class PerformaState {
   final List<CustomerModel> customers;
   final CustomerModel? selectedCustomer;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
-  final String estimateNo;
-  final DateTime? estimateDate;
+  final String performaNo;
+  final DateTime? perfromaDate;
   final DateTime? validityDate;
   final int validForDays;
   final List<ItemServiceModel> catalogue;
@@ -148,14 +148,14 @@ class EstState {
   final List<String> notes;
   final List<String> terms;
 
-  EstState({
+  PerformaState({
     this.customers = const [],
     this.selectedCustomer,
     this.cashSaleDefault = false,
-    this.prefix = 'EST',
-    this.estimateNo = '',
+    this.prefix = '',
+    this.performaNo = '',
     this.hsnMaster = const [],
-    this.estimateDate,
+    this.perfromaDate,
     this.validityDate,
     this.validForDays = 0,
     this.catalogue = const [],
@@ -174,13 +174,13 @@ class EstState {
     this.terms = const [],
   });
 
-  EstState copyWith({
+  PerformaState copyWith({
     List<CustomerModel>? customers,
     CustomerModel? selectedCustomer,
     bool? cashSaleDefault,
     String? prefix,
-    String? estimateNo,
-    DateTime? estimateDate,
+    String? performaNo,
+    DateTime? perfromaDate,
     List<HsnModel>? hsnMaster,
     DateTime? validityDate,
     int? validForDays,
@@ -199,13 +199,13 @@ class EstState {
     List<String>? notes,
     List<String>? terms,
   }) {
-    return EstState(
+    return PerformaState(
       customers: customers ?? this.customers,
       selectedCustomer: selectedCustomer ?? this.selectedCustomer,
       cashSaleDefault: cashSaleDefault ?? this.cashSaleDefault,
       prefix: prefix ?? this.prefix,
-      estimateNo: estimateNo ?? this.estimateNo,
-      estimateDate: estimateDate ?? this.estimateDate,
+      performaNo: performaNo ?? this.performaNo,
+      perfromaDate: perfromaDate ?? this.perfromaDate,
       hsnMaster: hsnMaster ?? this.hsnMaster,
       validityDate: validityDate ?? this.validityDate,
       validForDays: validForDays ?? this.validForDays,
@@ -228,7 +228,7 @@ class EstState {
 }
 
 /// ------------------- SAVE EVENT (UI) -------------------
-class EstSaveWithUIData extends EstEvent {
+class PerfromaSaveWithUIData extends PerformaEvent {
   final String customerName;
   final String? updateId;
   final String mobile;
@@ -238,7 +238,7 @@ class EstSaveWithUIData extends EstEvent {
   final List<String> terms;
   final File? signatureImage; // NEW
 
-  EstSaveWithUIData({
+  PerfromaSaveWithUIData({
     required this.customerName,
     required this.mobile,
     required this.billingAddress,
@@ -250,50 +250,50 @@ class EstSaveWithUIData extends EstEvent {
   });
 }
 
-final GlobalKey<NavigatorState> estimateNavigatorKey =
+final GlobalKey<NavigatorState> perfromaNavigatorKey =
     GlobalKey<NavigatorState>();
 
 /// ------------------- BLOC -------------------
-class EstBloc extends Bloc<EstEvent, EstState> {
+class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
   final GLobalRepository repo;
-  EstBloc({required this.repo}) : super(EstState()) {
-    on<EstLoadInit>((event, emit) async {
+  PerformaBloc({required this.repo}) : super(PerformaState()) {
+    on<PerformaLoadInit>((event, emit) async {
       await _onLoad(event, emit);
 
       if (event.existing != null) {
-        emit(_prefillEstimate(event.existing!, state));
-        add(EstCalculate());
+        emit(_prefillPerforma(event.existing!, state));
+        add(PerfromaCalculate());
       }
     });
-    on<EstSelectCustomer>(_onSelectCustomer);
-    on<EstToggleCashSale>(_onToggleCashSale);
-    on<EstAddRow>(_onAddRow);
-    on<EstRemoveRow>(_onRemoveRow);
-    on<EstUpdateRow>(_onUpdateRow);
-    on<EstSelectCatalogForRow>(_onSelectCatalogForRow);
-    on<EstSelectVariantForRow>(_onSelectVariantForRow);
-    on<EstToggleUnitForRow>(_onToggleUnitForRow);
-    on<EstSaveWithUIData>(_onSaveWithUIData);
-    on<EstApplyHsnToRow>(_onApplyHsnToRow);
-    on<EstAddCharge>(_onAddCharge);
-    on<EstRemoveCharge>(_onRemoveCharge);
-    on<EstUpdateCharge>(_onUpdateCharge);
-    on<EstAddDiscount>(_onAddDiscount);
-    on<EstRemoveDiscount>(_onRemoveDiscount);
+    on<PerfromaSelectCustomer>(_onSelectCustomer);
+    on<PerformaToggleCashSale>(_onToggleCashSale);
+    on<PerformaAddRow>(_onAddRow);
+    on<PerfromaRemoveRow>(_onRemoveRow);
+    on<PerformaUpdateRow>(_onUpdateRow);
+    on<PerfromaSelectCatalogForRow>(_onSelectCatalogForRow);
+    on<PerfromaSelectVariantForRow>(_onSelectVariantForRow);
+    on<PerfromaToggleUnitForRow>(_onToggleUnitForRow);
+    on<PerfromaSaveWithUIData>(_onSaveWithUIData);
+    on<PerfromaApplyHsnToRow>(_onApplyHsnToRow);
+    on<PerfromaAddCharge>(_onAddCharge);
+    on<PerfromaRemoveCharge>(_onRemoveCharge);
+    on<PerformaUpdateCharge>(_onUpdateCharge);
+    on<PerformaAddDiscount>(_onAddDiscount);
+    on<PerformaRemoveDiscount>(_onRemoveDiscount);
 
     // misc
-    on<EstAddMiscCharge>(_onAddMiscCharge);
-    on<EstRemoveMiscCharge>(_onRemoveMiscCharge);
-    on<EstUpdateMiscCharge>(_onUpdateMiscCharge);
+    on<PerformaAddMiscCharge>(_onAddMiscCharge);
+    on<PerfromaRemoveMiscCharge>(_onRemoveMiscCharge);
+    on<PerformaUpdateMiscCharge>(_onUpdateMiscCharge);
 
-    on<EstToggleRoundOff>(_onToggleRoundOff);
-    on<EstCalculate>(_onCalculate);
+    on<PerfromaToggleRoundOff>(_onToggleRoundOff);
+    on<PerfromaCalculate>(_onCalculate);
   }
 
-  Future<void> _onLoad(EstLoadInit e, Emitter<EstState> emit) async {
+  Future<void> _onLoad(PerformaLoadInit e, Emitter<PerformaState> emit) async {
     try {
       final customers = await repo.fetchCustomers();
-      final estimateNo = await repo.fetchEstimateNo();
+      final performaNo = await repo.fetchPerformaNo();
       final catalogue = await repo.fetchCatalogue();
       final hsnList = await repo.fetchHsnList();
 
@@ -308,7 +308,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
       emit(
         state.copyWith(
           customers: customers,
-          estimateNo: estimateNo,
+          performaNo: performaNo,
           catalogue: catalogue,
           hsnMaster: hsnList,
           miscMasterList: miscMaster,
@@ -317,15 +317,20 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         ),
       );
 
-      add(EstCalculate());
+      add(PerfromaCalculate());
     } catch (err) {
       print("❌ Load error: $err");
     }
   }
 
-  void _onSelectCustomer(EstSelectCustomer e, Emitter<EstState> emit) =>
-      emit(state.copyWith(selectedCustomer: e.c));
-  void _onToggleCashSale(EstToggleCashSale e, Emitter<EstState> emit) {
+  void _onSelectCustomer(
+    PerfromaSelectCustomer e,
+    Emitter<PerformaState> emit,
+  ) => emit(state.copyWith(selectedCustomer: e.c));
+  void _onToggleCashSale(
+    PerformaToggleCashSale e,
+    Emitter<PerformaState> emit,
+  ) {
     if (e.enabled) {
       emit(
         state.copyWith(
@@ -343,7 +348,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     }
   }
 
-  void _onAddRow(EstAddRow e, Emitter<EstState> emit) {
+  void _onAddRow(PerformaAddRow e, Emitter<PerformaState> emit) {
     emit(
       state.copyWith(
         rows: [
@@ -354,14 +359,14 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     );
   }
 
-  void _onRemoveRow(EstRemoveRow e, Emitter<EstState> emit) {
+  void _onRemoveRow(PerfromaRemoveRow e, Emitter<PerformaState> emit) {
     emit(
       state.copyWith(rows: state.rows.where((r) => r.localId != e.id).toList()),
     );
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
-  void _onUpdateRow(EstUpdateRow e, Emitter<EstState> emit) {
+  void _onUpdateRow(PerformaUpdateRow e, Emitter<PerformaState> emit) {
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -370,12 +375,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
   void _onSelectCatalogForRow(
-    EstSelectCatalogForRow e,
-    Emitter<EstState> emit,
+    PerfromaSelectCatalogForRow e,
+    Emitter<PerformaState> emit,
   ) {
     emit(
       state.copyWith(
@@ -404,12 +409,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
   void _onSelectVariantForRow(
-    EstSelectVariantForRow e,
-    Emitter<EstState> emit,
+    PerfromaSelectVariantForRow e,
+    Emitter<PerformaState> emit,
   ) {
     emit(
       state.copyWith(
@@ -428,10 +433,13 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
-  void _onToggleUnitForRow(EstToggleUnitForRow e, Emitter<EstState> emit) {
+  void _onToggleUnitForRow(
+    PerfromaToggleUnitForRow e,
+    Emitter<PerformaState> emit,
+  ) {
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -452,10 +460,10 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
-  void _onApplyHsnToRow(EstApplyHsnToRow e, Emitter<EstState> emit) {
+  void _onApplyHsnToRow(PerfromaApplyHsnToRow e, Emitter<PerformaState> emit) {
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -472,24 +480,24 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
-  void _onAddCharge(EstAddCharge e, Emitter<EstState> emit) {
+  void _onAddCharge(PerfromaAddCharge e, Emitter<PerformaState> emit) {
     emit(state.copyWith(charges: [...state.charges, e.charge]));
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
-  void _onRemoveCharge(EstRemoveCharge e, Emitter<EstState> emit) {
+  void _onRemoveCharge(PerfromaRemoveCharge e, Emitter<PerformaState> emit) {
     emit(
       state.copyWith(
         charges: state.charges.where((c) => c.id != e.id).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
-  void _onUpdateCharge(EstUpdateCharge e, Emitter<EstState> emit) {
+  void _onUpdateCharge(PerformaUpdateCharge e, Emitter<PerformaState> emit) {
     emit(
       state.copyWith(
         charges: state.charges.map((c) {
@@ -498,46 +506,58 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
-  void _onAddDiscount(EstAddDiscount e, Emitter<EstState> emit) {
+  void _onAddDiscount(PerformaAddDiscount e, Emitter<PerformaState> emit) {
     emit(state.copyWith(discounts: [...state.discounts, e.d]));
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
-  void _onRemoveDiscount(EstRemoveDiscount e, Emitter<EstState> emit) {
+  void _onRemoveDiscount(
+    PerformaRemoveDiscount e,
+    Emitter<PerformaState> emit,
+  ) {
     emit(
       state.copyWith(
         discounts: state.discounts.where((d) => d.id != e.id).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
-  void _onToggleRoundOff(EstToggleRoundOff e, Emitter<EstState> emit) {
+  void _onToggleRoundOff(
+    PerfromaToggleRoundOff e,
+    Emitter<PerformaState> emit,
+  ) {
     emit(state.copyWith(autoRound: e.value));
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
   // ------------------- MISC CHARGE HANDLERS -------------------
-  void _onAddMiscCharge(EstAddMiscCharge e, Emitter<EstState> emit) {
+  void _onAddMiscCharge(PerformaAddMiscCharge e, Emitter<PerformaState> emit) {
     // When adding from UI, user may select an item from master list or create custom.
-    // We'll accept the provided MiscChargeEntry as-is (it should already include gst/ledger if selected)
+    // We'll accept the provided GlobalMiscChargeEntry as-is (it should already include gst/ledger if selected)
     emit(state.copyWith(miscCharges: [...state.miscCharges, e.m]));
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
-  void _onRemoveMiscCharge(EstRemoveMiscCharge e, Emitter<EstState> emit) {
+  void _onRemoveMiscCharge(
+    PerfromaRemoveMiscCharge e,
+    Emitter<PerformaState> emit,
+  ) {
     emit(
       state.copyWith(
         miscCharges: state.miscCharges.where((m) => m.id != e.id).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
-  void _onUpdateMiscCharge(EstUpdateMiscCharge e, Emitter<EstState> emit) {
+  void _onUpdateMiscCharge(
+    PerformaUpdateMiscCharge e,
+    Emitter<PerformaState> emit,
+  ) {
     emit(
       state.copyWith(
         miscCharges: state.miscCharges.map((m) {
@@ -546,11 +566,11 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         }).toList(),
       ),
     );
-    add(EstCalculate());
+    add(PerfromaCalculate());
   }
 
   // ------------------- CALCULATION -------------------
-  void _onCalculate(EstCalculate e, Emitter<EstState> emit) {
+  void _onCalculate(PerfromaCalculate e, Emitter<PerformaState> emit) {
     final updatedRows = state.rows.map((r) => r.recalc()).toList();
 
     double subtotal = 0;
@@ -612,8 +632,8 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
   // ------------------- SAVE -------------------
   Future<void> _onSaveWithUIData(
-    EstSaveWithUIData e,
-    Emitter<EstState> emit,
+    PerfromaSaveWithUIData e,
+    Emitter<PerformaState> emit,
   ) async {
     try {
       final state = this.state;
@@ -716,10 +736,10 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         "address_0": billing,
         "address_1": shipping,
         "prefix": state.prefix,
-        "no": int.tryParse(state.estimateNo),
-        "estimate_date": DateFormat(
+        "no": int.tryParse(state.performaNo),
+        "proforma_date": DateFormat(
           'yyyy-MM-dd',
-        ).format(state.estimateDate ?? DateTime.now()),
+        ).format(state.perfromaDate ?? DateTime.now()),
         "payment_terms": state.validForDays,
         if (state.validityDate != null)
           "due_date": DateFormat('yyyy-MM-dd').format(state.validityDate!),
@@ -739,12 +759,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
       if (itemRows.isEmpty && serviceRows.isEmpty) {
         showCustomSnackbarError(
-          estimateNavigatorKey.currentContext!,
+          perfromaNavigatorKey.currentContext!,
           "Add atleast one item or service",
         );
         return;
       } else {
-        final res = await repo.saveEstimate(
+        final res = await repo.savePerfroma(
           payload: payload,
           signatureFile: e.signatureImage != null
               ? XFile(e.signatureImage!.path)
@@ -754,19 +774,19 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
         if (res?['status'] == true) {
           showCustomSnackbarSuccess(
-            estimateNavigatorKey.currentContext!,
+            perfromaNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
         } else {
           showCustomSnackbarError(
-            estimateNavigatorKey.currentContext!,
+            perfromaNavigatorKey.currentContext!,
             res?['message'] ?? "Save failed",
           );
         }
       }
     } catch (err) {
       showCustomSnackbarError(
-        estimateNavigatorKey.currentContext!,
+        perfromaNavigatorKey.currentContext!,
         err.toString(),
       );
     }
@@ -794,9 +814,7 @@ extension GlobalItemRowCalc on GlobalItemRow {
   }
 }
 
-/// ------------------- PREFILL HELPER -------------------
-/// Map server EstimateData -> UI state; lookup misc master list for gst/ledger/hsn
-EstState _prefillEstimate(EstimateData data, EstState s) {
+PerformaState _prefillPerforma(PerformaData data, PerformaState s) {
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.customerId,
@@ -837,14 +855,14 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
   // ---------------- MISC CHARGES (match by name with master) ----------------
   final mappedMisc = <GlobalMiscChargeEntry>[];
   for (final m in data.miscCharges) {
-    final nameFromEstimate = (m.name).trim().toLowerCase();
-    if (nameFromEstimate.isEmpty) continue;
+    final nameFromPerforma = (m.name).trim().toLowerCase();
+    if (nameFromPerforma.isEmpty) continue;
 
     // try to find in misc master list safely
     MiscChargeModelList? match;
     try {
       match = s.miscMasterList.firstWhere(
-        (mx) => (mx.name).trim().toLowerCase() == nameFromEstimate,
+        (mx) => (mx.name).trim().toLowerCase() == nameFromPerforma,
       );
     } catch (_) {
       match = null;
@@ -955,7 +973,7 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
     customers: s.customers,
     selectedCustomer: data.caseSale ? null : selectedCustomer,
     prefix: data.prefix,
-    estimateNo: data.no.toString(),
+    performaNo: data.no.toString(),
     rows: rows,
     charges: mappedCharges,
     discounts: mappedDiscounts,
@@ -964,8 +982,8 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
     totalGst: (data.subGst).toDouble(),
     totalAmount: (data.totalAmount).toDouble(),
     autoRound: data.autoRound,
-    estimateDate: data.estimateDate,
-    validityDate: data.estimateDate.add(Duration(days: data.paymentTerms)),
+    perfromaDate: data.performaDate,
+    validityDate: data.performaDate.add(Duration(days: data.paymentTerms)),
     validForDays: data.paymentTerms,
     cashSaleDefault: data.caseSale,
   );
