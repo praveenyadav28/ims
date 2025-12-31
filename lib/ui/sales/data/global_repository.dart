@@ -1,5 +1,6 @@
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
+import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/credit_note_data.dart';
 import 'package:ims/ui/sales/models/debitnote_model.dart';
 import 'package:ims/ui/sales/models/dilivery_data.dart';
@@ -15,6 +16,8 @@ import 'package:ims/utils/api.dart';
 import 'package:ims/utils/prefence.dart';
 
 class GLobalRepository {
+  //
+  //Get Cust/Supp
   Future<List<CustomerModel>> fetchCustomers() async {
     final res = await ApiService.fetchData(
       'get/customer',
@@ -37,6 +40,8 @@ class GLobalRepository {
         .toList();
   }
 
+  //
+  //Get Auto no
   Future<String> fetchEstimateNo() async {
     final res = await ApiService.fetchData(
       'get/estimate_no',
@@ -137,6 +142,8 @@ class GLobalRepository {
     return data;
   }
 
+  //
+  //Get Item/Service/Misc
   Future<List<ItemServiceModel>> fetchCatalogue() async {
     final items = await ApiService.fetchData(
       'get/item',
@@ -187,6 +194,8 @@ class GLobalRepository {
     }
   }
 
+  //
+  //Save Trans
   Future<Map<String, dynamic>?> saveEstimate({
     required Map<String, dynamic> payload,
     XFile? signatureFile,
@@ -343,6 +352,8 @@ class GLobalRepository {
     );
   }
 
+  //
+  //Gst HSN
   Future<List<HsnModel>> fetchHsnList() async {
     final res = await ApiService.fetchData(
       "get/hsn",
@@ -356,6 +367,8 @@ class GLobalRepository {
         .toList();
   }
 
+  //
+  //Get List
   Future<List<EstimateData>> getEstimates() async {
     final res = await ApiService.fetchData(
       "get/estimate",
@@ -462,6 +475,44 @@ class GLobalRepository {
     return parsed.data;
   }
 
+  //
+  //Get By number
+  Future<GlobalDataAll> getTransByNumber({
+    required int transNo,
+    required String transType,
+  }) async {
+    print(transType);
+    final res = await ApiService.fetchDataWithBody(
+      "get/getreletedrecode",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+      body: {
+        "trans_no": transNo,
+        "trans_type": transType,
+        "licence_no": Preference.getint(PrefKeys.licenseNo),
+      },
+    );
+    return GlobalDataAll.fromJson(res['data']);
+  }
+
+  Future<GlobalDataAllPurchase> getTransByNumberPurchase({
+    required int transNo,
+    required String transType,
+  }) async {
+    print(transType);
+    final res = await ApiService.fetchDataWithBody(
+      "get/getreletedrecode",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+      body: {
+        "trans_no": transNo,
+        "trans_type": transType,
+        "licence_no": Preference.getint(PrefKeys.licenseNo),
+      },
+    );
+    return GlobalDataAllPurchase.fromJson(res['data']);
+  }
+
+  //
+  //Delete
   Future<bool> deleteEstimate(String id) async {
     final res = await ApiService.deleteData(
       "estimate/$id",

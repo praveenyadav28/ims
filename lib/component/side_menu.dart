@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:ims/ui/customer_supplier/customer_list.dart';
+import 'package:ims/ui/master/customer_supplier/customer_list.dart';
 import 'package:ims/ui/inventry/item/create.dart';
-import 'package:ims/ui/inventry/item/old_code.dart';
 import 'package:ims/ui/master/company/company_profile.dart';
 import 'package:ims/ui/master/ledger/ledger_master.dart';
 import 'package:ims/ui/master/misc/misc_charge_list.dart';
@@ -49,18 +48,12 @@ class _SideMenuState extends State<SideMenu> {
               },
               title: "Create Item",
             ),
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(const CreateNewItemScreenOld());
-              },
-              title: "Create Item Old",
-            ),
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(const PaymentEntry());
-              },
-              title: "Payment Entry",
-            ),
+            // DrawerListtile(
+            //   onTap: () {
+            //     pushNdRemove(const PaymentEntry());
+            //   },
+            //   title: "Payment Entry",
+            // ),
             DrawerListtile(
               onTap: () {
                 pushNdRemove(const CreateLedger());

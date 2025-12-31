@@ -33,8 +33,7 @@ class CreditNoteDetailsCard extends StatelessWidget {
                   controller: prefixController,
                   hintText: 'Prefix',
                   onChanged: (value) {
-                    CreditNoteBloc bloc = context
-                        .read<CreditNoteBloc>();
+                    CreditNoteBloc bloc = context.read<CreditNoteBloc>();
                     bloc.emit(
                       bloc.state.copyWith(
                         creditNoteNo: creditNoteNoController.text,
@@ -49,8 +48,7 @@ class CreditNoteDetailsCard extends StatelessWidget {
                   controller: creditNoteNoController,
                   hintText: 'Credit Note No',
                   onChanged: (value) {
-                    CreditNoteBloc bloc = context
-                        .read<CreditNoteBloc>();
+                    CreditNoteBloc bloc = context.read<CreditNoteBloc>();
                     bloc.emit(
                       bloc.state.copyWith(
                         creditNoteNo: creditNoteNoController.text,
@@ -85,6 +83,26 @@ class CreditNoteDetailsCard extends StatelessWidget {
               Spacer(flex: 2),
             ],
           ),
+          flix: 30,
+        ),
+
+        SizedBox(height: Sizes.height * .03),
+        nameField(
+          text: "Purchase Invoice No",
+          child: CommonTextField(
+            hintText: 'Number',
+           suffixIcon: IconButton(
+              onPressed: () {
+                final bloc = context.read<CreditNoteBloc>();
+                bloc.add(CreditNoteSearchTransaction());
+              },
+              icon: Icon(Icons.search),
+            ),
+            onChanged: (v) {
+              context.read<CreditNoteBloc>().add(CreditNoteSetTransNo(v));
+            },
+          ),
+
           flix: 30,
         ),
 

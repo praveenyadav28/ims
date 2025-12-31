@@ -31,7 +31,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
         elevation: 0,
         // shadowColor: AppColor.grey,
         title: Text(
-          "Create Reciept Voucher",
+          "Create Payment Voucher",
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             height: 1,
@@ -72,7 +72,6 @@ class _PaymentEntryState extends State<PaymentEntry> {
               children: [
                 Expanded(
                   child: Container(
-                    height: 236,
                     padding: EdgeInsets.symmetric(vertical: 20, horizontal: 19),
                     decoration: BoxDecoration(
                       color: AppColor.white,
@@ -145,7 +144,32 @@ class _PaymentEntryState extends State<PaymentEntry> {
                             ),
                           ],
                         ),
-                        SizedBox(height: Sizes.height * .03),
+                        SizedBox(height: Sizes.height * .02),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Payment Mode",
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppColor.textColor,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            CommonSearchableDropdownField<String>(
+                              controller: partyController,
+                              hintText: "Select Payment Mode",
+                              suggestions: [],
+                              onSuggestionTap: (item) {
+                                setState(() {});
+                              },
+                              suffixIcon: Icon(Icons.keyboard_arrow_down),
+                            ),
+                          ],
+                        ),
+
+                        SizedBox(height: Sizes.height * .02),
                         TitleTextFeild(
                           controller: amountController,
                           titleText: "Enter Payment Amount",
@@ -158,7 +182,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
                 SizedBox(width: 18),
                 Expanded(
                   child: Container(
-                    height: 236,
+                    padding: EdgeInsets.symmetric(vertical: 20, horizontal: 19),
                     decoration: BoxDecoration(
                       color: AppColor.white,
                       boxShadow: [
@@ -170,6 +194,36 @@ class _PaymentEntryState extends State<PaymentEntry> {
                       ],
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColor.borderColor),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TitleTextFeild(titleText: "Payment Date"),
+                            ),
+                            SizedBox(width: 30),
+                            Expanded(
+                              child: TitleTextFeild(
+                                titleText: "Voucher Prifix",
+                              ),
+                            ),
+                            SizedBox(width: 30),
+                            Expanded(
+                              child: TitleTextFeild(
+                                titleText: "Payment Voucher No.",
+                              ),
+                            ),
+                            SizedBox(width: 30),
+                          ],
+                        ),
+                        SizedBox(height: Sizes.height * .037),
+                        TitleTextFeild(
+                          titleText: "Notes",
+                          maxLines: 5,
+                          hintText: "Enter Notes",
+                        ),
+                      ],
                     ),
                   ),
                 ),

@@ -15,7 +15,7 @@ class ApiException implements Exception {
 }
 
 class ApiService {
-  static String baseurl = "http://10.36.223.186:4000/api";
+  static String baseurl = "http://192.168.1.20:4000/api";
   static final Dio dio = Dio(
     BaseOptions(
       baseUrl: baseurl,
@@ -58,6 +58,30 @@ class ApiService {
         queryParameters: queryParameters,
         options: Options(headers: _authHeaders(licenceNo: licenceNo)),
       );
+      return response.data;
+    } catch (e) {
+      throw _formatError(e);
+    }
+  }
+
+  // -------------------- GET with BODY --------------------
+  static Future<dynamic> fetchDataWithBody(
+    String endpoint, {
+    int? licenceNo,
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      final response = await dio.request(
+        "/$endpoint",
+        data: body,
+        queryParameters: queryParameters,
+        options: Options(
+          method: "GET",
+          headers: _authHeaders(licenceNo: licenceNo),
+        ),
+      );
+
       return response.data;
     } catch (e) {
       throw _formatError(e);

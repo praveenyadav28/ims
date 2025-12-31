@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/company_model.dart';
-import 'package:ims/ui/customer_supplier/customer_list.dart';
+import 'package:ims/ui/master/customer_supplier/customer_list.dart';
 import 'package:ims/ui/onboarding/forgot_password.dart';
 import 'package:ims/ui/onboarding/utils/backgraound.dart';
 import 'package:ims/utils/api.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ims/component/side_menu.dart';
-import 'package:ims/ui/customer_supplier/create.dart';
+import 'package:ims/ui/master/customer_supplier/create.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';

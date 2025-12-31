@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
+import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/models/sale_return_data.dart';
@@ -118,6 +119,13 @@ class SaleReturnToggleRoundOff extends SaleReturnEvent {
   SaleReturnToggleRoundOff(this.value);
 }
 
+class SaleReturnSetTransNo extends SaleReturnEvent {
+  final String number;
+  SaleReturnSetTransNo(this.number);
+}
+
+class SaleReturnSearchTransaction extends SaleReturnEvent {}
+
 /// ------------------- STATE -------------------
 class SaleReturnState {
   final List<CustomerModel> customers;
@@ -133,6 +141,8 @@ class SaleReturnState {
   final List<GlobalItemRow> rows;
   final List<AdditionalCharge> charges;
   final List<GlobalMiscChargeEntry> miscCharges; // UI entries
+  final String transNo; // user input number as string
+  final String? transId; // loaded transaction id (from backend) if any
   final List<DiscountLine> discounts;
   final double subtotal;
   final double totalGst;
@@ -172,6 +182,8 @@ class SaleReturnState {
     this.miscMasterList = const [],
     this.notes = const [],
     this.terms = const [],
+    this.transNo = "",
+    this.transId,
   });
 
   SaleReturnState copyWith({
@@ -198,6 +210,8 @@ class SaleReturnState {
     List<MiscChargeModelList>? miscMasterList,
     List<String>? notes,
     List<String>? terms,
+    String? transNo,
+    String? transId,
   }) {
     return SaleReturnState(
       customers: customers ?? this.customers,
@@ -223,6 +237,8 @@ class SaleReturnState {
       miscMasterList: miscMasterList ?? this.miscMasterList,
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
+      transNo: transNo ?? this.transNo,
+      transId: transId ?? this.transId,
     );
   }
 }
@@ -288,6 +304,12 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
 
     on<SaleReturnToggleRoundOff>(_onToggleRoundOff);
     on<SaleReturnCalculate>(_onCalculate);
+
+    on<SaleReturnSetTransNo>((e, emit) {
+      emit(state.copyWith(transNo: e.number));
+    });
+
+    on<SaleReturnSearchTransaction>(_onSearchTransaction);
   }
 
   Future<void> _onLoad(
@@ -645,6 +667,48 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
     );
   }
 
+  // ------------------- SEARCH TRANSACTION -------------------
+  Future<void> _onSearchTransaction(
+    SaleReturnSearchTransaction e,
+    Emitter<SaleReturnState> emit,
+  ) async {
+    try {
+      final transNoInt = int.tryParse(state.transNo) ?? 0;
+      if (transNoInt == 0) {
+        showCustomSnackbarError(
+          saleReturnNavigatorKey.currentContext!,
+          "Enter a valid number",
+        );
+        return;
+      }
+
+      // call repo method provided by you
+      final GlobalDataAll estimate = await repo.getTransByNumber(
+        transNo: transNoInt,
+        transType: 'Invoice',
+      );
+
+      // map estimate -> saleReturn state (without touching prefix, saleReturnNo, saleReturnDate)
+      final newState = _prefillSaleReturnFromTrans(
+        estimate,
+        state,
+      ).copyWith(transId: estimate.id, transNo: state.transNo);
+
+      emit(newState);
+      add(SaleReturnCalculate());
+      showCustomSnackbarSuccess(
+        saleReturnNavigatorKey.currentContext!,
+        "Transaction loaded",
+      );
+    } catch (err) {
+      print("❌ transaction fetch error: $err");
+      showCustomSnackbarError(
+        saleReturnNavigatorKey.currentContext!,
+        "Transaction not found",
+      );
+    }
+  }
+
   // ------------------- SAVE -------------------
   Future<void> _onSaveWithUIData(
     SaleReturnSaveWithUIData e,
@@ -771,6 +835,14 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
         "service_details": serviceRows,
       };
 
+      // include trans fields only if present (from search)
+      if (state.transId != null && state.transId!.isNotEmpty) {
+        payload["invoice_id"] = state.transId;
+      }
+      if (state.transNo.isNotEmpty) {
+        payload["invoice_no"] = int.tryParse(state.transNo) ?? state.transNo;
+      }
+
       if (itemRows.isEmpty && serviceRows.isEmpty) {
         showCustomSnackbarError(
           saleReturnNavigatorKey.currentContext!,
@@ -826,6 +898,179 @@ extension GlobalItemRowCalc on GlobalItemRow {
       return copyWith(taxable: taxable, taxAmount: tax, gross: taxable + tax);
     }
   }
+}
+
+SaleReturnState _prefillSaleReturnFromTrans(
+  GlobalDataAll data,
+  SaleReturnState s,
+) {
+  // find customer from loaded list (or create fallback)
+  final selectedCustomer = s.customers.firstWhere(
+    (c) => c.id == data.customerId,
+    orElse: () => CustomerModel(
+      id: data.customerId ?? "",
+      name: data.customerName,
+      mobile: data.mobile,
+      billingAddress: data.address0,
+      shippingAddress: data.address1,
+    ),
+  );
+
+  // ---------------- ADDITIONAL CHARGES ----------------
+  final mappedCharges = (data.additionalCharges)
+      .map(
+        (c) => AdditionalCharge(
+          id: c.id,
+          name: c.name,
+          amount: (c.amount).toDouble(),
+          taxPercent: 0,
+          taxIncluded: false,
+        ),
+      )
+      .toList();
+
+  // ---------------- DISCOUNTS ----------------
+  final mappedDiscounts = (data.discountLines)
+      .map(
+        (d) => DiscountLine(
+          id: d.id,
+          name: d.name,
+          amount: (d.amount).toDouble(),
+          isPercent: (d.type).toString().toLowerCase() == "percent",
+        ),
+      )
+      .toList();
+
+  // ---------------- MISC CHARGES (match by name with master) ----------------
+  final mappedMisc = <GlobalMiscChargeEntry>[];
+  for (final m in data.miscCharges) {
+    final nameFromSaleReturn = (m.name).trim().toLowerCase();
+    if (nameFromSaleReturn.isEmpty) continue;
+
+    // try to find in misc master list safely
+    MiscChargeModelList? match;
+    try {
+      match = s.miscMasterList.firstWhere(
+        (mx) => (mx.name).trim().toLowerCase() == nameFromSaleReturn,
+      );
+    } catch (_) {
+      match = null;
+    }
+
+    if (match == null) {
+      // skip if master not found
+      continue;
+    }
+
+    double gst = 0;
+    try {
+      gst = match.gst != null ? double.tryParse(match.gst.toString()) ?? 0 : 0;
+    } catch (_) {
+      gst = 0;
+    }
+    final ledgerId = match.ledgerId;
+    final hsn = match.hsn;
+
+    final taxIncluded =
+        (m.type == true) || (m.type.toString().toLowerCase() == "true");
+
+    mappedMisc.add(
+      GlobalMiscChargeEntry(
+        id: UniqueKey().toString(),
+        miscId: match.id,
+        ledgerId: ledgerId,
+        name: m.name,
+        hsn: hsn,
+        gst: gst,
+        amount: (m.amount).toDouble(),
+        taxIncluded: taxIncluded,
+      ),
+    );
+  }
+
+  // empty fallback item (if catalogue doesn't contain item/service)
+  ItemServiceModel emptyItem() {
+    return ItemServiceModel(
+      id: "",
+      type: ItemServiceType.item,
+      name: "",
+      hsn: "",
+      variantValue: '',
+      baseSalePrice: 0,
+      gstRate: 0,
+      gstIncluded: false,
+      baseUnit: '',
+      secondaryUnit: '',
+      conversion: 1,
+      variants: [],
+      itemNo: '',
+      group: '',
+    );
+  }
+
+  // Convert itemDetails -> GlobalItemRow
+  final itemRows = (data.itemDetails).map((i) {
+    final catalogItem = s.catalogue.firstWhere(
+      (c) => c.id == (i.itemId),
+      orElse: () => emptyItem(),
+    );
+
+    return GlobalItemRow(
+      localId: UniqueKey().toString(),
+      product: catalogItem,
+      selectedVariant: null,
+      qty: (i.qty).toInt(),
+      pricePerSelectedUnit: (i.price).toDouble(),
+      discountPercent: (i.discount).toDouble(),
+      hsnOverride: (i.hsn),
+      taxPercent: (i.gstRate).toDouble(),
+      gstInclusiveToggle: i.inclusive,
+      sellInBaseUnit: false,
+    ).recalc();
+  }).toList();
+
+  // Convert serviceDetails -> GlobalItemRow
+  final serviceRows = (data.serviceDetails).map((i) {
+    final catalogService = s.catalogue.firstWhere(
+      (c) => c.id == (i.serviceId),
+      orElse: () => emptyItem(),
+    );
+
+    return GlobalItemRow(
+      localId: UniqueKey().toString(),
+      product: catalogService,
+      selectedVariant: null,
+      qty: (i.qty).toInt(),
+      pricePerSelectedUnit: (i.price).toDouble(),
+      discountPercent: (i.discount).toDouble(),
+      hsnOverride: (i.hsn),
+      taxPercent: (i.gstRate).toDouble(),
+      gstInclusiveToggle: i.inclusive,
+      sellInBaseUnit: false,
+    ).recalc();
+  }).toList();
+
+  final rows = <GlobalItemRow>[
+    ...itemRows,
+    ...serviceRows,
+    if (itemRows.isEmpty && serviceRows.isEmpty)
+      GlobalItemRow(localId: UniqueKey().toString()),
+  ];
+
+  return s.copyWith(
+    customers: s.customers,
+    selectedCustomer: data.caseSale ? null : selectedCustomer,
+    // NOTE: Intentionally NOT overwriting prefix, saleReturnNo, saleReturnDate
+    rows: rows,
+    charges: mappedCharges,
+    discounts: mappedDiscounts,
+    miscCharges: mappedMisc,
+    subtotal: (data.subTotal).toDouble(),
+    totalGst: (data.subGst).toDouble(),
+    totalAmount: (data.totalAmount).toDouble(),
+    autoRound: data.autoRound,
+    cashSaleDefault: data.caseSale,
+  );
 }
 
 SaleReturnState _prefillSaleReturn(SaleReturnData data, SaleReturnState s) {

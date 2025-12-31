@@ -87,7 +87,25 @@ class PurchaseReturnDetailsCard extends StatelessWidget {
           ),
           flix: 30,
         ),
+        SizedBox(height: Sizes.height * .03),
+        nameField(
+          text: "Purchase Invoice No",
+          child: CommonTextField(
+            hintText: 'Number',
+            suffixIcon: IconButton(
+              onPressed: () {
+                final bloc = context.read<PurchaseReturnBloc>();
+                bloc.add(PurchaseReturnSearchTransaction());
+              },
+              icon: Icon(Icons.search),
+            ),
+            onChanged: (v) {
+              context.read<PurchaseReturnBloc>().add(PurchaseReturnSetTransNo(v));
+            },
+          ),
 
+          flix: 30,
+        ),
         SizedBox(height: Sizes.height * .03),
       ],
     );

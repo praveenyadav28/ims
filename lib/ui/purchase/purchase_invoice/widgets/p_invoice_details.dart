@@ -87,7 +87,24 @@ class PurchaseInvoiceDetailsCard extends StatelessWidget {
           ),
           flix: 30,
         ),
+        SizedBox(height: Sizes.height * .03),
+        nameField(
+          text: "Purchase Order No",
+          child: CommonTextField(
+            hintText: 'Number', suffixIcon: IconButton(
+              onPressed: () {
+                final bloc = context.read<PurchaseInvoiceBloc>();
+                bloc.add(PurchaseInvoiceSearchTransaction());
+              },
+              icon: Icon(Icons.search),
+            ),
+            onChanged: (v) {
+              context.read<PurchaseInvoiceBloc>().add(PurchaseInvoiceSetTransNo(v));
+            },
+          ),
 
+          flix: 30,
+        ),
         SizedBox(height: Sizes.height * .03),
       ],
     );

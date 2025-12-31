@@ -38,6 +38,9 @@ class SaleInvoiceData {
   final String address0;
   final String address1;
   final String mobile;
+  final String transId;
+  final int transNo;
+  final String transType;
 
   final String prefix;
   final int no;
@@ -73,6 +76,9 @@ class SaleInvoiceData {
     required this.address1,
     required this.mobile,
     required this.prefix,
+    required this.transId,
+    required this.transNo,
+    required this.transType,
     required this.no,
     required this.saleInvoiceDate,
     required this.paymentTerms,
@@ -100,6 +106,9 @@ class SaleInvoiceData {
     address0: j["address_0"],
     address1: j["address_1"],
     mobile: j["mobile"].toString(),
+    transType: j["trans_type"] ?? "",
+    transId: j["trans_id"],
+    transNo: j["trans_no"],
 
     prefix: j["prefix"],
     no: j["no"],

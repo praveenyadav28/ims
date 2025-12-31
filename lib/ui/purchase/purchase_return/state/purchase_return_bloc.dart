@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
+import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/models/purchase_return_data.dart';
@@ -117,6 +118,13 @@ class PurchaseReturnToggleRoundOff extends PurchaseReturnEvent {
   PurchaseReturnToggleRoundOff(this.value);
 }
 
+class PurchaseReturnSetTransNo extends PurchaseReturnEvent {
+  final String number;
+  PurchaseReturnSetTransNo(this.number);
+}
+
+class PurchaseReturnSearchTransaction extends PurchaseReturnEvent {}
+
 /// ------------------- STATE -------------------
 class PurchaseReturnState {
   final List<CustomerModel> customers;
@@ -125,6 +133,8 @@ class PurchaseReturnState {
   final List<HsnModel> hsnMaster;
   final String prefix;
   final String purchaseReturnNo;
+  final String transNo; // user input number as string
+  final String? transId; // loaded transaction id (from backend) if any
   final DateTime? purchaseReturnDate;
   final List<ItemServiceModel> catalogue;
   final List<GlobalItemRow> rows;
@@ -167,6 +177,8 @@ class PurchaseReturnState {
     this.miscMasterList = const [],
     this.notes = const [],
     this.terms = const [],
+    this.transNo = "",
+    this.transId,
   });
 
   PurchaseReturnState copyWith({
@@ -191,6 +203,8 @@ class PurchaseReturnState {
     List<MiscChargeModelList>? miscMasterList,
     List<String>? notes,
     List<String>? terms,
+    String? transNo,
+    String? transId,
   }) {
     return PurchaseReturnState(
       customers: customers ?? this.customers,
@@ -214,6 +228,8 @@ class PurchaseReturnState {
       miscMasterList: miscMasterList ?? this.miscMasterList,
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
+      transNo: transNo ?? this.transNo,
+      transId: transId ?? this.transId,
     );
   }
 }
@@ -280,6 +296,12 @@ class PurchaseReturnBloc
 
     on<PurchaseReturnToggleRoundOff>(_onToggleRoundOff);
     on<PurchaseReturnCalculate>(_onCalculate);
+
+    on<PurchaseReturnSetTransNo>((e, emit) {
+      emit(state.copyWith(transNo: e.number));
+    });
+
+    on<PurchaseReturnSearchTransaction>(_onSearchTransaction);
   }
 
   Future<void> _onLoad(
@@ -652,6 +674,49 @@ class PurchaseReturnBloc
     );
   }
 
+  // ------------------- SEARCH TRANSACTION -------------------
+  Future<void> _onSearchTransaction(
+    PurchaseReturnSearchTransaction e,
+    Emitter<PurchaseReturnState> emit,
+  ) async {
+    try {
+      final transNoInt = int.tryParse(state.transNo) ?? 0;
+      if (transNoInt == 0) {
+        showCustomSnackbarError(
+          purchaseReturnNavigatorKey.currentContext!,
+          "Enter a valid number",
+        );
+        return;
+      }
+
+      // call repo method provided by you
+      final GlobalDataAllPurchase estimate = await repo
+          .getTransByNumberPurchase(
+            transNo: transNoInt,
+            transType: 'Purchaseinvoice',
+          );
+
+      // map estimate -> PurchaseReturn state (without touching prefix, PurchaseReturnNo, PurchaseReturnDate)
+      final newState = _prefillPurchaseReturnFromTrans(
+        estimate,
+        state,
+      ).copyWith(transId: estimate.id, transNo: state.transNo);
+
+      emit(newState);
+      add(PurchaseReturnCalculate());
+      showCustomSnackbarSuccess(
+        purchaseReturnNavigatorKey.currentContext!,
+        "Transaction loaded",
+      );
+    } catch (err) {
+      print("❌ transaction fetch error: $err");
+      showCustomSnackbarError(
+        purchaseReturnNavigatorKey.currentContext!,
+        "Transaction not found",
+      );
+    }
+  }
+
   // ------------------- SAVE -------------------
   Future<void> _onSaveWithUIData(
     PurchaseReturnSaveWithUIData e,
@@ -757,6 +822,14 @@ class PurchaseReturnBloc
         "discount": discounts,
         "item_details": itemRows,
       };
+      // include trans fields only if present (from search)
+      if (state.transId != null && state.transId!.isNotEmpty) {
+        payload["purchaseinvoice_id"] = state.transId;
+      }
+      if (state.transNo.isNotEmpty) {
+        payload["purchaseinvoice_no"] =
+            int.tryParse(state.transNo) ?? state.transNo;
+      }
 
       if (itemRows.isEmpty) {
         showCustomSnackbarError(
@@ -813,6 +886,156 @@ extension GlobalItemRowCalc on GlobalItemRow {
       return copyWith(taxable: taxable, taxAmount: tax, gross: taxable + tax);
     }
   }
+}
+
+PurchaseReturnState _prefillPurchaseReturnFromTrans(
+  GlobalDataAllPurchase data,
+  PurchaseReturnState s,
+) {
+  // find customer from loaded list (or create fallback)
+  final selectedCustomer = s.customers.firstWhere(
+    (c) => c.id == data.supplierId,
+    orElse: () => CustomerModel(
+      id: data.supplierId ?? "",
+      name: data.supplierName,
+      mobile: data.mobile,
+      billingAddress: data.address0,
+      shippingAddress: data.address1,
+    ),
+  );
+
+  // ---------------- ADDITIONAL CHARGES ----------------
+  final mappedCharges = (data.additionalCharges)
+      .map(
+        (c) => AdditionalCharge(
+          id: c.id,
+          name: c.name,
+          amount: (c.amount).toDouble(),
+          taxPercent: 0,
+          taxIncluded: false,
+        ),
+      )
+      .toList();
+
+  // ---------------- DISCOUNTS ----------------
+  final mappedDiscounts = (data.discountLines)
+      .map(
+        (d) => DiscountLine(
+          id: d.id,
+          name: d.name,
+          amount: (d.amount).toDouble(),
+          isPercent: (d.type).toString().toLowerCase() == "percent",
+        ),
+      )
+      .toList();
+
+  // ---------------- MISC CHARGES (match by name with master) ----------------
+  final mappedMisc = <GlobalMiscChargeEntry>[];
+  for (final m in data.miscCharges) {
+    final nameFromPurchaseReturn = (m.name).trim().toLowerCase();
+    if (nameFromPurchaseReturn.isEmpty) continue;
+
+    // try to find in misc master list safely
+    MiscChargeModelList? match;
+    try {
+      match = s.miscMasterList.firstWhere(
+        (mx) => (mx.name).trim().toLowerCase() == nameFromPurchaseReturn,
+      );
+    } catch (_) {
+      match = null;
+    }
+
+    if (match == null) {
+      // skip if master not found
+      continue;
+    }
+
+    double gst = 0;
+    try {
+      gst = match.gst != null ? double.tryParse(match.gst.toString()) ?? 0 : 0;
+    } catch (_) {
+      gst = 0;
+    }
+    final ledgerId = match.ledgerId;
+    final hsn = match.hsn;
+
+    final taxIncluded =
+        (m.type == true) || (m.type.toString().toLowerCase() == "true");
+
+    mappedMisc.add(
+      GlobalMiscChargeEntry(
+        id: UniqueKey().toString(),
+        miscId: match.id,
+        ledgerId: ledgerId,
+        name: m.name,
+        hsn: hsn,
+        gst: gst,
+        amount: (m.amount).toDouble(),
+        taxIncluded: taxIncluded,
+      ),
+    );
+  }
+
+  // empty fallback item (if catalogue doesn't contain item/service)
+  ItemServiceModel emptyItem() {
+    return ItemServiceModel(
+      id: "",
+      type: ItemServiceType.item,
+      name: "",
+      hsn: "",
+      variantValue: '',
+      baseSalePrice: 0,
+      gstRate: 0,
+      gstIncluded: false,
+      baseUnit: '',
+      secondaryUnit: '',
+      conversion: 1,
+      variants: [],
+      itemNo: '',
+      group: '',
+    );
+  }
+
+  // Convert itemDetails -> GlobalItemRow
+  final itemRows = (data.itemDetails).map((i) {
+    final catalogItem = s.catalogue.firstWhere(
+      (c) => c.id == (i.itemId),
+      orElse: () => emptyItem(),
+    );
+
+    return GlobalItemRow(
+      localId: UniqueKey().toString(),
+      product: catalogItem,
+      selectedVariant: null,
+      qty: (i.qty).toInt(),
+      pricePerSelectedUnit: (i.price).toDouble(),
+      discountPercent: (i.discount).toDouble(),
+      hsnOverride: (i.hsn),
+      taxPercent: (i.gstRate).toDouble(),
+      gstInclusiveToggle: i.inclusive,
+      sellInBaseUnit: false,
+    ).recalc();
+  }).toList();
+
+  final rows = <GlobalItemRow>[
+    ...itemRows,
+    if (itemRows.isEmpty) GlobalItemRow(localId: UniqueKey().toString()),
+  ];
+
+  return s.copyWith(
+    customers: s.customers,
+    selectedCustomer: data.caseSale ? null : selectedCustomer,
+    // NOTE: Intentionally NOT overwriting prefix, PurchaseReturnNo, PurchaseReturnDate
+    rows: rows,
+    charges: mappedCharges,
+    discounts: mappedDiscounts,
+    miscCharges: mappedMisc,
+    subtotal: (data.subTotal).toDouble(),
+    totalGst: (data.subGst).toDouble(),
+    totalAmount: (data.totalAmount).toDouble(),
+    autoRound: data.autoRound,
+    cashSaleDefault: data.caseSale,
+  );
 }
 
 /// ------------------- PREFILL HELPER -------------------

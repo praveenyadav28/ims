@@ -89,6 +89,7 @@ class TitleTextFeild extends StatelessWidget {
   TitleTextFeild({
     super.key,
     this.titleText,
+    this.maxLines,
     this.hintText,
     this.controller,
     this.onChanged,
@@ -104,6 +105,7 @@ class TitleTextFeild extends StatelessWidget {
 
   final String? hintText;
   final String? titleText;
+  final int? maxLines;
   final TextEditingController? controller;
   final bool? readOnly;
   final void Function(String)? onChanged;
@@ -139,6 +141,7 @@ class TitleTextFeild extends StatelessWidget {
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
+          maxLines: maxLines??1,
           validator: validator,
           keyboardType: keyboardType,
           maxLength: maxLength,
@@ -209,7 +212,7 @@ class CommonDropdownField<T> extends StatelessWidget {
         icon: const Icon(
           Icons.keyboard_arrow_down_rounded,
           color: Color(0xFF565D6D),
-        ),
+        ),        
         decoration: InputDecoration(
           labelText: hintText ?? "",
           prefixIcon: prefixIcon,

@@ -1,4 +1,4 @@
-// SaleInvoice_bloc.dart
+// sale_invoice_bloc.dart
 import 'dart:convert';
 import 'dart:io';
 
@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
+import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/models/sale_invoice_data.dart';
@@ -118,6 +119,19 @@ class SaleInvoiceToggleRoundOff extends SaleInvoiceEvent {
   SaleInvoiceToggleRoundOff(this.value);
 }
 
+// ---- new events for transaction search
+class SaleInvoiceSetTransType extends SaleInvoiceEvent {
+  final String type;
+  SaleInvoiceSetTransType(this.type);
+}
+
+class SaleInvoiceSetTransNo extends SaleInvoiceEvent {
+  final String number;
+  SaleInvoiceSetTransNo(this.number);
+}
+
+class SaleInvoiceSearchTransaction extends SaleInvoiceEvent {}
+
 /// ------------------- STATE -------------------
 class SaleInvoiceState {
   final List<CustomerModel> customers;
@@ -127,8 +141,6 @@ class SaleInvoiceState {
   final String prefix;
   final String saleInvoiceNo;
   final DateTime? saleInvoiceDate;
-  final DateTime? validityDate;
-  final int validForDays;
   final List<ItemServiceModel> catalogue;
   final List<GlobalItemRow> rows;
   final List<AdditionalCharge> charges;
@@ -148,6 +160,11 @@ class SaleInvoiceState {
   final List<String> notes;
   final List<String> terms;
 
+  // ---- transaction search state
+  final String transType; // e.g. "Estimate", "Performa", "Challan"
+  final String transNo; // user input number as string
+  final String? transId; // loaded transaction id (from backend) if any
+
   SaleInvoiceState({
     this.customers = const [],
     this.selectedCustomer,
@@ -156,8 +173,6 @@ class SaleInvoiceState {
     this.saleInvoiceNo = '',
     this.hsnMaster = const [],
     this.saleInvoiceDate,
-    this.validityDate,
-    this.validForDays = 0,
     this.catalogue = const [],
     this.rows = const [],
     this.charges = const [],
@@ -172,6 +187,9 @@ class SaleInvoiceState {
     this.miscMasterList = const [],
     this.notes = const [],
     this.terms = const [],
+    this.transType = "Estimate",
+    this.transNo = "",
+    this.transId,
   });
 
   SaleInvoiceState copyWith({
@@ -182,8 +200,6 @@ class SaleInvoiceState {
     String? saleInvoiceNo,
     DateTime? saleInvoiceDate,
     List<HsnModel>? hsnMaster,
-    DateTime? validityDate,
-    int? validForDays,
     List<ItemServiceModel>? catalogue,
     List<GlobalItemRow>? rows,
     List<AdditionalCharge>? charges,
@@ -198,6 +214,9 @@ class SaleInvoiceState {
     List<MiscChargeModelList>? miscMasterList,
     List<String>? notes,
     List<String>? terms,
+    String? transType,
+    String? transNo,
+    String? transId,
   }) {
     return SaleInvoiceState(
       customers: customers ?? this.customers,
@@ -207,8 +226,6 @@ class SaleInvoiceState {
       saleInvoiceNo: saleInvoiceNo ?? this.saleInvoiceNo,
       saleInvoiceDate: saleInvoiceDate ?? this.saleInvoiceDate,
       hsnMaster: hsnMaster ?? this.hsnMaster,
-      validityDate: validityDate ?? this.validityDate,
-      validForDays: validForDays ?? this.validForDays,
       catalogue: catalogue ?? this.catalogue,
       rows: rows ?? this.rows,
       charges: charges ?? this.charges,
@@ -223,6 +240,9 @@ class SaleInvoiceState {
       miscMasterList: miscMasterList ?? this.miscMasterList,
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
+      transType: transType ?? this.transType,
+      transNo: transNo ?? this.transNo,
+      transId: transId ?? this.transId,
     );
   }
 }
@@ -288,6 +308,17 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
 
     on<SaleInvoiceToggleRoundOff>(_onToggleRoundOff);
     on<SaleInvoiceCalculate>(_onCalculate);
+
+    // ----- transaction related handlers -----
+    on<SaleInvoiceSetTransType>((e, emit) {
+      emit(state.copyWith(transType: e.type));
+    });
+
+    on<SaleInvoiceSetTransNo>((e, emit) {
+      emit(state.copyWith(transNo: e.number));
+    });
+
+    on<SaleInvoiceSearchTransaction>(_onSearchTransaction);
   }
 
   Future<void> _onLoad(
@@ -648,6 +679,49 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
     );
   }
 
+  // ------------------- SEARCH TRANSACTION -------------------
+  Future<void> _onSearchTransaction(
+    SaleInvoiceSearchTransaction e,
+    Emitter<SaleInvoiceState> emit,
+  ) async {
+    try {
+      final transNoInt = int.tryParse(state.transNo) ?? 0;
+      if (transNoInt == 0) {
+        showCustomSnackbarError(
+          saleInvoiceNavigatorKey.currentContext!,
+          "Enter a valid number",
+        );
+        return;
+      }
+
+      // call repo method provided by you
+      final GlobalDataAll estimate = await repo.getTransByNumber(
+        transNo: transNoInt,
+        transType: state.transType,
+      );
+
+      // map estimate -> saleInvoice state (without touching prefix, saleInvoiceNo, saleInvoiceDate)
+      final newState = _prefillSaleInvoiceFromTrans(estimate, state).copyWith(
+        transId: estimate.id,
+        transNo: state.transNo,
+        transType: state.transType,
+      );
+
+      emit(newState);
+      add(SaleInvoiceCalculate());
+      showCustomSnackbarSuccess(
+        saleInvoiceNavigatorKey.currentContext!,
+        "Transaction loaded",
+      );
+    } catch (err) {
+      print("❌ transaction fetch error: $err");
+      showCustomSnackbarError(
+        saleInvoiceNavigatorKey.currentContext!,
+        "Transaction not found",
+      );
+    }
+  }
+
   // ------------------- SAVE -------------------
   Future<void> _onSaveWithUIData(
     SaleInvoiceSaveWithUIData e,
@@ -734,7 +808,6 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
       }).toList();
 
       // ---------------- MISC CHARGES (NEW) ----------------
-      // When saving, backend expects only name, amount, type (true => inclusive).
       final miscCharges = state.miscCharges.map((m) {
         return {
           "name": m.name,
@@ -744,7 +817,6 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
       }).toList();
 
       // ---------------- FINAL PAYLOAD ----------------
-
       Map<String, dynamic> payload = {
         "licence_no": Preference.getint(PrefKeys.licenseNo),
         "branch_id": Preference.getString(PrefKeys.locationId),
@@ -759,9 +831,6 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
           'yyyy-MM-dd',
         ).format(state.saleInvoiceDate ?? DateTime.now()),
         "case_sale": isCash,
-        // "trans_id": "693134c8c29133095f0c34d9",
-        // "trans_no": 1,
-        // "trans_type": "Estimate",
         "add_note": jsonEncode(e.notes),
         "te_co": jsonEncode(e.terms),
         "sub_totle": state.subtotal,
@@ -774,6 +843,17 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
         "item_details": itemRows,
         "service_details": serviceRows,
       };
+
+      // include trans fields only if present (from search)
+      if (state.transId != null && state.transId!.isNotEmpty) {
+        payload["trans_id"] = state.transId;
+      }
+      if (state.transNo.isNotEmpty) {
+        payload["trans_no"] = int.tryParse(state.transNo) ?? state.transNo;
+      }
+      if (state.transType.isNotEmpty) {
+        payload["trans_type"] = state.transType;
+      }
 
       if (itemRows.isEmpty && serviceRows.isEmpty) {
         showCustomSnackbarError(
@@ -832,6 +912,184 @@ extension GlobalItemRowCalc on GlobalItemRow {
   }
 }
 
+// ------------------ PREFILL FROM ESTIMATE (or similar transaction) ------------------
+// This maps EstimateData -> SaleInvoiceState but intentionally DOES NOT
+// overwrite prefix, saleInvoiceNo, saleInvoiceDate (per requirement).
+SaleInvoiceState _prefillSaleInvoiceFromTrans(
+  GlobalDataAll data,
+  SaleInvoiceState s,
+) {
+  // find customer from loaded list (or create fallback)
+  final selectedCustomer = s.customers.firstWhere(
+    (c) => c.id == data.customerId,
+    orElse: () => CustomerModel(
+      id: data.customerId ?? "",
+      name: data.customerName,
+      mobile: data.mobile,
+      billingAddress: data.address0,
+      shippingAddress: data.address1,
+    ),
+  );
+
+  // ---------------- ADDITIONAL CHARGES ----------------
+  final mappedCharges = (data.additionalCharges)
+      .map(
+        (c) => AdditionalCharge(
+          id: c.id,
+          name: c.name,
+          amount: (c.amount).toDouble(),
+          taxPercent: 0,
+          taxIncluded: false,
+        ),
+      )
+      .toList();
+
+  // ---------------- DISCOUNTS ----------------
+  final mappedDiscounts = (data.discountLines)
+      .map(
+        (d) => DiscountLine(
+          id: d.id,
+          name: d.name,
+          amount: (d.amount).toDouble(),
+          isPercent: (d.type).toString().toLowerCase() == "percent",
+        ),
+      )
+      .toList();
+
+  // ---------------- MISC CHARGES (match by name with master) ----------------
+  final mappedMisc = <GlobalMiscChargeEntry>[];
+  for (final m in data.miscCharges) {
+    final nameFromSaleInvoice = (m.name).trim().toLowerCase();
+    if (nameFromSaleInvoice.isEmpty) continue;
+
+    // try to find in misc master list safely
+    MiscChargeModelList? match;
+    try {
+      match = s.miscMasterList.firstWhere(
+        (mx) => (mx.name).trim().toLowerCase() == nameFromSaleInvoice,
+      );
+    } catch (_) {
+      match = null;
+    }
+
+    if (match == null) {
+      // skip if master not found
+      continue;
+    }
+
+    double gst = 0;
+    try {
+      gst = match.gst != null ? double.tryParse(match.gst.toString()) ?? 0 : 0;
+    } catch (_) {
+      gst = 0;
+    }
+    final ledgerId = match.ledgerId;
+    final hsn = match.hsn;
+
+    final taxIncluded =
+        (m.type == true) || (m.type.toString().toLowerCase() == "true");
+
+    mappedMisc.add(
+      GlobalMiscChargeEntry(
+        id: UniqueKey().toString(),
+        miscId: match.id,
+        ledgerId: ledgerId,
+        name: m.name,
+        hsn: hsn,
+        gst: gst,
+        amount: (m.amount).toDouble(),
+        taxIncluded: taxIncluded,
+      ),
+    );
+  }
+
+  // empty fallback item (if catalogue doesn't contain item/service)
+  ItemServiceModel emptyItem() {
+    return ItemServiceModel(
+      id: "",
+      type: ItemServiceType.item,
+      name: "",
+      hsn: "",
+      variantValue: '',
+      baseSalePrice: 0,
+      gstRate: 0,
+      gstIncluded: false,
+      baseUnit: '',
+      secondaryUnit: '',
+      conversion: 1,
+      variants: [],
+      itemNo: '',
+      group: '',
+    );
+  }
+
+  // Convert itemDetails -> GlobalItemRow
+  final itemRows = (data.itemDetails).map((i) {
+    final catalogItem = s.catalogue.firstWhere(
+      (c) => c.id == (i.itemId),
+      orElse: () => emptyItem(),
+    );
+
+    return GlobalItemRow(
+      localId: UniqueKey().toString(),
+      product: catalogItem,
+      selectedVariant: null,
+      qty: (i.qty).toInt(),
+      pricePerSelectedUnit: (i.price).toDouble(),
+      discountPercent: (i.discount).toDouble(),
+      hsnOverride: (i.hsn),
+      taxPercent: (i.gstRate).toDouble(),
+      gstInclusiveToggle: i.inclusive,
+      sellInBaseUnit: false,
+    ).recalc();
+  }).toList();
+
+  // Convert serviceDetails -> GlobalItemRow
+  final serviceRows = (data.serviceDetails).map((i) {
+    final catalogService = s.catalogue.firstWhere(
+      (c) => c.id == (i.serviceId),
+      orElse: () => emptyItem(),
+    );
+
+    return GlobalItemRow(
+      localId: UniqueKey().toString(),
+      product: catalogService,
+      selectedVariant: null,
+      qty: (i.qty).toInt(),
+      pricePerSelectedUnit: (i.price).toDouble(),
+      discountPercent: (i.discount).toDouble(),
+      hsnOverride: (i.hsn),
+      taxPercent: (i.gstRate).toDouble(),
+      gstInclusiveToggle: i.inclusive,
+      sellInBaseUnit: false,
+    ).recalc();
+  }).toList();
+
+  final rows = <GlobalItemRow>[
+    ...itemRows,
+    ...serviceRows,
+    if (itemRows.isEmpty && serviceRows.isEmpty)
+      GlobalItemRow(localId: UniqueKey().toString()),
+  ];
+
+  return s.copyWith(
+    customers: s.customers,
+    selectedCustomer: data.caseSale ? null : selectedCustomer,
+    // NOTE: Intentionally NOT overwriting prefix, saleInvoiceNo, saleInvoiceDate
+    rows: rows,
+    charges: mappedCharges,
+    discounts: mappedDiscounts,
+    miscCharges: mappedMisc,
+    subtotal: (data.subTotal).toDouble(),
+    totalGst: (data.subGst).toDouble(),
+    totalAmount: (data.totalAmount).toDouble(),
+    autoRound: data.autoRound,
+    cashSaleDefault: data.caseSale,
+  );
+}
+
+// ------------------ PREFILL FROM EXISTING SALE INVOICE ------------------
+// Map SaleInvoiceData -> SaleInvoiceState (used when editing an existing sale invoice)
 SaleInvoiceState _prefillSaleInvoice(SaleInvoiceData data, SaleInvoiceState s) {
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
@@ -888,7 +1146,6 @@ SaleInvoiceState _prefillSaleInvoice(SaleInvoiceData data, SaleInvoiceState s) {
 
     if (match == null) {
       // Option chosen: SKIP misc charge if master not found.
-      // If you prefer to include anyway with defaults, replace continue with default mapping.
       continue;
     }
 
@@ -1001,8 +1258,6 @@ SaleInvoiceState _prefillSaleInvoice(SaleInvoiceData data, SaleInvoiceState s) {
     totalAmount: (data.totalAmount).toDouble(),
     autoRound: data.autoRound,
     saleInvoiceDate: data.saleInvoiceDate,
-    validityDate: data.saleInvoiceDate.add(Duration(days: data.paymentTerms)),
-    validForDays: data.paymentTerms,
     cashSaleDefault: data.caseSale,
   );
 }

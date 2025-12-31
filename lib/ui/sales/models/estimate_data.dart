@@ -1,7 +1,4 @@
-
-
 import 'dart:convert';
-
 import 'package:ims/ui/sales/models/globalget_model.dart';
 
 EstimateListResponse estimateListResponseFromJson(String str) =>
@@ -99,17 +96,17 @@ class EstimateData {
   });
 
   factory EstimateData.fromJson(Map<String, dynamic> j) => EstimateData(
-    id: j["_id"],
+    id: j["_id"] ?? "",
     licenceNo: j["licence_no"],
-    branchId: j["branch_id"],
-    customerId: j["customer_id"],
-    customerName: j["customer_name"],
-    address0: j["address_0"],
-    address1: j["address_1"],
+    branchId: j["branch_id"] ?? "",
+    customerId: j["customer_id"] ?? "",
+    customerName: j["customer_name"] ?? "",
+    address0: j["address_0"] ?? "",
+    address1: j["address_1"] ?? "",
     mobile: j["mobile"].toString(),
 
-    prefix: j["prefix"],
-    no: j["no"],
+    prefix: j["prefix"] ?? "",
+    no: j["no"] ?? 0,
     estimateDate: DateTime.parse(j["estimate_date"]),
 
     paymentTerms: j["payment_terms"] ?? 0,

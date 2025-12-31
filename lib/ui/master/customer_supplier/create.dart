@@ -410,7 +410,8 @@ class _CreateCusSupState extends State<CreateCusSup>
                             ),
                             SizedBox(width: 55),
                             Expanded(
-                              child: CommonSearchableDropdownField<String>(
+                              child: 
+                              CommonSearchableDropdownField<String>(
                                 controller: TextEditingController(
                                   text: selectedCity?.item ?? "",
                                 ),
@@ -590,8 +591,7 @@ class _CreateCusSupState extends State<CreateCusSup>
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: AppColor.grey, width: .5)),
         ),
-        child: 
-        Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             defaultButton(

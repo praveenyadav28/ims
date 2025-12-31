@@ -79,6 +79,26 @@ class DebitNoteDetailsCard extends StatelessWidget {
           ),
           flix: 30,
         ),
+        SizedBox(height: Sizes.height * .03),
+        nameField(
+          text: "Sale Invoice No",
+          child: CommonTextField(
+            hintText: 'Number',
+            suffixIcon: IconButton(
+              onPressed: () {
+                final bloc = context.read<DebitNoteBloc>();
+                bloc.add(DebitNoteSearchTransaction());
+              },
+              icon: Icon(Icons.search),
+            ),
+            onChanged: (v) {
+              context.read<DebitNoteBloc>().add(DebitNoteSetTransNo(v));
+            },
+          ),
+
+          flix: 30,
+        ),
+        SizedBox(height: Sizes.height * .03),
       ],
     );
   }

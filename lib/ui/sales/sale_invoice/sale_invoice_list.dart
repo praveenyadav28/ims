@@ -23,17 +23,17 @@ class SaleInvoiceInvoiceListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TransactionListScreen<SaleInvoiceData>(
-      title: "SaleInvoice Invoice",
+      title: "Sale Invoice",
       fetchData: repo.getSaleInvoice,
       onView: (e) {
-        print("VIEW SaleInvoice PDF: ${e.id}");
+        print("VIEW Sale Invoice PDF: ${e.id}");
       },
       onEdit: (e) => pushTo(CreateSaleInvoiceFullScreen(saleInvoiceData: e)),
       onDelete: repo.deleteSaleInvoice,
       onCreate: () => pushTo(CreateSaleInvoiceFullScreen()),
       idGetter: (e) => e.id,
       dateGetter: (e) => e.saleInvoiceDate,
-      numberGetter: (e) => "${e.prefix}-${e.no}",
+      numberGetter: (e) => "${e.prefix} ${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
     );

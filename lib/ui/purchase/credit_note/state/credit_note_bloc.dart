@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
+import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/credit_note_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
@@ -117,6 +118,13 @@ class CreditNoteToggleRoundOff extends CreditNoteEvent {
   CreditNoteToggleRoundOff(this.value);
 }
 
+class CreditNoteSetTransNo extends CreditNoteEvent {
+  final String number;
+  CreditNoteSetTransNo(this.number);
+}
+
+class CreditNoteSearchTransaction extends CreditNoteEvent {}
+
 /// ------------------- STATE -------------------
 class CreditNoteState {
   final List<CustomerModel> customers;
@@ -126,6 +134,8 @@ class CreditNoteState {
   final String prefix;
   final String creditNoteNo;
   final DateTime? creditNoteDate;
+  final String transNo; // user input number as string
+  final String? transId; // loaded transaction id (from backend) if any
   final List<ItemServiceModel> catalogue;
   final List<GlobalItemRow> rows;
   final List<AdditionalCharge> charges;
@@ -167,6 +177,8 @@ class CreditNoteState {
     this.miscMasterList = const [],
     this.notes = const [],
     this.terms = const [],
+    this.transNo = "",
+    this.transId,
   });
 
   CreditNoteState copyWith({
@@ -191,6 +203,8 @@ class CreditNoteState {
     List<MiscChargeModelList>? miscMasterList,
     List<String>? notes,
     List<String>? terms,
+    String? transNo,
+    String? transId,
   }) {
     return CreditNoteState(
       customers: customers ?? this.customers,
@@ -214,6 +228,8 @@ class CreditNoteState {
       miscMasterList: miscMasterList ?? this.miscMasterList,
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
+      transNo: transNo ?? this.transNo,
+      transId: transId ?? this.transId,
     );
   }
 }
@@ -279,6 +295,12 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
 
     on<CreditNoteToggleRoundOff>(_onToggleRoundOff);
     on<CreditNoteCalculate>(_onCalculate);
+
+    on<CreditNoteSetTransNo>((e, emit) {
+      emit(state.copyWith(transNo: e.number));
+    });
+
+    on<CreditNoteSearchTransaction>(_onSearchTransaction);
   }
 
   Future<void> _onLoad(
@@ -636,6 +658,49 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
     );
   }
 
+  // ------------------- SEARCH TRANSACTION -------------------
+  Future<void> _onSearchTransaction(
+    CreditNoteSearchTransaction e,
+    Emitter<CreditNoteState> emit,
+  ) async {
+    try {
+      final transNoInt = int.tryParse(state.transNo) ?? 0;
+      if (transNoInt == 0) {
+        showCustomSnackbarError(
+          creditNoteNavigatorKey.currentContext!,
+          "Enter a valid number",
+        );
+        return;
+      }
+
+      // call repo method provided by you
+      final GlobalDataAllPurchase estimate = await repo
+          .getTransByNumberPurchase(
+            transNo: transNoInt,
+            transType: 'Purchaseinvoice',
+          );
+
+      // map estimate -> CreditNote state (without touching prefix, CreditNoteNo, CreditNoteDate)
+      final newState = _prefillCreditNoteFromTrans(
+        estimate,
+        state,
+      ).copyWith(transId: estimate.id, transNo: state.transNo);
+
+      emit(newState);
+      add(CreditNoteCalculate());
+      showCustomSnackbarSuccess(
+        creditNoteNavigatorKey.currentContext!,
+        "Transaction loaded",
+      );
+    } catch (err) {
+      print("❌ transaction fetch error: $err");
+      showCustomSnackbarError(
+        creditNoteNavigatorKey.currentContext!,
+        "Transaction not found",
+      );
+    }
+  }
+
   // ------------------- SAVE -------------------
   Future<void> _onSaveWithUIData(
     CreditNoteSaveWithUIData e,
@@ -742,6 +807,14 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
         "item_details": itemRows,
       };
 
+      // include trans fields only if present (from search)
+      if (state.transId != null && state.transId!.isNotEmpty) {
+        payload["purchaseinvoice_id"] = state.transId;
+      }
+      if (state.transNo.isNotEmpty) {
+        payload["purchaseinvoice_no"] =
+            int.tryParse(state.transNo) ?? state.transNo;
+      }
       if (itemRows.isEmpty) {
         showCustomSnackbarError(
           creditNoteNavigatorKey.currentContext!,
@@ -797,6 +870,156 @@ extension GlobalItemRowCalc on GlobalItemRow {
       return copyWith(taxable: taxable, taxAmount: tax, gross: taxable + tax);
     }
   }
+}
+
+CreditNoteState _prefillCreditNoteFromTrans(
+  GlobalDataAllPurchase data,
+  CreditNoteState s,
+) {
+  // find customer from loaded list (or create fallback)
+  final selectedCustomer = s.customers.firstWhere(
+    (c) => c.id == data.supplierId,
+    orElse: () => CustomerModel(
+      id: data.supplierId ?? "",
+      name: data.supplierName,
+      mobile: data.mobile,
+      billingAddress: data.address0,
+      shippingAddress: data.address1,
+    ),
+  );
+
+  // ---------------- ADDITIONAL CHARGES ----------------
+  final mappedCharges = (data.additionalCharges)
+      .map(
+        (c) => AdditionalCharge(
+          id: c.id,
+          name: c.name,
+          amount: (c.amount).toDouble(),
+          taxPercent: 0,
+          taxIncluded: false,
+        ),
+      )
+      .toList();
+
+  // ---------------- DISCOUNTS ----------------
+  final mappedDiscounts = (data.discountLines)
+      .map(
+        (d) => DiscountLine(
+          id: d.id,
+          name: d.name,
+          amount: (d.amount).toDouble(),
+          isPercent: (d.type).toString().toLowerCase() == "percent",
+        ),
+      )
+      .toList();
+
+  // ---------------- MISC CHARGES (match by name with master) ----------------
+  final mappedMisc = <GlobalMiscChargeEntry>[];
+  for (final m in data.miscCharges) {
+    final nameFromCreditNote = (m.name).trim().toLowerCase();
+    if (nameFromCreditNote.isEmpty) continue;
+
+    // try to find in misc master list safely
+    MiscChargeModelList? match;
+    try {
+      match = s.miscMasterList.firstWhere(
+        (mx) => (mx.name).trim().toLowerCase() == nameFromCreditNote,
+      );
+    } catch (_) {
+      match = null;
+    }
+
+    if (match == null) {
+      // skip if master not found
+      continue;
+    }
+
+    double gst = 0;
+    try {
+      gst = match.gst != null ? double.tryParse(match.gst.toString()) ?? 0 : 0;
+    } catch (_) {
+      gst = 0;
+    }
+    final ledgerId = match.ledgerId;
+    final hsn = match.hsn;
+
+    final taxIncluded =
+        (m.type == true) || (m.type.toString().toLowerCase() == "true");
+
+    mappedMisc.add(
+      GlobalMiscChargeEntry(
+        id: UniqueKey().toString(),
+        miscId: match.id,
+        ledgerId: ledgerId,
+        name: m.name,
+        hsn: hsn,
+        gst: gst,
+        amount: (m.amount).toDouble(),
+        taxIncluded: taxIncluded,
+      ),
+    );
+  }
+
+  // empty fallback item (if catalogue doesn't contain item/service)
+  ItemServiceModel emptyItem() {
+    return ItemServiceModel(
+      id: "",
+      type: ItemServiceType.item,
+      name: "",
+      hsn: "",
+      variantValue: '',
+      baseSalePrice: 0,
+      gstRate: 0,
+      gstIncluded: false,
+      baseUnit: '',
+      secondaryUnit: '',
+      conversion: 1,
+      variants: [],
+      itemNo: '',
+      group: '',
+    );
+  }
+
+  // Convert itemDetails -> GlobalItemRow
+  final itemRows = (data.itemDetails).map((i) {
+    final catalogItem = s.catalogue.firstWhere(
+      (c) => c.id == (i.itemId),
+      orElse: () => emptyItem(),
+    );
+
+    return GlobalItemRow(
+      localId: UniqueKey().toString(),
+      product: catalogItem,
+      selectedVariant: null,
+      qty: (i.qty).toInt(),
+      pricePerSelectedUnit: (i.price).toDouble(),
+      discountPercent: (i.discount).toDouble(),
+      hsnOverride: (i.hsn),
+      taxPercent: (i.gstRate).toDouble(),
+      gstInclusiveToggle: i.inclusive,
+      sellInBaseUnit: false,
+    ).recalc();
+  }).toList();
+
+  final rows = <GlobalItemRow>[
+    ...itemRows,
+    if (itemRows.isEmpty) GlobalItemRow(localId: UniqueKey().toString()),
+  ];
+
+  return s.copyWith(
+    customers: s.customers,
+    selectedCustomer: data.caseSale ? null : selectedCustomer,
+    // NOTE: Intentionally NOT overwriting prefix, CreditNoteNo, CreditNoteDate
+    rows: rows,
+    charges: mappedCharges,
+    discounts: mappedDiscounts,
+    miscCharges: mappedMisc,
+    subtotal: (data.subTotal).toDouble(),
+    totalGst: (data.subGst).toDouble(),
+    totalAmount: (data.totalAmount).toDouble(),
+    autoRound: data.autoRound,
+    cashSaleDefault: data.caseSale,
+  );
 }
 
 /// ------------------- PREFILL HELPER -------------------

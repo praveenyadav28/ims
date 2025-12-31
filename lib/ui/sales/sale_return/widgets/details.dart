@@ -83,6 +83,26 @@ class SaleReturnDetailsCard extends StatelessWidget {
           ),
           flix: 30,
         ),
+        SizedBox(height: Sizes.height * .03),
+        nameField(
+          text: "Sale Invoice No",
+          child: CommonTextField(
+            hintText: 'Number',
+            suffixIcon: IconButton(
+              onPressed: () {
+                final bloc = context.read<SaleReturnBloc>();
+                bloc.add(SaleReturnSearchTransaction());
+              },
+              icon: Icon(Icons.search),
+            ),
+            onChanged: (v) {
+              context.read<SaleReturnBloc>().add(SaleReturnSetTransNo(v));
+            },
+          ),
+
+          flix: 30,
+        ),
+        SizedBox(height: Sizes.height * .03),
       ],
     );
   }

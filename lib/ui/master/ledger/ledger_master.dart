@@ -360,7 +360,7 @@ class _CreateLedgerState extends State<CreateLedger> {
           ? null
           : int.tryParse(
               openingBalanceController.text.trim(),
-            ), // Use tryParse for safety
+            ),
       'address': addressLine1Controller.text.trim().toString(),
       'town': permanentareaController.text.trim().toString(),
       'opening_type': _selectedBalance,
