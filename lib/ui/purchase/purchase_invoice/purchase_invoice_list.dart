@@ -5,22 +5,47 @@ import 'package:ims/ui/sales/data/transection_list.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
 import '../../../utils/navigation.dart';
 
-class PurchaseInvoiceListScreen extends StatelessWidget {
+class PurchaseInvoiceListScreen extends StatefulWidget {
+  PurchaseInvoiceListScreen({super.key});
+
+  @override
+  State<PurchaseInvoiceListScreen> createState() =>
+      _PurchaseInvoiceListScreenState();
+}
+
+class _PurchaseInvoiceListScreenState extends State<PurchaseInvoiceListScreen> {
   final repo = GLobalRepository();
 
-  PurchaseInvoiceListScreen({super.key});
+  /// 🔑 Key to access TransactionListScreen state
+  final GlobalKey<TransactionListScreenState<PurchaseInvoiceData>> listKey =
+      GlobalKey<TransactionListScreenState<PurchaseInvoiceData>>();
 
   @override
   Widget build(BuildContext context) {
     return TransactionListScreen<PurchaseInvoiceData>(
+      key: listKey,
       title: "Purchase Invoice",
       fetchData: repo.getPurchaseInvoice,
       onView: (e) {
         print("VIEW Purchase Invoice PDF: ${e.no}");
       },
-      onEdit: (e) => pushTo(CreatePurchaseInvoiceFullScreen(purchaseInvoiceData: e)),
+      onEdit: (e) async {
+        final result = await pushTo(
+          CreatePurchaseInvoiceFullScreen(purchaseInvoiceData: e),
+        );
+
+        if (result == true) {
+          listKey.currentState?.load();
+        }
+      },
+      onCreate: () async {
+        final result = await pushTo(CreatePurchaseInvoiceFullScreen());
+
+        if (result == true) {
+          listKey.currentState?.load();
+        }
+      },
       onDelete: repo.deletePurchaseInvoice,
-      onCreate: () => pushTo(CreatePurchaseInvoiceFullScreen()),
 
       /// EXTRACTORS — REQUIRED
       idGetter: (e) => e.id,
@@ -28,6 +53,7 @@ class PurchaseInvoiceListScreen extends StatelessWidget {
       numberGetter: (e) => "${e.prefix} ${e.no}",
       customerGetter: (e) => e.supplierName,
       amountGetter: (e) => e.totalAmount,
+      addressGetter: (e) => e.address0,
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/component/full_screen.dart';
 import 'package:ims/model/company_model.dart';
-import 'package:ims/ui/master/customer_supplier/customer_list.dart';
 import 'package:ims/ui/onboarding/forgot_password.dart';
 import 'package:ims/ui/onboarding/utils/backgraound.dart';
 import 'package:ims/utils/api.dart';
@@ -22,9 +22,13 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  TextEditingController licenceNoController = TextEditingController(text: "10001");
+  TextEditingController licenceNoController = TextEditingController(
+    text: "10001",
+  );
   TextEditingController userIdController = TextEditingController(text: "Vijay");
-  TextEditingController passwordController = TextEditingController(text: "Vijay@1234");
+  TextEditingController passwordController = TextEditingController(
+    text: "Vijay@1234",
+  );
 
   int selectedUserType = 0;
   BranchList? _selectedBranch;
@@ -230,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // Preference.setString(PrefKeys.rights, response['user']['rights']);
       showCustomSnackbarSuccess(context, response['message']);
       // await fetchAndSaveActiveSessionId();
-      pushNdRemove(CustomerTableScreen());
+      pushNdRemove(FullScreen());
     } else {
       showCustomSnackbarError(context, response['message']);
     }

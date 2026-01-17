@@ -17,13 +17,13 @@ import 'package:searchfield/searchfield.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 
-class UserEmpCreate extends StatefulWidget {
-  const UserEmpCreate({super.key});
+class UserScreenCreate extends StatefulWidget {
+  const UserScreenCreate({super.key});
   @override
-  State<UserEmpCreate> createState() => _UserEmpCreateState();
+  State<UserScreenCreate> createState() => _UserScreenCreateState();
 }
 
-class _UserEmpCreateState extends State<UserEmpCreate>
+class _UserScreenCreateState extends State<UserScreenCreate>
     with SingleTickerProviderStateMixin {
   TextEditingController companyNameController = TextEditingController();
   TextEditingController firstNameController = TextEditingController();

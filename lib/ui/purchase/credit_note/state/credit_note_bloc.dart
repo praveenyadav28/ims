@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
+import 'package:ims/ui/sales/debit_note/widgets/item_model.dart';
 import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/credit_note_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
@@ -39,26 +40,8 @@ class CreditNoteRemoveRow extends CreditNoteEvent {
 }
 
 class CreditNoteUpdateRow extends CreditNoteEvent {
-  final GlobalItemRow row;
+  final NoteModelItem row;
   CreditNoteUpdateRow(this.row);
-}
-
-class CreditNoteSelectCatalogForRow extends CreditNoteEvent {
-  final String rowId;
-  final ItemServiceModel item;
-  CreditNoteSelectCatalogForRow(this.rowId, this.item);
-}
-
-class CreditNoteSelectVariantForRow extends CreditNoteEvent {
-  final String rowId;
-  final VariantModel variant;
-  CreditNoteSelectVariantForRow(this.rowId, this.variant);
-}
-
-class CreditNoteToggleUnitForRow extends CreditNoteEvent {
-  final String rowId;
-  final bool sellInBase;
-  CreditNoteToggleUnitForRow(this.rowId, this.sellInBase);
 }
 
 class CreditNoteApplyHsnToRow extends CreditNoteEvent {
@@ -136,8 +119,7 @@ class CreditNoteState {
   final DateTime? creditNoteDate;
   final String transNo; // user input number as string
   final String? transId; // loaded transaction id (from backend) if any
-  final List<ItemServiceModel> catalogue;
-  final List<GlobalItemRow> rows;
+  final List<NoteModelItem> rows;
   final List<AdditionalCharge> charges;
   final List<GlobalMiscChargeEntry> miscCharges; // UI entries
   final List<DiscountLine> discounts;
@@ -163,7 +145,6 @@ class CreditNoteState {
     this.creditNoteNo = '',
     this.hsnMaster = const [],
     this.creditNoteDate,
-    this.catalogue = const [],
     this.rows = const [],
     this.charges = const [],
     this.miscCharges = const [],
@@ -189,8 +170,7 @@ class CreditNoteState {
     String? creditNoteNo,
     DateTime? creditNoteDate,
     List<HsnModel>? hsnMaster,
-    List<ItemServiceModel>? catalogue,
-    List<GlobalItemRow>? rows,
+    List<NoteModelItem>? rows,
     List<AdditionalCharge>? charges,
     List<GlobalMiscChargeEntry>? miscCharges,
     List<DiscountLine>? discounts,
@@ -214,7 +194,6 @@ class CreditNoteState {
       creditNoteNo: creditNoteNo ?? this.creditNoteNo,
       creditNoteDate: creditNoteDate ?? this.creditNoteDate,
       hsnMaster: hsnMaster ?? this.hsnMaster,
-      catalogue: catalogue ?? this.catalogue,
       rows: rows ?? this.rows,
       charges: charges ?? this.charges,
       miscCharges: miscCharges ?? this.miscCharges,
@@ -277,9 +256,6 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
     on<CreditNoteAddRow>(_onAddRow);
     on<CreditNoteRemoveRow>(_onRemoveRow);
     on<CreditNoteUpdateRow>(_onUpdateRow);
-    on<CreditNoteSelectCatalogForRow>(_onSelectCatalogForRow);
-    on<CreditNoteSelectVariantForRow>(_onSelectVariantForRow);
-    on<CreditNoteToggleUnitForRow>(_onToggleUnitForRow);
     on<CreditNoteSaveWithUIData>(_onSaveWithUIData);
     on<CreditNoteApplyHsnToRow>(_onApplyHsnToRow);
     on<CreditNoteAddCharge>(_onAddCharge);
@@ -310,7 +286,6 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
     try {
       final customers = await repo.fetchSupplier();
       final creditNoteNo = await repo.fetchCreditNoteNo();
-      final catalogue = await repo.fetchOnyItem();
       final hsnList = await repo.fetchHsnList();
 
       // fetch misc master list
@@ -325,11 +300,10 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
         state.copyWith(
           customers: customers,
           creditNoteNo: creditNoteNo,
-          catalogue: catalogue,
           hsnMaster: hsnList,
           miscMasterList: miscMaster,
           // ensure UI has at least one empty row to start
-          rows: [GlobalItemRow(localId: UniqueKey().toString())],
+          rows: [NoteModelItem(localId: UniqueKey().toString())],
         ),
       );
 
@@ -369,7 +343,7 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
       state.copyWith(
         rows: [
           ...state.rows,
-          GlobalItemRow(localId: UniqueKey().toString()),
+          NoteModelItem(localId: UniqueKey().toString()),
         ],
       ),
     );
@@ -394,91 +368,6 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
     add(CreditNoteCalculate());
   }
 
-  void _onSelectCatalogForRow(
-    CreditNoteSelectCatalogForRow e,
-    Emitter<CreditNoteState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        rows: state.rows.map((r) {
-          if (r.localId == e.rowId) {
-            final item = e.item;
-            final variant = item.variants.isNotEmpty
-                ? item.variants.first
-                : null;
-
-            return r
-                .copyWith(
-                  product: item,
-                  selectedVariant: variant,
-                  qty: r.qty == 0 ? 1 : r.qty,
-                  pricePerSelectedUnit:
-                      variant?.salePrice ?? item.baseSalePrice,
-                  discountPercent: 0,
-                  hsnOverride: item.hsn,
-                  taxPercent: item.gstRate,
-                  gstInclusiveToggle: item.gstIncluded,
-                )
-                .recalc();
-          }
-          return r;
-        }).toList(),
-      ),
-    );
-    add(CreditNoteCalculate());
-  }
-
-  void _onSelectVariantForRow(
-    CreditNoteSelectVariantForRow e,
-    Emitter<CreditNoteState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        rows: state.rows.map((r) {
-          if (r.localId == e.rowId) {
-            return r
-                .copyWith(
-                  selectedVariant: e.variant,
-                  pricePerSelectedUnit: r.sellInBaseUnit
-                      ? e.variant.salePrice * (r.product?.conversion ?? 1)
-                      : e.variant.salePrice,
-                )
-                .recalc();
-          }
-          return r;
-        }).toList(),
-      ),
-    );
-    add(CreditNoteCalculate());
-  }
-
-  void _onToggleUnitForRow(
-    CreditNoteToggleUnitForRow e,
-    Emitter<CreditNoteState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        rows: state.rows.map((r) {
-          if (r.localId == e.rowId) {
-            final basePrice =
-                r.selectedVariant?.salePrice ?? r.product?.baseSalePrice ?? 0;
-
-            return r
-                .copyWith(
-                  sellInBaseUnit: e.sellInBase,
-                  pricePerSelectedUnit: e.sellInBase
-                      ? basePrice * (r.product?.conversion ?? 1)
-                      : basePrice,
-                )
-                .recalc();
-          }
-          return r;
-        }).toList(),
-      ),
-    );
-    add(CreditNoteCalculate());
-  }
-
   void _onApplyHsnToRow(
     CreditNoteApplyHsnToRow e,
     Emitter<CreditNoteState> emit,
@@ -489,9 +378,9 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
           if (r.localId == e.rowId) {
             return r
                 .copyWith(
-                  hsnOverride: e.hsn.code,
+                  hsnCode: e.hsn.code,
                   taxPercent: e.hsn.igst,
-                  gstInclusiveToggle: false,
+                  gstInclusive: false,
                 )
                 .recalc();
           }
@@ -732,27 +621,18 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
       final itemRows = <Map<String, dynamic>>[];
 
       for (final r in state.rows) {
-        if (r.product == null) continue;
+        if (r.itemName.isEmpty) continue;
 
-        if (r.product!.type == ItemServiceType.item) {
-          itemRows.add({
-            "item_id": r.product!.id,
-            "item_name": r.product!.name,
-            "item_no": r.product!.itemNo,
-            "price": r.pricePerSelectedUnit,
-            "hsn_code": r.hsnOverride.isNotEmpty
-                ? r.hsnOverride
-                : r.product!.hsn,
-            "gst_tax_rate": r.taxPercent,
-            "measuring_unit": r.sellInBaseUnit
-                ? r.product!.baseUnit
-                : r.product!.secondaryUnit,
-            "qty": r.qty,
-            "amount": r.gross,
-            "discount": r.discountPercent,
-            "in_ex": r.gstInclusiveToggle,
-          });
-        }
+        itemRows.add({
+          "item_name": r.itemName,
+          "price": r.price,
+          "hsn_code": r.hsnCode,
+          "gst_tax_rate": r.taxPercent,
+          "qty": r.qty,
+          "amount": r.gross,
+          "discount": r.discountPercent,
+          "in_ex": r.gstInclusive,
+        });
       }
 
       // ---------------- DISCOUNTS ----------------
@@ -818,7 +698,7 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
       if (itemRows.isEmpty) {
         showCustomSnackbarError(
           creditNoteNavigatorKey.currentContext!,
-          "Add atleast one item",
+          "Add atleast one note",
         );
         return;
       } else {
@@ -835,6 +715,8 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
             creditNoteNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+          final ctx = creditNoteNavigatorKey.currentContext!;
+          Navigator.of(ctx).pop(true);
         } else {
           showCustomSnackbarError(
             creditNoteNavigatorKey.currentContext!,
@@ -852,13 +734,13 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
 }
 
 /// ------------------- IMMUTABLE CALC EXT -------------------
-extension GlobalItemRowCalc on GlobalItemRow {
-  GlobalItemRow recalc() {
-    final base = pricePerSelectedUnit * qty;
+extension GlobalItemRowCalc on NoteModelItem {
+  NoteModelItem recalc() {
+    final base = qty;
     final discountValue = base * (discountPercent / 100);
     final afterDiscount = base - discountValue;
 
-    if (gstInclusiveToggle) {
+    if (gstInclusive) {
       final divisor = 1 + (taxPercent / 100);
       final taxable = afterDiscount / divisor;
       final tax = afterDiscount - taxable;
@@ -888,136 +770,9 @@ CreditNoteState _prefillCreditNoteFromTrans(
     ),
   );
 
-  // ---------------- ADDITIONAL CHARGES ----------------
-  final mappedCharges = (data.additionalCharges)
-      .map(
-        (c) => AdditionalCharge(
-          id: c.id,
-          name: c.name,
-          amount: (c.amount).toDouble(),
-          taxPercent: 0,
-          taxIncluded: false,
-        ),
-      )
-      .toList();
-
-  // ---------------- DISCOUNTS ----------------
-  final mappedDiscounts = (data.discountLines)
-      .map(
-        (d) => DiscountLine(
-          id: d.id,
-          name: d.name,
-          amount: (d.amount).toDouble(),
-          isPercent: (d.type).toString().toLowerCase() == "percent",
-        ),
-      )
-      .toList();
-
-  // ---------------- MISC CHARGES (match by name with master) ----------------
-  final mappedMisc = <GlobalMiscChargeEntry>[];
-  for (final m in data.miscCharges) {
-    final nameFromCreditNote = (m.name).trim().toLowerCase();
-    if (nameFromCreditNote.isEmpty) continue;
-
-    // try to find in misc master list safely
-    MiscChargeModelList? match;
-    try {
-      match = s.miscMasterList.firstWhere(
-        (mx) => (mx.name).trim().toLowerCase() == nameFromCreditNote,
-      );
-    } catch (_) {
-      match = null;
-    }
-
-    if (match == null) {
-      // skip if master not found
-      continue;
-    }
-
-    double gst = 0;
-    try {
-      gst = match.gst != null ? double.tryParse(match.gst.toString()) ?? 0 : 0;
-    } catch (_) {
-      gst = 0;
-    }
-    final ledgerId = match.ledgerId;
-    final hsn = match.hsn;
-
-    final taxIncluded =
-        (m.type == true) || (m.type.toString().toLowerCase() == "true");
-
-    mappedMisc.add(
-      GlobalMiscChargeEntry(
-        id: UniqueKey().toString(),
-        miscId: match.id,
-        ledgerId: ledgerId,
-        name: m.name,
-        hsn: hsn,
-        gst: gst,
-        amount: (m.amount).toDouble(),
-        taxIncluded: taxIncluded,
-      ),
-    );
-  }
-
-  // empty fallback item (if catalogue doesn't contain item/service)
-  ItemServiceModel emptyItem() {
-    return ItemServiceModel(
-      id: "",
-      type: ItemServiceType.item,
-      name: "",
-      hsn: "",
-      variantValue: '',
-      baseSalePrice: 0,
-      gstRate: 0,
-      gstIncluded: false,
-      baseUnit: '',
-      secondaryUnit: '',
-      conversion: 1,
-      variants: [],
-      itemNo: '',
-      group: '',
-    );
-  }
-
-  // Convert itemDetails -> GlobalItemRow
-  final itemRows = (data.itemDetails).map((i) {
-    final catalogItem = s.catalogue.firstWhere(
-      (c) => c.id == (i.itemId),
-      orElse: () => emptyItem(),
-    );
-
-    return GlobalItemRow(
-      localId: UniqueKey().toString(),
-      product: catalogItem,
-      selectedVariant: null,
-      qty: (i.qty).toInt(),
-      pricePerSelectedUnit: (i.price).toDouble(),
-      discountPercent: (i.discount).toDouble(),
-      hsnOverride: (i.hsn),
-      taxPercent: (i.gstRate).toDouble(),
-      gstInclusiveToggle: i.inclusive,
-      sellInBaseUnit: false,
-    ).recalc();
-  }).toList();
-
-  final rows = <GlobalItemRow>[
-    ...itemRows,
-    if (itemRows.isEmpty) GlobalItemRow(localId: UniqueKey().toString()),
-  ];
-
   return s.copyWith(
     customers: s.customers,
     selectedCustomer: data.caseSale ? null : selectedCustomer,
-    // NOTE: Intentionally NOT overwriting prefix, CreditNoteNo, CreditNoteDate
-    rows: rows,
-    charges: mappedCharges,
-    discounts: mappedDiscounts,
-    miscCharges: mappedMisc,
-    subtotal: (data.subTotal).toDouble(),
-    totalGst: (data.subGst).toDouble(),
-    totalAmount: (data.totalAmount).toDouble(),
-    autoRound: data.autoRound,
     cashSaleDefault: data.caseSale,
   );
 }
@@ -1109,50 +864,22 @@ CreditNoteState _prefillCreditNote(CreditNoteData data, CreditNoteState s) {
     );
   }
 
-  // empty fallback item (if catalogue doesn't contain item/service)
-  ItemServiceModel emptyItem() {
-    return ItemServiceModel(
-      id: "",
-      type: ItemServiceType.item,
-      name: "",
-      hsn: "",
-      variantValue: '',
-      baseSalePrice: 0,
-      gstRate: 0,
-      gstIncluded: false,
-      baseUnit: '',
-      secondaryUnit: '',
-      conversion: 1,
-      variants: [],
-      itemNo: '',
-      group: '',
-    );
-  }
-
-  // Convert itemDetails -> GlobalItemRow
   final itemRows = (data.itemDetails).map((i) {
-    final catalogItem = s.catalogue.firstWhere(
-      (c) => c.id == (i.itemId),
-      orElse: () => emptyItem(),
-    );
-
-    return GlobalItemRow(
+    return NoteModelItem(
       localId: UniqueKey().toString(),
-      product: catalogItem,
-      selectedVariant: null,
+      itemName: i.name,
       qty: (i.qty).toInt(),
-      pricePerSelectedUnit: (i.price).toDouble(),
+      price: (i.price).toDouble(),
       discountPercent: (i.discount).toDouble(),
-      hsnOverride: (i.hsn),
+      hsnCode: (i.hsn),
       taxPercent: (i.gstRate).toDouble(),
-      gstInclusiveToggle: i.inclusive,
-      sellInBaseUnit: false,
+      gstInclusive: i.inclusive,
     ).recalc();
   }).toList();
 
-  final rows = <GlobalItemRow>[
+  final rows = <NoteModelItem>[
     ...itemRows,
-    if (itemRows.isEmpty) GlobalItemRow(localId: UniqueKey().toString()),
+    if (itemRows.isEmpty) NoteModelItem(localId: UniqueKey().toString()),
   ];
 
   return s.copyWith(

@@ -11,7 +11,7 @@ import 'package:ims/ui/purchase/credit_note/widgets/credit_note_details.dart';
 import 'package:ims/ui/sales/data/global_additionalcharge.dart';
 import 'package:ims/ui/sales/data/global_billto.dart';
 import 'package:ims/ui/sales/data/global_discount.dart';
-import 'package:ims/ui/sales/data/global_item_table.dart';
+import 'package:ims/ui/sales/data/global_note_table.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/data/global_shipto.dart';
 import 'package:ims/ui/sales/data/globalheader.dart';
@@ -341,19 +341,14 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                   ),
 
                   SizedBox(height: Sizes.height * .03),
-                  GlobalItemsTableSection(
+                  NoteItemsTableSection(
                     rows: state.rows,
-                    catalogue: state.catalogue,
                     hsnList: state.hsnMaster,
                     onAddRow: () => bloc.add(CreditNoteAddRow()),
                     onRemoveRow: (id) => bloc.add(CreditNoteRemoveRow(id)),
                     onUpdateRow: (row) => bloc.add(CreditNoteUpdateRow(row)),
-                    onSelectCatalog: (id, item) =>
-                        bloc.add(CreditNoteSelectCatalogForRow(id, item)),
                     onSelectHsn: (id, hsn) =>
                         bloc.add(CreditNoteApplyHsnToRow(id, hsn)),
-                    onToggleUnit: (id, value) =>
-                        bloc.add(CreditNoteToggleUnitForRow(id, value)),
                   ),
                   SizedBox(height: Sizes.height * .02),
 

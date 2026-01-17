@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:ims/model/ledger_model.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/purchase/purchase_invoice/state/p_invoice_bloc.dart';
 import 'package:ims/ui/purchase/purchase_invoice/widgets/p_invoice_details.dart';
@@ -26,6 +27,7 @@ import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
+import 'package:ims/utils/textfield.dart';
 
 class CreatePurchaseInvoiceFullScreen extends StatelessWidget {
   final GLobalRepository repo;
@@ -69,8 +71,12 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
   final cashMobileController = TextEditingController();
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
+  final payingAmtController = TextEditingController();
+  final voucherNoController = TextEditingController();
   DateTime pickedPurchaseInvoiceDate = DateTime.now();
   String signatureImageUrl = '';
+  List<LedgerListModel> ledgerList = [];
+  LedgerListModel? selectedLedger;
 
   File? signatureImage;
   final ImagePicker picker = ImagePicker();
@@ -78,10 +84,22 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
   List<MiscChargeModelList> miscList = [];
+
+  bool fullyPaid = false;
+
+  String balanceAmt = "";
+
+  void onToggleFPaid(bool value) {
+    setState(() {
+      fullyPaid = value;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-
+    getAutoVoucherApi();
+    ledgerApi();
     if (widget.purchaseInvoiceData != null) {
       final e = widget.purchaseInvoiceData!;
 
@@ -281,6 +299,22 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                         updateId: widget.purchaseInvoiceData?.id,
                       ),
                     );
+                    if (widget.purchaseInvoiceData == null) {
+                      // 🔥 Payment voucher only if amount > 0
+                      if (payingAmtController.text.isNotEmpty &&
+                          double.tryParse(payingAmtController.text) != null &&
+                          double.parse(payingAmtController.text) > 0 &&
+                          selectedLedger != null) {
+                        bloc.add(
+                          PurchaseInvoiceSavePayment(
+                            voucherNo: voucherNoController.text,
+                            amount: payingAmtController.text,
+                            ledger: selectedLedger!,
+                            date: pickedPurchaseInvoiceDate,
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
                 const SizedBox(width: 18),
@@ -430,6 +464,230 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                             ),
 
                             SizedBox(height: Sizes.height * .02),
+                            if (widget.purchaseInvoiceData == null)
+                              Column(
+                                children: [
+                                  SizedBox(height: Sizes.height * .02),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        "Mark as fully paid",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Checkbox(
+                                        fillColor: WidgetStatePropertyAll(
+                                          AppColor.primary,
+                                        ),
+                                        shape: ContinuousRectangleBorder(
+                                          borderRadius:
+                                              BorderRadiusGeometry.circular(5),
+                                        ),
+                                        value: fullyPaid,
+                                        onChanged: (v) {
+                                          onToggleFPaid(v ?? true);
+                                          setState(() {});
+                                          payingAmtController.text = state
+                                              .totalAmount
+                                              .toString();
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: Sizes.height * .02),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        "Amount Paid",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Spacer(flex: 2),
+                                      Expanded(
+                                        flex: 3,
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              height: 45,
+                                              width: 30,
+                                              decoration: BoxDecoration(
+                                                color: AppColor.backgroundColor,
+                                                border: Border.all(
+                                                  color: AppColor.borderColor,
+                                                ),
+                                              ),
+                                              child: Icon(
+                                                Icons.currency_rupee_sharp,
+                                                color: Color(0xff565D6D),
+                                                size: 18,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Container(
+                                                height: 45,
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                    color: AppColor.borderColor,
+                                                  ),
+                                                ),
+                                                alignment: Alignment.center,
+                                                child: TextField(
+                                                  controller:
+                                                      payingAmtController,
+                                                  readOnly: fullyPaid,
+                                                  onChanged: (v) {
+                                                    setState(() {
+                                                      balanceAmt =
+                                                          "${state.totalAmount - double.parse(v)}";
+                                                    });
+                                                  },
+                                                  style: GoogleFonts.inter(
+                                                    color: AppColor.text,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                  decoration: InputDecoration(
+                                                    hintText: "0",
+                                                    contentPadding:
+                                                        EdgeInsets.symmetric(
+                                                          vertical: 4,
+                                                          horizontal: 10,
+                                                        ),
+                                                    border: OutlineInputBorder(
+                                                      borderSide:
+                                                          BorderSide.none,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Container(
+                                                height: 45,
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                    color: AppColor.borderColor,
+                                                  ),
+                                                ),
+                                                alignment: Alignment.center,
+                                                child:
+                                                    DropdownButton<
+                                                      LedgerListModel
+                                                    >(
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                            vertical: 4,
+                                                            horizontal: 10,
+                                                          ),
+                                                      underline:
+                                                          const SizedBox(),
+                                                      isExpanded: true,
+                                                      icon: const Icon(
+                                                        Icons
+                                                            .keyboard_arrow_down,
+                                                      ),
+
+                                                      value: selectedLedger,
+
+                                                      hint: Text(
+                                                        "Select Ledger",
+                                                        style:
+                                                            GoogleFonts.inter(
+                                                              fontSize: 14,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w500,
+                                                            ),
+                                                      ),
+                                                      items: ledgerList.map((
+                                                        ledger,
+                                                      ) {
+                                                        return DropdownMenuItem<
+                                                          LedgerListModel
+                                                        >(
+                                                          value: ledger,
+                                                          child: Text(
+                                                            ledger.ledgerName ??
+                                                                "",
+                                                            style:
+                                                                GoogleFonts.inter(
+                                                                  fontSize: 14,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w500,
+                                                                  color: AppColor
+                                                                      .textColor,
+                                                                ),
+                                                          ),
+                                                        );
+                                                      }).toList(),
+
+                                                      onChanged:
+                                                          (LedgerListModel? v) {
+                                                            setState(() {
+                                                              selectedLedger =
+                                                                  v;
+                                                            });
+                                                          },
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: Sizes.height * .02),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        "Voucher Number",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          color: Color(0xff22C55E),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Spacer(),
+                                      Expanded(
+                                        child: CommonTextField(
+                                          hintText: "Voucher No",
+                                          controller: voucherNoController,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  SizedBox(height: Sizes.height * .02),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        "Balance",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          color: Color(0xff22C55E),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Spacer(),
+                                      Text(
+                                        "₹ $balanceAmt",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          color: Color(0xff22C55E),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+
                             Row(
                               children: [
                                 Text(
@@ -634,5 +892,35 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
         ],
       ),
     );
+  }
+
+  Future ledgerApi() async {
+    var response = await ApiService.fetchData(
+      "get/ledger",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    List responseData = response['data'];
+
+    setState(() {
+      ledgerList = responseData
+          .where(
+            (e) =>
+                e['ledger_group'] == 'Bank Account' ||
+                e['ledger_group'] == 'Cash In Hand',
+          )
+          .map((e) => LedgerListModel.fromJson(e))
+          .toList();
+    });
+  }
+
+  Future getAutoVoucherApi() async {
+    var response = await ApiService.fetchData(
+      "get/autono",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+    if (response['status'] == true) {
+      voucherNoController.text = response['next_no'].toString();
+    }
   }
 }

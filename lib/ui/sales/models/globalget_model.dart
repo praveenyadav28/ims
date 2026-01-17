@@ -33,9 +33,9 @@ class ItemDetail {
 
   factory ItemDetail.fromJson(Map<String, dynamic> j) => ItemDetail(
     id: j["_id"],
-    itemId: j["item_id"],
+    itemId: j["item_id"]??"",
     name: j["item_name"],
-    itemNo: j["item_no"],
+    itemNo: j["item_no"]??0,
     price: (j["price"] ?? 0).toDouble(),
     hsn: j["hsn_code"],
     gstRate: (j["gst_tax_rate"] ?? 0).toDouble(),

@@ -5,7 +5,6 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:ims/component/side_menu.dart';
 import 'package:ims/ui/master/company/company_api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -248,7 +247,6 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
           ),
         ],
       ),
-      drawer: const SideMenu(),
       body: SingleChildScrollView(
         padding: EdgeInsets.only(
           right: Sizes.width * .08,

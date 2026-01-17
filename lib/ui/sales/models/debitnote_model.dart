@@ -57,8 +57,7 @@ class DebitNoteData {
   final List<DiscountModel> discountLines;
   final List<MiscChargeModel> miscCharges;
 
-  final List<ItemDetail> itemDetails;
-  final List<ServiceDetail> serviceDetails;
+  final List<NoteItemDetail> itemDetails;
 
   final String signature;
 
@@ -85,7 +84,6 @@ class DebitNoteData {
     required this.discountLines,
     required this.miscCharges,
     required this.itemDetails,
-    required this.serviceDetails,
     required this.signature,
   });
 
@@ -126,13 +124,45 @@ class DebitNoteData {
         .toList(),
 
     itemDetails: (j["item_details"] as List)
-        .map((e) => ItemDetail.fromJson(e))
-        .toList(),
-
-    serviceDetails: (j["service_details"] as List)
-        .map((e) => ServiceDetail.fromJson(e))
+        .map((e) => NoteItemDetail.fromJson(e))
         .toList(),
 
     signature: j["signature"] ?? "",
+  );
+}
+
+class NoteItemDetail {
+  final String id;
+  final String name;
+  final double price;
+  final String hsn;
+  final double gstRate;
+  final double qty;
+  final double amount;
+  final double discount;
+  final bool inclusive;
+
+  NoteItemDetail({
+    required this.id,
+    required this.name,
+    required this.price,
+    required this.hsn,
+    required this.gstRate,
+    required this.qty,
+    required this.amount,
+    required this.discount,
+    required this.inclusive,
+  });
+
+  factory NoteItemDetail.fromJson(Map<String, dynamic> j) => NoteItemDetail(
+    id: j["_id"],
+    name: j["item_name"],
+    price: (j["price"] ?? 0).toDouble(),
+    hsn: j["hsn_code"],
+    gstRate: (j["gst_tax_rate"] ?? 0).toDouble(),
+    qty: (j["qty"] ?? 0).toDouble(),
+    amount: (j["amount"] ?? 0).toDouble(),
+    discount: (j["discount"] ?? 0).toDouble(),
+    inclusive: j["in_ex"] ?? false,
   );
 }

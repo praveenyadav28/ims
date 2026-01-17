@@ -4,11 +4,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:ims/model/ledger_model.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
+import 'package:ims/ui/sales/debit_note/widgets/item_model.dart';
 import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/debitnote_model.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
+import 'package:ims/utils/api.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:intl/intl.dart';
@@ -39,26 +42,8 @@ class DebitNoteRemoveRow extends DebitNoteEvent {
 }
 
 class DebitNoteUpdateRow extends DebitNoteEvent {
-  final GlobalItemRow row;
+  final NoteModelItem row;
   DebitNoteUpdateRow(this.row);
-}
-
-class DebitNoteSelectCatalogForRow extends DebitNoteEvent {
-  final String rowId;
-  final ItemServiceModel item;
-  DebitNoteSelectCatalogForRow(this.rowId, this.item);
-}
-
-class DebitNoteSelectVariantForRow extends DebitNoteEvent {
-  final String rowId;
-  final VariantModel variant;
-  DebitNoteSelectVariantForRow(this.rowId, this.variant);
-}
-
-class DebitNoteToggleUnitForRow extends DebitNoteEvent {
-  final String rowId;
-  final bool sellInBase;
-  DebitNoteToggleUnitForRow(this.rowId, this.sellInBase);
 }
 
 class DebitNoteApplyHsnToRow extends DebitNoteEvent {
@@ -125,6 +110,20 @@ class DebitNoteSetTransNo extends DebitNoteEvent {
 
 class DebitNoteSearchTransaction extends DebitNoteEvent {}
 
+class DebitNoteSavePayment extends DebitNoteEvent {
+  final String amount;
+  final String voucherNo;
+  final LedgerListModel ledger;
+  final DateTime date;
+
+  DebitNoteSavePayment({
+    required this.amount,
+    required this.voucherNo,
+    required this.ledger,
+    required this.date,
+  });
+}
+
 /// ------------------- STATE -------------------
 class DebitNoteState {
   final List<CustomerModel> customers;
@@ -138,8 +137,7 @@ class DebitNoteState {
   final DateTime? debitNoteDate;
   final DateTime? validityDate;
   final int validForDays;
-  final List<ItemServiceModel> catalogue;
-  final List<GlobalItemRow> rows;
+  final List<NoteModelItem> rows;
   final List<AdditionalCharge> charges;
   final List<GlobalMiscChargeEntry> miscCharges; // UI entries
   final List<DiscountLine> discounts;
@@ -167,7 +165,6 @@ class DebitNoteState {
     this.debitNoteDate,
     this.validityDate,
     this.validForDays = 0,
-    this.catalogue = const [],
     this.rows = const [],
     this.charges = const [],
     this.miscCharges = const [],
@@ -195,8 +192,7 @@ class DebitNoteState {
     List<HsnModel>? hsnMaster,
     DateTime? validityDate,
     int? validForDays,
-    List<ItemServiceModel>? catalogue,
-    List<GlobalItemRow>? rows,
+    List<NoteModelItem>? rows,
     List<AdditionalCharge>? charges,
     List<GlobalMiscChargeEntry>? miscCharges,
     List<DiscountLine>? discounts,
@@ -222,7 +218,6 @@ class DebitNoteState {
       hsnMaster: hsnMaster ?? this.hsnMaster,
       validityDate: validityDate ?? this.validityDate,
       validForDays: validForDays ?? this.validForDays,
-      catalogue: catalogue ?? this.catalogue,
       rows: rows ?? this.rows,
       charges: charges ?? this.charges,
       miscCharges: miscCharges ?? this.miscCharges,
@@ -285,9 +280,6 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
     on<DebitNoteAddRow>(_onAddRow);
     on<DebitNoteRemoveRow>(_onRemoveRow);
     on<DebitNoteUpdateRow>(_onUpdateRow);
-    on<DebitNoteSelectCatalogForRow>(_onSelectCatalogForRow);
-    on<DebitNoteSelectVariantForRow>(_onSelectVariantForRow);
-    on<DebitNoteToggleUnitForRow>(_onToggleUnitForRow);
     on<DebitNoteSaveWithUIData>(_onSaveWithUIData);
     on<DebitNoteApplyHsnToRow>(_onApplyHsnToRow);
     on<DebitNoteAddCharge>(_onAddCharge);
@@ -309,6 +301,7 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
     });
 
     on<DebitNoteSearchTransaction>(_onSearchTransaction);
+    on<DebitNoteSavePayment>(_onSavePaymentVoucher);
   }
 
   Future<void> _onLoad(
@@ -318,7 +311,6 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
     try {
       final customers = await repo.fetchCustomers();
       final debitNoteNo = await repo.fetchDebitNoteNo();
-      final catalogue = await repo.fetchCatalogue();
       final hsnList = await repo.fetchHsnList();
 
       // fetch misc master list
@@ -333,11 +325,10 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
         state.copyWith(
           customers: customers,
           debitNoteNo: debitNoteNo,
-          catalogue: catalogue,
           hsnMaster: hsnList,
           miscMasterList: miscMaster,
           // ensure UI has at least one empty row to start
-          rows: [GlobalItemRow(localId: UniqueKey().toString())],
+          rows: [NoteModelItem(localId: UniqueKey().toString())],
         ),
       );
 
@@ -377,7 +368,7 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
       state.copyWith(
         rows: [
           ...state.rows,
-          GlobalItemRow(localId: UniqueKey().toString()),
+          NoteModelItem(localId: UniqueKey().toString()),
         ],
       ),
     );
@@ -402,91 +393,6 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
     add(DebitNoteCalculate());
   }
 
-  void _onSelectCatalogForRow(
-    DebitNoteSelectCatalogForRow e,
-    Emitter<DebitNoteState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        rows: state.rows.map((r) {
-          if (r.localId == e.rowId) {
-            final item = e.item;
-            final variant = item.variants.isNotEmpty
-                ? item.variants.first
-                : null;
-
-            return r
-                .copyWith(
-                  product: item,
-                  selectedVariant: variant,
-                  qty: r.qty == 0 ? 1 : r.qty,
-                  pricePerSelectedUnit:
-                      variant?.salePrice ?? item.baseSalePrice,
-                  discountPercent: 0,
-                  hsnOverride: item.hsn,
-                  taxPercent: item.gstRate,
-                  gstInclusiveToggle: item.gstIncluded,
-                )
-                .recalc();
-          }
-          return r;
-        }).toList(),
-      ),
-    );
-    add(DebitNoteCalculate());
-  }
-
-  void _onSelectVariantForRow(
-    DebitNoteSelectVariantForRow e,
-    Emitter<DebitNoteState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        rows: state.rows.map((r) {
-          if (r.localId == e.rowId) {
-            return r
-                .copyWith(
-                  selectedVariant: e.variant,
-                  pricePerSelectedUnit: r.sellInBaseUnit
-                      ? e.variant.salePrice * (r.product?.conversion ?? 1)
-                      : e.variant.salePrice,
-                )
-                .recalc();
-          }
-          return r;
-        }).toList(),
-      ),
-    );
-    add(DebitNoteCalculate());
-  }
-
-  void _onToggleUnitForRow(
-    DebitNoteToggleUnitForRow e,
-    Emitter<DebitNoteState> emit,
-  ) {
-    emit(
-      state.copyWith(
-        rows: state.rows.map((r) {
-          if (r.localId == e.rowId) {
-            final basePrice =
-                r.selectedVariant?.salePrice ?? r.product?.baseSalePrice ?? 0;
-
-            return r
-                .copyWith(
-                  sellInBaseUnit: e.sellInBase,
-                  pricePerSelectedUnit: e.sellInBase
-                      ? basePrice * (r.product?.conversion ?? 1)
-                      : basePrice,
-                )
-                .recalc();
-          }
-          return r;
-        }).toList(),
-      ),
-    );
-    add(DebitNoteCalculate());
-  }
-
   void _onApplyHsnToRow(
     DebitNoteApplyHsnToRow e,
     Emitter<DebitNoteState> emit,
@@ -497,9 +403,9 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
           if (r.localId == e.rowId) {
             return r
                 .copyWith(
-                  hsnOverride: e.hsn.code,
+                  hsnCode: e.hsn.code,
                   taxPercent: e.hsn.igst,
-                  gstInclusiveToggle: false,
+                  gstInclusive: false,
                 )
                 .recalc();
           }
@@ -688,7 +594,6 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
       ).copyWith(transId: estimate.id, transNo: state.transNo);
 
       emit(newState);
-      add(DebitNoteCalculate());
       showCustomSnackbarSuccess(
         debitNoteNavigatorKey.currentContext!,
         "Transaction loaded",
@@ -699,6 +604,64 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
         debitNoteNavigatorKey.currentContext!,
         "Transaction not found",
       );
+    }
+  }
+
+  Future<void> _onSavePaymentVoucher(
+    DebitNoteSavePayment e,
+    Emitter<DebitNoteState> emit,
+  ) async {
+    final ctx = debitNoteNavigatorKey.currentContext!;
+    final state = this.state;
+
+    // ---------- VALIDATIONS ----------
+    if (e.amount.trim().isEmpty || double.tryParse(e.amount) == null) return;
+    if (double.parse(e.amount) <= 0) return;
+
+    if (state.cashSaleDefault == false && state.selectedCustomer == null) {
+      showCustomSnackbarError(ctx, "Select customer");
+      return;
+    }
+
+    try {
+      final body = {
+        "licence_no": Preference.getint(PrefKeys.licenseNo),
+        "branch_id": Preference.getString(PrefKeys.locationId),
+
+        "ledger_id": e.ledger.id,
+        "ledger_name": e.ledger.ledgerName,
+
+        "customer_id": state.cashSaleDefault
+            ? null
+            : state.selectedCustomer!.id,
+        "customer_name": state.cashSaleDefault
+            ? "Cash"
+            : state.selectedCustomer!.name,
+
+        "amount": double.parse(e.amount),
+        "invoice_no": state.debitNoteNo,
+
+        "date":
+            "${e.date.year}-${e.date.month.toString().padLeft(2, '0')}-${e.date.day.toString().padLeft(2, '0')}",
+
+        "prefix": state.prefix,
+        "vouncher_no": e.voucherNo,
+        "type": "Debit Note",
+      };
+
+      final res = await ApiService.postData(
+        "payment",
+        body,
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      if (res?['status'] == true) {
+        showCustomSnackbarSuccess(ctx, res['message'] ?? "Payment saved");
+      } else {
+        showCustomSnackbarError(ctx, res?['message'] ?? "Payment failed");
+      }
+    } catch (e) {
+      showCustomSnackbarError(ctx, e.toString());
     }
   }
 
@@ -731,46 +694,20 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
 
       // ---------------- ROWS ----------------
       final itemRows = <Map<String, dynamic>>[];
-      final serviceRows = <Map<String, dynamic>>[];
 
       for (final r in state.rows) {
-        if (r.product == null) continue;
+        if (r.itemName.isEmpty) continue;
 
-        if (r.product!.type == ItemServiceType.item) {
-          itemRows.add({
-            "item_id": r.product!.id,
-            "item_name": r.product!.name,
-            "item_no": r.product!.itemNo,
-            "price": r.pricePerSelectedUnit,
-            "hsn_code": r.hsnOverride.isNotEmpty
-                ? r.hsnOverride
-                : r.product!.hsn,
-            "gst_tax_rate": r.taxPercent,
-            "measuring_unit": r.sellInBaseUnit
-                ? r.product!.baseUnit
-                : r.product!.secondaryUnit,
-            "qty": r.qty,
-            "amount": r.gross,
-            "discount": r.discountPercent,
-            "in_ex": r.gstInclusiveToggle,
-          });
-        } else {
-          serviceRows.add({
-            "service_id": r.product!.id,
-            "service_name": r.product!.name,
-            "service_no": r.product!.itemNo,
-            "amount": r.gross,
-            "price": r.pricePerSelectedUnit,
-            "hsn_code": r.hsnOverride.isNotEmpty
-                ? r.hsnOverride
-                : r.product!.hsn,
-            "measuring_unit": r.product!.baseUnit,
-            "gst_tax_rate": r.taxPercent,
-            "qty": r.qty,
-            "discount": r.discountPercent,
-            "in_ex": r.gstInclusiveToggle,
-          });
-        }
+        itemRows.add({
+          "item_name": r.itemName,
+          "price": r.price,
+          "hsn_code": r.hsnCode,
+          "gst_tax_rate": r.taxPercent,
+          "qty": r.qty,
+          "amount": r.gross,
+          "discount": r.discountPercent,
+          "in_ex": r.gstInclusive,
+        });
       }
 
       // ---------------- DISCOUNTS ----------------
@@ -825,7 +762,6 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
         "misccharge": miscCharges,
         "discount": discounts,
         "item_details": itemRows,
-        "service_details": serviceRows,
       };
 
       // include trans fields only if present (from search)
@@ -835,33 +771,26 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
       if (state.transNo.isNotEmpty) {
         payload["invoice_no"] = int.tryParse(state.transNo) ?? state.transNo;
       }
+      final res = await repo.saveDebitNote(
+        payload: payload,
+        signatureFile: e.signatureImage != null
+            ? XFile(e.signatureImage!.path)
+            : null,
+        updateId: e.updateId,
+      );
 
-      if (itemRows.isEmpty && serviceRows.isEmpty) {
+      if (res?['status'] == true) {
+        final ctx = debitNoteNavigatorKey.currentContext!;
+        showCustomSnackbarSuccess(
+          debitNoteNavigatorKey.currentContext!,
+          res?['message'] ?? "Saved",
+        );
+        Navigator.of(ctx).pop(true);
+      } else {
         showCustomSnackbarError(
           debitNoteNavigatorKey.currentContext!,
-          "Add atleast one item or service",
+          res?['message'] ?? "Save failed",
         );
-        return;
-      } else {
-        final res = await repo.saveDebitNote(
-          payload: payload,
-          signatureFile: e.signatureImage != null
-              ? XFile(e.signatureImage!.path)
-              : null,
-          updateId: e.updateId,
-        );
-
-        if (res?['status'] == true) {
-          showCustomSnackbarSuccess(
-            debitNoteNavigatorKey.currentContext!,
-            res?['message'] ?? "Saved",
-          );
-        } else {
-          showCustomSnackbarError(
-            debitNoteNavigatorKey.currentContext!,
-            res?['message'] ?? "Save failed",
-          );
-        }
       }
     } catch (err) {
       showCustomSnackbarError(
@@ -873,13 +802,13 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
 }
 
 /// ------------------- IMMUTABLE CALC EXT -------------------
-extension GlobalItemRowCalc on GlobalItemRow {
-  GlobalItemRow recalc() {
-    final base = pricePerSelectedUnit * qty;
+extension NoteItemRowCalc on NoteModelItem {
+  NoteModelItem recalc() {
+    final base = qty;
     final discountValue = base * (discountPercent / 100);
     final afterDiscount = base - discountValue;
 
-    if (gstInclusiveToggle) {
+    if (gstInclusive) {
       final divisor = 1 + (taxPercent / 100);
       final taxable = afterDiscount / divisor;
       final tax = afterDiscount - taxable;
@@ -909,159 +838,9 @@ DebitNoteState _prefillDebitNoteFromTrans(
     ),
   );
 
-  // ---------------- ADDITIONAL CHARGES ----------------
-  final mappedCharges = (data.additionalCharges)
-      .map(
-        (c) => AdditionalCharge(
-          id: c.id,
-          name: c.name,
-          amount: (c.amount).toDouble(),
-          taxPercent: 0,
-          taxIncluded: false,
-        ),
-      )
-      .toList();
-
-  // ---------------- DISCOUNTS ----------------
-  final mappedDiscounts = (data.discountLines)
-      .map(
-        (d) => DiscountLine(
-          id: d.id,
-          name: d.name,
-          amount: (d.amount).toDouble(),
-          isPercent: (d.type).toString().toLowerCase() == "percent",
-        ),
-      )
-      .toList();
-
-  // ---------------- MISC CHARGES (match by name with master) ----------------
-  final mappedMisc = <GlobalMiscChargeEntry>[];
-  for (final m in data.miscCharges) {
-    final nameFromDebitNote = (m.name).trim().toLowerCase();
-    if (nameFromDebitNote.isEmpty) continue;
-
-    // try to find in misc master list safely
-    MiscChargeModelList? match;
-    try {
-      match = s.miscMasterList.firstWhere(
-        (mx) => (mx.name).trim().toLowerCase() == nameFromDebitNote,
-      );
-    } catch (_) {
-      match = null;
-    }
-
-    if (match == null) {
-      // skip if master not found
-      continue;
-    }
-
-    double gst = 0;
-    try {
-      gst = match.gst != null ? double.tryParse(match.gst.toString()) ?? 0 : 0;
-    } catch (_) {
-      gst = 0;
-    }
-    final ledgerId = match.ledgerId;
-    final hsn = match.hsn;
-
-    final taxIncluded =
-        (m.type == true) || (m.type.toString().toLowerCase() == "true");
-
-    mappedMisc.add(
-      GlobalMiscChargeEntry(
-        id: UniqueKey().toString(),
-        miscId: match.id,
-        ledgerId: ledgerId,
-        name: m.name,
-        hsn: hsn,
-        gst: gst,
-        amount: (m.amount).toDouble(),
-        taxIncluded: taxIncluded,
-      ),
-    );
-  }
-
-  // empty fallback item (if catalogue doesn't contain item/service)
-  ItemServiceModel emptyItem() {
-    return ItemServiceModel(
-      id: "",
-      type: ItemServiceType.item,
-      name: "",
-      hsn: "",
-      variantValue: '',
-      baseSalePrice: 0,
-      gstRate: 0,
-      gstIncluded: false,
-      baseUnit: '',
-      secondaryUnit: '',
-      conversion: 1,
-      variants: [],
-      itemNo: '',
-      group: '',
-    );
-  }
-
-  // Convert itemDetails -> GlobalItemRow
-  final itemRows = (data.itemDetails).map((i) {
-    final catalogItem = s.catalogue.firstWhere(
-      (c) => c.id == (i.itemId),
-      orElse: () => emptyItem(),
-    );
-
-    return GlobalItemRow(
-      localId: UniqueKey().toString(),
-      product: catalogItem,
-      selectedVariant: null,
-      qty: (i.qty).toInt(),
-      pricePerSelectedUnit: (i.price).toDouble(),
-      discountPercent: (i.discount).toDouble(),
-      hsnOverride: (i.hsn),
-      taxPercent: (i.gstRate).toDouble(),
-      gstInclusiveToggle: i.inclusive,
-      sellInBaseUnit: false,
-    ).recalc();
-  }).toList();
-
-  // Convert serviceDetails -> GlobalItemRow
-  final serviceRows = (data.serviceDetails).map((i) {
-    final catalogService = s.catalogue.firstWhere(
-      (c) => c.id == (i.serviceId),
-      orElse: () => emptyItem(),
-    );
-
-    return GlobalItemRow(
-      localId: UniqueKey().toString(),
-      product: catalogService,
-      selectedVariant: null,
-      qty: (i.qty).toInt(),
-      pricePerSelectedUnit: (i.price).toDouble(),
-      discountPercent: (i.discount).toDouble(),
-      hsnOverride: (i.hsn),
-      taxPercent: (i.gstRate).toDouble(),
-      gstInclusiveToggle: i.inclusive,
-      sellInBaseUnit: false,
-    ).recalc();
-  }).toList();
-
-  final rows = <GlobalItemRow>[
-    ...itemRows,
-    ...serviceRows,
-    if (itemRows.isEmpty && serviceRows.isEmpty)
-      GlobalItemRow(localId: UniqueKey().toString()),
-  ];
-
   return s.copyWith(
     customers: s.customers,
     selectedCustomer: data.caseSale ? null : selectedCustomer,
-    // NOTE: Intentionally NOT overwriting prefix, DebitNoteNo, DebitNoteDate
-    rows: rows,
-    charges: mappedCharges,
-    discounts: mappedDiscounts,
-    miscCharges: mappedMisc,
-    subtotal: (data.subTotal).toDouble(),
-    totalGst: (data.subGst).toDouble(),
-    totalAmount: (data.totalAmount).toDouble(),
-    autoRound: data.autoRound,
     cashSaleDefault: data.caseSale,
   );
 }
@@ -1152,73 +931,22 @@ DebitNoteState _prefillDebitNote(DebitNoteData data, DebitNoteState s) {
     );
   }
 
-  // empty fallback item (if catalogue doesn't contain item/service)
-  ItemServiceModel emptyItem() {
-    return ItemServiceModel(
-      id: "",
-      type: ItemServiceType.item,
-      name: "",
-      hsn: "",
-      variantValue: '',
-      baseSalePrice: 0,
-      gstRate: 0,
-      gstIncluded: false,
-      baseUnit: '',
-      secondaryUnit: '',
-      conversion: 1,
-      variants: [],
-      itemNo: '',
-      group: '',
-    );
-  }
-
-  // Convert itemDetails -> GlobalItemRow
   final itemRows = (data.itemDetails).map((i) {
-    final catalogItem = s.catalogue.firstWhere(
-      (c) => c.id == (i.itemId),
-      orElse: () => emptyItem(),
-    );
-
-    return GlobalItemRow(
+    return NoteModelItem(
       localId: UniqueKey().toString(),
-      product: catalogItem,
-      selectedVariant: null,
+      itemName: i.name,
       qty: (i.qty).toInt(),
-      pricePerSelectedUnit: (i.price).toDouble(),
+      price: (i.price).toDouble(),
       discountPercent: (i.discount).toDouble(),
-      hsnOverride: (i.hsn),
+      hsnCode: (i.hsn),
       taxPercent: (i.gstRate).toDouble(),
-      gstInclusiveToggle: i.inclusive,
-      sellInBaseUnit: false,
+      gstInclusive: i.inclusive,
     ).recalc();
   }).toList();
 
-  // Convert serviceDetails -> GlobalItemRow
-  final serviceRows = (data.serviceDetails).map((i) {
-    final catalogService = s.catalogue.firstWhere(
-      (c) => c.id == (i.serviceId),
-      orElse: () => emptyItem(),
-    );
-
-    return GlobalItemRow(
-      localId: UniqueKey().toString(),
-      product: catalogService,
-      selectedVariant: null,
-      qty: (i.qty).toInt(),
-      pricePerSelectedUnit: (i.price).toDouble(),
-      discountPercent: (i.discount).toDouble(),
-      hsnOverride: (i.hsn),
-      taxPercent: (i.gstRate).toDouble(),
-      gstInclusiveToggle: i.inclusive,
-      sellInBaseUnit: false,
-    ).recalc();
-  }).toList();
-
-  final rows = <GlobalItemRow>[
+  final rows = <NoteModelItem>[
     ...itemRows,
-    ...serviceRows,
-    if (itemRows.isEmpty && serviceRows.isEmpty)
-      GlobalItemRow(localId: UniqueKey().toString()),
+    if (itemRows.isEmpty) NoteModelItem(localId: UniqueKey().toString()),
   ];
 
   return s.copyWith(

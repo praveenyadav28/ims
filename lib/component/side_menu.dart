@@ -1,209 +1,276 @@
 import 'package:flutter/material.dart';
-import 'package:ims/ui/master/customer_supplier/customer_list.dart';
-import 'package:ims/ui/inventry/item/create.dart';
-import 'package:ims/ui/master/company/company_profile.dart';
-import 'package:ims/ui/master/ledger/ledger_master.dart';
-import 'package:ims/ui/master/misc/misc_charge_list.dart';
-import 'package:ims/ui/master/user/user_list.dart';
-import 'package:ims/ui/purchase/credit_note/credit_note_list.dart';
-import 'package:ims/ui/purchase/purchase_invoice/purchase_invoice_list.dart';
-import 'package:ims/ui/purchase/purchase_order/purchase_order_list.dart';
-import 'package:ims/ui/purchase/purchase_return/purchase_return_list.dart';
-import 'package:ims/ui/sales/debit_note/debit_note_list.dart';
-import 'package:ims/ui/sales/dilivery_chalan/challan_list.dart';
-import 'package:ims/ui/sales/estimate/estimate_list.dart';
-import 'package:ims/ui/sales/performa_invoice/performa_list.dart';
-import 'package:ims/ui/sales/sale_invoice/sale_invoice_list.dart';
-import 'package:ims/ui/sales/sale_return/sale_return_list.dart';
-import 'package:ims/ui/voucher/payment/create.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/utils/colors.dart';
-import 'package:ims/utils/navigation.dart';
+import 'menu_screen.dart';
 
 class SideMenu extends StatefulWidget {
-  const SideMenu({super.key});
+  final MenuScreen selected;
+  final Function(MenuScreen) onSelect;
+
+  const SideMenu({super.key, required this.selected, required this.onSelect});
 
   @override
   State<SideMenu> createState() => _SideMenuState();
 }
 
-class _SideMenuState extends State<SideMenu> {
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: AppColor.white,
+class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
+  String? expandedKey;
 
-      child: SingleChildScrollView(
+  Color get activeColor => const Color(0xff22CCB2);
+  Color get bgColor => AppColor.black;
+  Color get tileColor => const Color(0xff20293C);
+
+  // ================= SINGLE MENU =================
+  Widget menuItem(String icon, String title, MenuScreen screen) {
+    final bool active = widget.selected == screen;
+
+    return InkWell(
+      onTap: () => widget.onSelect(screen),
+      child: Container(
+        height: 77,
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        decoration: BoxDecoration(
+          color: active ? activeColor : tileColor,
+          borderRadius: BorderRadius.circular(6),
+        ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Master Data Section
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(const CustomerTableScreen());
-              },
-              title: "Customer Supplier",
-            ),
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(const CreateNewItemScreen());
-              },
-              title: "Create Item",
-            ),
-            // DrawerListtile(
-            //   onTap: () {
-            //     pushNdRemove(const PaymentEntry());
-            //   },
-            //   title: "Payment Entry",
-            // ),
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(const CreateLedger());
-              },
-              title: "Ledger Master",
-            ),
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(const CompanyProfileScreen());
-              },
-              title: "Company Profile",
-            ),
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(const UserEmpTableScreen());
-              },
-              title: "User Master",
-            ),
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(const MiscChargeScreen());
-              },
-              title: "Misc Charge",
-            ),
-
-            // Sales Documents Section
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(EstimateListScreen());
-              },
-              title: "Estimate List",
-            ),
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(PerformaInvoiceListScreen());
-              },
-              title: "Performa Invoice List",
-            ),
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(SaleInvoiceInvoiceListScreen());
-              },
-              title: "Sale Invoice List",
-            ),
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(DiliveryChallanInvoiceListScreen());
-              },
-              title: "Delivery Challan List",
-            ),
-
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(SaleReturnInvoiceListScreen());
-              },
-              title: "Sales Return List",
-            ),
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(DebitNoteInvoiceListScreen());
-              },
-              title: "Debit Note List",
-            ),
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(PurchaseOrderListScreen());
-              },
-              title: "Purchase Order List",
-            ),
-
-            // Purchase Documents Section
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(PurchaseInvoiceListScreen());
-              },
-              title: "Purchase Invoice List",
-            ),
-
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(CreditNoteListScreen());
-              },
-              title: "Credit Note List",
-            ),
-
-            DrawerListtile(
-              onTap: () {
-                pushNdRemove(PurchaseReturnListScreen());
-              },
-              title: "Purchase Return List",
+            SvgPicture.asset(icon, height: 24, color: AppColor.white),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              style: GoogleFonts.inter(fontSize: 14, color: AppColor.white),
             ),
           ],
         ),
       ),
     );
   }
-}
 
-class DrawerListtile extends StatelessWidget {
-  DrawerListtile({
-    required this.title,
-    required this.onTap,
-    this.style,
-    super.key,
-  });
-  final String title;
-  final TextStyle? style;
-  final void Function()? onTap;
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 9,
-          child: InkWell(
-            onTap: onTap,
+  // ================= CHILD ITEM =================
+  Widget childItem(String title, MenuScreen screen) {
+    final bool active = widget.selected == screen;
 
-            child: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColor.grey,
-                    blurRadius: 2,
-                    spreadRadius: 0,
-                    offset: Offset(0, 1),
+    return InkWell(
+      onTap: () => widget.onSelect(screen),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        padding: const EdgeInsets.only(top: 8, bottom: 8, left: 4),
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          color: active ? activeColor : tileColor,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          title,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(fontSize: 12, color: AppColor.white),
+        ),
+      ),
+    );
+  }
+
+  // ================= EXPANDABLE MENU =================
+  Widget expandableMenu({
+    required String menuKey,
+    required String icon,
+    required String title,
+    required List<Map<String, MenuScreen>> children,
+
+    bool isPng = false,
+  }) {
+    final bool isOpen = expandedKey == menuKey;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      decoration: BoxDecoration(
+        color: tileColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                expandedKey = isOpen ? null : menuKey;
+              });
+            },
+            child: Stack(
+              alignment: Alignment.centerRight,
+              children: [
+                Container(
+                  height: 77,
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      isPng
+                          ? Image.asset(icon, height: 24, color: AppColor.white)
+                          : SvgPicture.asset(
+                              icon,
+                              height: 24,
+                              color: AppColor.white,
+                            ),
+                      const SizedBox(height: 6),
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: AppColor.white,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-                color: style != null
-                    ? Color.fromARGB(255, 250, 208, 208)
-                    : AppColor.white,
-                border: Border.all(color: AppColor.grey),
-                borderRadius: BorderRadius.only(
-                  topRight: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
                 ),
-              ),
-              alignment: Alignment.centerLeft,
-              margin: EdgeInsets.symmetric(vertical: 8),
-              padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-              child: Text(
-                title,
-                style:
-                    style ??
-                    TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-              ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Icon(
+                    isOpen
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: AppColor.white,
+                  ),
+                ),
+              ],
             ),
           ),
+
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            child: isOpen
+                ? Column(
+                    children: children
+                        .map((e) => childItem(e.keys.first, e.values.first))
+                        .toList(),
+                  )
+                : const SizedBox(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= BUILD =================
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Container(
+        color: bgColor,
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            const Icon(Icons.blur_on, color: Colors.white),
+            const SizedBox(height: 20),
+
+            menuItem(
+              "assets/icons/home.svg",
+              "Home",
+              MenuScreen.dashboardScreen,
+            ),
+
+            expandableMenu(
+              menuKey: "customers",
+              icon: "assets/icons/user.svg",
+              title: "Trader",
+              children: [
+                {"Customer": MenuScreen.customerList},
+                {"Supplier": MenuScreen.supplierList},
+              ],
+            ),
+
+            menuItem(
+              "assets/icons/inventry.svg",
+              "Inventory",
+              MenuScreen.inventoryScreen,
+            ),
+
+            expandableMenu(
+              menuKey: "sales",
+              icon: "assets/icons/sales.svg",
+              title: "Sales",
+              children: [
+                {"Estimate": MenuScreen.estimateList},
+                {"Performa Invoice": MenuScreen.performaInvoice},
+                {"Delivery": MenuScreen.deliveryChallan},
+                {"Sale Invoice": MenuScreen.saleInvoice},
+                {"Sales Return": MenuScreen.saleReturn},
+                {"Debit Note": MenuScreen.debitNote},
+              ],
+            ),
+
+            expandableMenu(
+              menuKey: "purchase",
+              icon: "assets/icons/purchase.svg",
+              title: "Purchase",
+              children: [
+                {"Purchase Order": MenuScreen.purchaseOrder},
+                {"Purchase Invoice": MenuScreen.purchaseInvoice},
+                {"Purchase Return": MenuScreen.purchaseReturn},
+                {"Credit Note": MenuScreen.creditNote},
+              ],
+            ),
+
+            expandableMenu(
+              menuKey: "reports",
+              icon: "assets/icons/reports.svg",
+              title: "Reports",
+              children: [
+                {"Customer Report": MenuScreen.customerReport},
+                {"Supplier Report": MenuScreen.supplierReport},
+                {"P Invoice Report": MenuScreen.purchaseInvReport},
+                {"S Invoice Report": MenuScreen.saleInvReport},
+                {"Inventory Report": MenuScreen.inventoryReport},
+              ],
+            ),
+
+            expandableMenu(
+              menuKey: "vouchers",
+              icon: "assets/icons/vouchers.svg",
+              title: "Vouchers",
+              children: [
+                {"Payment": MenuScreen.payment},
+                {"Reciept": MenuScreen.reciept},
+                {"Contra": MenuScreen.contra},
+                {"Expense": MenuScreen.expanse},
+              ],
+            ),
+            expandableMenu(
+              menuKey: "employee",
+              icon: "assets/icons/employee.png",
+              title: "Employees/Users",
+              children: [
+                {"User": MenuScreen.userMaster},
+                {"Employee": MenuScreen.employeeMaster},
+              ],
+              isPng: true,
+            ),
+
+            expandableMenu(
+              menuKey: "utils",
+              icon: "assets/icons/utils.svg",
+              title: "Utilities",
+              children: [
+                {"Misc Charge": MenuScreen.miscCharge},
+                {"Company Profile": MenuScreen.companyProfile},
+                {"Ledger": MenuScreen.ledgerMaster},
+              ],
+            ),
+
+            const SizedBox(height: 20),
+            IconButton(
+              icon: const Icon(Icons.logout, color: Colors.white),
+              onPressed: () {},
+            ),
+            const SizedBox(height: 10),
+          ],
         ),
-        Expanded(flex: 2, child: Container()),
-      ],
+      ),
     );
   }
 }

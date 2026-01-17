@@ -120,7 +120,7 @@ class SaleReturnData {
     terms: List<String>.from(j["te_co"] ?? []),
 
     transId: j["invoice_id"]??"",
-    transNo: j["invoice_no"]??"",
+    transNo: j["invoice_no"]??0,
     subTotal: (j["sub_totle"] ?? 0).toDouble(),
     subGst: (j["sub_gst"] ?? 0).toDouble(),
     autoRound: j["auto_ro"] ?? false,

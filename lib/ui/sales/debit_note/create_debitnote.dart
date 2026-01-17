@@ -9,7 +9,7 @@ import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/data/global_additionalcharge.dart';
 import 'package:ims/ui/sales/data/global_billto.dart';
 import 'package:ims/ui/sales/data/global_discount.dart';
-import 'package:ims/ui/sales/data/global_item_table.dart';
+import 'package:ims/ui/sales/data/global_note_table.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/data/global_shipto.dart';
 import 'package:ims/ui/sales/data/globalmisc_charge.dart';
@@ -335,9 +335,8 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                   ),
 
                   SizedBox(height: Sizes.height * .03),
-                  GlobalItemsTableSection(
+                  NoteItemsTableSection(
                     rows: state.rows, // list of GlobalItemRow
-                    catalogue: state.catalogue, // list of ItemServiceModel
                     hsnList: state.hsnMaster, // list of HsnModel
 
                     onAddRow: () => bloc.add(DebitNoteAddRow()),
@@ -346,14 +345,8 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
 
                     onUpdateRow: (row) => bloc.add(DebitNoteUpdateRow(row)),
 
-                    onSelectCatalog: (rowId, item) =>
-                        bloc.add(DebitNoteSelectCatalogForRow(rowId, item)),
-
                     onSelectHsn: (rowId, hsn) =>
                         bloc.add(DebitNoteApplyHsnToRow(rowId, hsn)),
-
-                    onToggleUnit: (rowId, value) =>
-                        bloc.add(DebitNoteToggleUnitForRow(rowId, value)),
                   ),
                   SizedBox(height: Sizes.height * .02),
 

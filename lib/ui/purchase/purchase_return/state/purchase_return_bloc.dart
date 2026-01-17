@@ -851,6 +851,8 @@ class PurchaseReturnBloc
             purchaseReturnNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+          final ctx = purchaseReturnNavigatorKey.currentContext!;
+          Navigator.of(ctx).pop(true);
         } else {
           showCustomSnackbarError(
             purchaseReturnNavigatorKey.currentContext!,

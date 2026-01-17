@@ -6,14 +6,24 @@ import '../estimate/estimate_screen.dart';
 import '../data/global_repository.dart';
 import '../../../utils/navigation.dart';
 
-class EstimateListScreen extends StatelessWidget {
+class EstimateListScreen extends StatefulWidget {
+  const EstimateListScreen({super.key});
+
+  @override
+  State<EstimateListScreen> createState() => _EstimateListScreenState();
+}
+
+class _EstimateListScreenState extends State<EstimateListScreen> {
   final repo = GLobalRepository();
 
-  EstimateListScreen({super.key});
+  /// 🔑 Use PUBLIC state type (no underscore)
+  final GlobalKey<TransactionListScreenState<EstimateData>> listKey =
+      GlobalKey<TransactionListScreenState<EstimateData>>();
 
   @override
   Widget build(BuildContext context) {
     return TransactionListScreen<EstimateData>(
+      key: listKey, // 👈 VERY IMPORTANT
       title: "Estimate",
 
       /// API Call
@@ -21,9 +31,25 @@ class EstimateListScreen extends StatelessWidget {
 
       /// ACTIONS
       onView: generateEstimatePdf,
-      onEdit: (e) => pushTo(CreateEstimateFullScreen(estimateData: e)),
+
+      onEdit: (e) async {
+        final result =
+            await pushTo(CreateEstimateFullScreen(estimateData: e));
+
+        if (result == true) {
+          listKey.currentState?.load(); // ✅ reload list
+        }
+      },
+
       onDelete: repo.deleteEstimate,
-      onCreate: () => pushTo(CreateEstimateFullScreen()),
+
+      onCreate: () async {
+        final result = await pushTo(CreateEstimateFullScreen());
+
+        if (result == true) {
+          listKey.currentState?.load(); // ✅ reload list
+        }
+      },
 
       /// EXTRACTORS — REQUIRED
       idGetter: (e) => e.id,
@@ -31,6 +57,7 @@ class EstimateListScreen extends StatelessWidget {
       numberGetter: (e) => "${e.prefix}-${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
+      addressGetter: (e) => e.address0,
     );
   }
 }

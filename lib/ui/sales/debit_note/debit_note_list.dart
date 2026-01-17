@@ -14,27 +14,54 @@ extension DebitNoteMapper on DebitNoteData {
   double get baseAmount => totalAmount;
 }
 
-class DebitNoteInvoiceListScreen extends StatelessWidget {
+class DebitNoteInvoiceListScreen extends StatefulWidget {
+  DebitNoteInvoiceListScreen({super.key});
+
+  @override
+  State<DebitNoteInvoiceListScreen> createState() =>
+      _DebitNoteInvoiceListScreenState();
+}
+
+class _DebitNoteInvoiceListScreenState
+    extends State<DebitNoteInvoiceListScreen> {
   final repo = GLobalRepository();
 
-  DebitNoteInvoiceListScreen({super.key});
+  /// 🔑 Key to access TransactionListScreen state
+  final GlobalKey<TransactionListScreenState<DebitNoteData>> listKey =
+      GlobalKey<TransactionListScreenState<DebitNoteData>>();
 
   @override
   Widget build(BuildContext context) {
     return TransactionListScreen<DebitNoteData>(
+      key: listKey,
       title: "Debit Note",
       fetchData: repo.getDebitNote,
       onView: (e) {
         print("VIEW Debit Note PDF: ${e.baseNumber}");
       },
-      onEdit: (e) => pushTo(CreateDebitNoteFullScreen(debitNoteData: e)),
+      onEdit: (e) async {
+        final result = await pushTo(
+          CreateDebitNoteFullScreen(debitNoteData: e),
+        );
+
+        if (result == true) {
+          listKey.currentState?.load();
+        }
+      },
+      onCreate: () async {
+        final result = await pushTo(CreateDebitNoteFullScreen());
+
+        if (result == true) {
+          listKey.currentState?.load();
+        }
+      },
       onDelete: repo.deleteDebitNote,
-      onCreate: () => pushTo(CreateDebitNoteFullScreen()),
       idGetter: (e) => e.id,
       dateGetter: (e) => e.debitNoteDate,
       numberGetter: (e) => "${e.prefix} ${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
+      addressGetter: (e) => e.address0,
     );
   }
 }

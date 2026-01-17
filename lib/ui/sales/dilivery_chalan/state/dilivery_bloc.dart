@@ -800,10 +800,12 @@ class DiliveryChallanBloc
         );
 
         if (res?['status'] == true) {
+          final ctx = diliveryChallanNavigatorKey.currentContext!;
           showCustomSnackbarSuccess(
             diliveryChallanNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+          Navigator.of(ctx).pop(true);
         } else {
           showCustomSnackbarError(
             diliveryChallanNavigatorKey.currentContext!,

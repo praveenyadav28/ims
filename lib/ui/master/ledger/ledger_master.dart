@@ -1,6 +1,8 @@
+// ignore_for_file: must_be_immutable
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ims/component/side_menu.dart';
+import 'package:ims/model/ledger_model.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -12,7 +14,8 @@ import 'package:ims/utils/textfield.dart';
 import 'package:searchfield/searchfield.dart';
 
 class CreateLedger extends StatefulWidget {
-  const CreateLedger({super.key});
+  CreateLedger({super.key, this.existing});
+  LedgerListModel? existing;
 
   @override
   State<CreateLedger> createState() => _CreateLedgerState();
@@ -144,7 +147,6 @@ class _CreateLedgerState extends State<CreateLedger> {
           ),
         ),
       ),
-      drawer: SideMenu(),
       body: SingleChildScrollView(
         padding: EdgeInsets.only(
           right: Sizes.width * .08,
@@ -358,9 +360,7 @@ class _CreateLedgerState extends State<CreateLedger> {
       // Safely parse int, using null if empty.
       'opening_balance': openingBalanceController.text.trim().isEmpty
           ? null
-          : int.tryParse(
-              openingBalanceController.text.trim(),
-            ),
+          : int.tryParse(openingBalanceController.text.trim()),
       'address': addressLine1Controller.text.trim().toString(),
       'town': permanentareaController.text.trim().toString(),
       'opening_type': _selectedBalance,
@@ -393,7 +393,7 @@ class _CreateLedgerState extends State<CreateLedger> {
       // Use `await` for async snackbar/dialog if needed, but not strictly required here.
       showCustomSnackbarSuccess(context, response['message']);
       // If you uncomment the pop, ensure 'context' is valid.
-      // Navigator.pop(context, "New Data");
+      Navigator.pop(context, "data");
     } else {
       showCustomSnackbarError(context, response['message']);
     }

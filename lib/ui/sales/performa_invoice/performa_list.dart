@@ -14,27 +14,60 @@ extension PerformaMapper on PerformaData {
   double get baseAmount => totalAmount;
 }
 
-class PerformaInvoiceListScreen extends StatelessWidget {
+class PerformaInvoiceListScreen extends StatefulWidget {
+  const PerformaInvoiceListScreen({super.key});
+
+  @override
+  State<PerformaInvoiceListScreen> createState() =>
+      _PerformaInvoiceListScreenState();
+}
+
+class _PerformaInvoiceListScreenState extends State<PerformaInvoiceListScreen> {
   final repo = GLobalRepository();
 
-  PerformaInvoiceListScreen({super.key});
+  /// 🔑 Key to access TransactionListScreen state
+  final GlobalKey<TransactionListScreenState<PerformaData>> listKey =
+      GlobalKey<TransactionListScreenState<PerformaData>>();
 
   @override
   Widget build(BuildContext context) {
     return TransactionListScreen<PerformaData>(
+      key: listKey, // 👈 IMPORTANT
       title: "Performa Invoice",
+
+      /// API Call
       fetchData: repo.getPerforma,
+
+      /// ACTIONS
       onView: (e) {
         print("VIEW PERFORMA PDF: ${e.baseNumber}");
       },
-      onEdit: (e) => pushTo(CreatePerformaFullScreen(performaData: e)),
+
+      onEdit: (e) async {
+        final result = await pushTo(CreatePerformaFullScreen(performaData: e));
+
+        if (result == true) {
+          listKey.currentState?.load(); // ✅ reload list
+        }
+      },
+
       onDelete: repo.deletePerforma,
-      onCreate: () => pushTo(CreatePerformaFullScreen()),
+
+      onCreate: () async {
+        final result = await pushTo(CreatePerformaFullScreen());
+
+        if (result == true) {
+          listKey.currentState?.load(); // ✅ reload list
+        }
+      },
+
+      /// EXTRACTORS
       idGetter: (e) => e.id,
       dateGetter: (e) => e.performaDate,
-      numberGetter: (e) => "${e.prefix}-${e.no}",
+      numberGetter: (e) => "${e.prefix} ${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
+      addressGetter: (e) => e.address0,
     );
   }
 }

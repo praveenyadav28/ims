@@ -753,10 +753,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         );
 
         if (res?['status'] == true) {
-          showCustomSnackbarSuccess(
-            estimateNavigatorKey.currentContext!,
-            res?['message'] ?? "Saved",
-          );
+          final ctx = estimateNavigatorKey.currentContext!;
+
+          showCustomSnackbarSuccess(ctx, res?['message'] ?? "Saved");
+
+          // 🔥 GO BACK TO PREVIOUS SCREEN
+          Navigator.of(ctx).pop(true); // true = success result
         } else {
           showCustomSnackbarError(
             estimateNavigatorKey.currentContext!,

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/model/cussup_model.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -18,8 +19,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 
 class CreateCusSup extends StatefulWidget {
-  CreateCusSup({super.key, required this.isCustomer});
+  CreateCusSup({super.key, required this.isCustomer, this.cusSupData});
   bool isCustomer;
+  Customer? cusSupData;
   @override
   State<CreateCusSup> createState() => _CreateCusSupState();
 }
@@ -99,6 +101,52 @@ class _CreateCusSupState extends State<CreateCusSup>
     statesSuggestions = stateCities.keys.toList();
     citiesSuggestions = [];
     _tabController = TabController(length: 3, vsync: this);
+
+    /// ✅ AUTO FILL WHEN EDIT
+    if (widget.cusSupData != null) {
+      final c = widget.cusSupData!;
+
+      selectedType = c.customerType;
+      selectedTitle = c.title;
+      selectedTitleParent = c.related;
+
+      companyNameController.text = c.companyName;
+      firstNameController.text = c.firstName;
+      lastNameController.text = c.lastName;
+      firstNameGuardianController.text = c.parents;
+      lastNameGuardianController.text = c.parentsLast;
+
+      emailController.text = c.email;
+      mobileController.text = c.mobile;
+      workPhoneController.text = c.phone ?? "";
+
+      panController.text = c.pan;
+      gstNumberController.text = c.gstNo;
+      selectedGstType = c.gstType == "" ? null : c.gstType;
+
+      addressLine1Controller.text = c.address0;
+      addressLine2Controller.text = c.address1;
+      cityDistrictController.text = c.city;
+
+      // State & City
+      selectedState = SearchFieldListItem(c.state, item: c.state);
+      citiesSuggestions = stateCities[c.state] ?? [];
+      selectedCity = SearchFieldListItem(c.city, item: c.city);
+
+      /// DOCUMENTS
+      documents = c.documents.isEmpty
+          ? [
+              {"duc_title": "", "image": null},
+            ]
+          : c.documents
+                .map(
+                  (e) => {
+                    "duc_title": e.title,
+                    "image": e.image, // URL string
+                  },
+                )
+                .toList();
+    }
   }
 
   @override
@@ -122,7 +170,7 @@ class _CreateCusSupState extends State<CreateCusSup>
         elevation: .4,
         shadowColor: AppColor.grey,
         title: Text(
-          "Create New ${widget.isCustomer ? "Customer" : "Supplier"}",
+          "${widget.cusSupData == null ? "Create New" : "Update"} ${widget.isCustomer ? "Customer" : "Supplier"}",
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             height: 1,
@@ -410,8 +458,7 @@ class _CreateCusSupState extends State<CreateCusSup>
                             ),
                             SizedBox(width: 55),
                             Expanded(
-                              child: 
-                              CommonSearchableDropdownField<String>(
+                              child: CommonSearchableDropdownField<String>(
                                 controller: TextEditingController(
                                   text: selectedCity?.item ?? "",
                                 ),
@@ -596,7 +643,8 @@ class _CreateCusSupState extends State<CreateCusSup>
           children: [
             defaultButton(
               buttonColor: Color(0xff8947E5),
-              text: "Create ${widget.isCustomer ? "Customer" : "Supplier"}",
+              text:
+                  "${widget.cusSupData == null ? "Create" : "Update"} ${widget.isCustomer ? "Customer" : "Supplier"}",
               height: 40,
               width: 149,
               onTap: () => saveOrUpdate(),
@@ -608,6 +656,7 @@ class _CreateCusSupState extends State<CreateCusSup>
               text: "Cancel",
               height: 40,
               width: 93,
+              onTap: () => Navigator.pop(context),
             ),
           ],
         ),
@@ -721,17 +770,32 @@ class _CreateCusSupState extends State<CreateCusSup>
       };
 
       // ✅ Send POST request
-      final response = await dio.post(
-        "${ApiService.baseurl}/${widget.isCustomer ? "customer" : "supplier"}",
-        data: formData,
-        options: Options(headers: headers, contentType: 'multipart/form-data'),
-      );
+      final response = widget.cusSupData != null
+          ? await dio.put(
+              "${ApiService.baseurl}/${widget.isCustomer ? "customer" : "supplier"}/${widget.cusSupData?.id}",
+              data: formData,
+              options: Options(
+                headers: headers,
+                contentType: 'multipart/form-data',
+              ),
+            )
+          : await dio.post(
+              "${ApiService.baseurl}/${widget.isCustomer ? "customer" : "supplier"}",
+              data: formData,
+              options: Options(
+                headers: headers,
+                contentType: 'multipart/form-data',
+              ),
+            );
 
       if (response.statusCode == 200) {
         var data = json.decode("$response");
-
-        Navigator.pop(context, "data");
-        showCustomSnackbarSuccess(context, data['message']);
+        if (data['status'] == true) {
+          Navigator.pop(context, "data");
+          showCustomSnackbarSuccess(context, data['message']);
+        } else {
+          showCustomSnackbarError(context, data['message']);
+        }
       } else {
         showCustomSnackbarError(context, "Failed: ${response.statusMessage}");
       }

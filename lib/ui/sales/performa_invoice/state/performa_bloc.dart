@@ -773,10 +773,13 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
         );
 
         if (res?['status'] == true) {
+          final ctx = perfromaNavigatorKey.currentContext!;
           showCustomSnackbarSuccess(
             perfromaNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+          // 🔥 GO BACK TO PREVIOUS SCREEN
+          Navigator.of(ctx).pop(true); // true = success result
         } else {
           showCustomSnackbarError(
             perfromaNavigatorKey.currentContext!,

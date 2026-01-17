@@ -533,7 +533,7 @@ class GLobalRepository {
 
   Future<bool> deleteSaleReturn(String id) async {
     final res = await ApiService.deleteData(
-      "sale_return/$id",
+      "returnsale/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 

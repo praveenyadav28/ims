@@ -15,27 +15,53 @@ extension SaleInvoiceMapper on SaleInvoiceData {
   double get baseAmount => totalAmount;
 }
 
-class SaleInvoiceInvoiceListScreen extends StatelessWidget {
+class SaleInvoiceInvoiceListScreen extends StatefulWidget {
+  SaleInvoiceInvoiceListScreen({super.key});
+
+  @override
+  State<SaleInvoiceInvoiceListScreen> createState() =>
+      _SaleInvoiceInvoiceListScreenState();
+}
+
+class _SaleInvoiceInvoiceListScreenState
+    extends State<SaleInvoiceInvoiceListScreen> {
   final repo = GLobalRepository();
 
-  SaleInvoiceInvoiceListScreen({super.key});
+  /// 🔑 Key to access TransactionListScreen state
+  final GlobalKey<TransactionListScreenState<SaleInvoiceData>> listKey =
+      GlobalKey<TransactionListScreenState<SaleInvoiceData>>();
 
   @override
   Widget build(BuildContext context) {
     return TransactionListScreen<SaleInvoiceData>(
+      key: listKey,
       title: "Sale Invoice",
       fetchData: repo.getSaleInvoice,
       onView: (e) {
         print("VIEW Sale Invoice PDF: ${e.id}");
       },
-      onEdit: (e) => pushTo(CreateSaleInvoiceFullScreen(saleInvoiceData: e)),
+      onEdit: (e) async {
+        final result = await pushTo(
+          CreateSaleInvoiceFullScreen(saleInvoiceData: e),
+        );
+        if (result == true) {
+          listKey.currentState?.load(); // ✅ reload list
+        }
+      },
+      onCreate: () async {
+        final result = await pushTo(CreateSaleInvoiceFullScreen());
+
+        if (result == true) {
+          listKey.currentState?.load(); // ✅ reload list
+        }
+      },
       onDelete: repo.deleteSaleInvoice,
-      onCreate: () => pushTo(CreateSaleInvoiceFullScreen()),
       idGetter: (e) => e.id,
       dateGetter: (e) => e.saleInvoiceDate,
       numberGetter: (e) => "${e.prefix} ${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
+      addressGetter: (e) => e.address0,
     );
   }
 }

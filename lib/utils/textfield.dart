@@ -141,7 +141,7 @@ class TitleTextFeild extends StatelessWidget {
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
-          maxLines: maxLines??1,
+          maxLines: maxLines ?? 1,
           validator: validator,
           keyboardType: keyboardType,
           maxLength: maxLength,
@@ -212,7 +212,7 @@ class CommonDropdownField<T> extends StatelessWidget {
         icon: const Icon(
           Icons.keyboard_arrow_down_rounded,
           color: Color(0xFF565D6D),
-        ),        
+        ),
         decoration: InputDecoration(
           labelText: hintText ?? "",
           prefixIcon: prefixIcon,

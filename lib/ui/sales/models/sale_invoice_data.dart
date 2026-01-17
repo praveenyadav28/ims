@@ -19,7 +19,7 @@ class SaleInvoiceListResponse {
   factory SaleInvoiceListResponse.fromJson(Map<String, dynamic> json) =>
       SaleInvoiceListResponse(
         status: json["status"] ?? false,
-        message: json["message"],
+        message: json["message"] ?? "",
         data: json["data"] == null
             ? []
             : List<SaleInvoiceData>.from(
@@ -98,19 +98,19 @@ class SaleInvoiceData {
   });
 
   factory SaleInvoiceData.fromJson(Map<String, dynamic> j) => SaleInvoiceData(
-    id: j["_id"],
+    id: j["_id"] ?? "",
     licenceNo: j["licence_no"],
-    branchId: j["branch_id"],
-    customerId: j["customer_id"],
-    customerName: j["customer_name"],
-    address0: j["address_0"],
-    address1: j["address_1"],
+    branchId: j["branch_id"] ?? "",
+    customerId: j["customer_id"] ?? "",
+    customerName: j["customer_name"] ?? "",
+    address0: j["address_0"] ?? "",
+    address1: j["address_1"] ?? "",
     mobile: j["mobile"].toString(),
     transType: j["trans_type"] ?? "",
-    transId: j["trans_id"],
-    transNo: j["trans_no"],
+    transId: j["trans_id"] ?? "",
+    transNo: j["trans_no"]??0,
 
-    prefix: j["prefix"],
+    prefix: j["prefix"] ?? "",
     no: j["no"],
     saleInvoiceDate: DateTime.parse(j["invoice_date"]),
 

@@ -780,10 +780,12 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         );
 
         if (res?['status'] == true) {
+          final ctx = purchaseOrderNavigatorKey.currentContext!;
           showCustomSnackbarSuccess(
             purchaseOrderNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+          Navigator.of(ctx).pop(true);
         } else {
           showCustomSnackbarError(
             purchaseOrderNavigatorKey.currentContext!,

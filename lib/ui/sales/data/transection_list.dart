@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ims/component/side_menu.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/textfield.dart';
@@ -24,6 +23,7 @@ class TransactionListScreen<T> extends StatefulWidget {
   final String Function(T) numberGetter;
   final String Function(T) customerGetter;
   final double Function(T) amountGetter;
+  final String Function(T) addressGetter;
 
   const TransactionListScreen({
     super.key,
@@ -37,15 +37,17 @@ class TransactionListScreen<T> extends StatefulWidget {
     required this.numberGetter,
     required this.customerGetter,
     required this.amountGetter,
+    required this.addressGetter,
     this.onCreate,
   });
 
   @override
   State<TransactionListScreen<T>> createState() =>
-      _TransactionListScreenState<T>();
+      TransactionListScreenState<T>(); // 👈 PUBLIC STATE
 }
 
-class _TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
+/// 🔓 PUBLIC STATE CLASS (no underscore)
+class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
   List<T> items = [];
   List<T> filtered = [];
 
@@ -108,23 +110,22 @@ class _TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
   }
 
   /// ------------------------------------------------------
-  /// UI STARTS HERE
+  /// UI
   /// ------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColor.white,
-      drawer: SideMenu(),
       appBar: AppBar(
         elevation: 0.4,
         iconTheme: IconThemeData(color: AppColor.black),
-        backgroundColor: AppColor.white,
+        backgroundColor: AppColor.black,
         title: Text(
           widget.title,
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: AppColor.blackText,
+            color: AppColor.white,
           ),
         ),
       ),
@@ -230,18 +231,18 @@ class _TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
       decoration: BoxDecoration(
         color: AppColor.primary,
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(7),
           topRight: Radius.circular(7),
         ),
       ),
       child: Row(
-        children: const [
+        children: [
           Expanded(flex: 2, child: Text("DATE", style: headerStyle)),
-          Expanded(flex: 3, child: Text("NUMBER", style: headerStyle)),
-          Expanded(flex: 3, child: Text("PARTY", style: headerStyle)),
+          Expanded(flex: 2, child: Text("NUMBER", style: headerStyle)),
+          Expanded(flex: 2, child: Text("PARTY", style: headerStyle)),
           Expanded(flex: 2, child: Text("AMOUNT", style: headerStyle)),
-          Expanded(flex: 2, child: Text("STATUS", style: headerStyle)),
+          Expanded(flex: 3, child: Text("ADDRESS", style: headerStyle)),
         ],
       ),
     );
@@ -265,6 +266,7 @@ class _TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
     final String baseNumber = widget.numberGetter(item);
     final String baseCustomer = widget.customerGetter(item);
     final double baseAmount = widget.amountGetter(item);
+    final String address = widget.addressGetter(item);
     final String baseId = widget.idGetter(item);
 
     bool selected = activeRow == item;
@@ -277,7 +279,7 @@ class _TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
         height: 55,
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColor.white,
           border: Border.all(
             color: selected ? AppColor.primary : Colors.grey.shade300,
             width: selected ? 2 : 1,
@@ -287,29 +289,21 @@ class _TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
           children: [
             Expanded(
               flex: 2,
-              child: Text(DateFormat("dd MMM yyyy").format(baseDate)),
+              child: Text(
+                DateFormat("dd MMM yyyy").format(baseDate),
+                style: rowStyle,
+              ),
             ),
-            Expanded(flex: 3, child: Text(baseNumber)),
-            Expanded(flex: 3, child: Text(baseCustomer)),
+            Expanded(flex: 2, child: Text(baseNumber, style: rowStyle)),
+            Expanded(flex: 2, child: Text(baseCustomer, style: rowStyle)),
             Expanded(
               flex: 2,
               child: Text(
                 "₹${baseAmount.toStringAsFixed(2)}",
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
               ),
             ),
-            const Expanded(
-              flex: 2,
-              child: Text(
-                "Pending",
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.orange,
-                ),
-              ),
-            ),
-
+            Expanded(flex: 3, child: Text(address, style: rowStyle)),
             if (selected) ...[
               const SizedBox(width: 10),
               _action(Icons.visibility, Colors.blue, () => widget.onView(item)),
@@ -319,11 +313,11 @@ class _TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
                   context: context,
                   builder: (context) {
                     return AlertDialog(
-                      title: Text("Delete Confirmation"),
+                      title: const Text("Delete Confirmation"),
                       content: Text(
                         "Are you sure you want to delete this record?",
                         style: GoogleFonts.inter(),
-                      ),  
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context, false),
@@ -370,8 +364,14 @@ class _TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
 }
 
 /// HEADER STYLE
-const headerStyle = TextStyle(
-  color: Colors.white,
-  fontWeight: FontWeight.w700,
+TextStyle headerStyle = GoogleFonts.inter(
+  color: AppColor.white,
+  fontWeight: FontWeight.w600,
+  fontSize: 13,
+);
+
+TextStyle rowStyle = GoogleFonts.inter(
+  color: AppColor.black,
+  fontWeight: FontWeight.w500,
   fontSize: 13,
 );

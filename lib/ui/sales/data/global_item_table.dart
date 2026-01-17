@@ -38,6 +38,7 @@ class GlobalItemsTableSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
       decoration: BoxDecoration(
         color: AppColor.white,
+
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColor.borderColor),
       ),
@@ -55,23 +56,33 @@ class GlobalItemsTableSection extends StatelessWidget {
           const SizedBox(height: 10),
           _buildHeader(),
           const Divider(),
-          Column(
-            children: rows.map((r) {
-              return _GlobalItemRowWidget(
-                key: ValueKey(r.localId),
-                row: r,
-                catalogue: catalogue,
-                hsnList: hsnList,
-                onUpdate: onUpdateRow,
-                onRemove: () => onRemoveRow(r.localId),
-                onSelectCatalog: (item) => onSelectCatalog(r.localId, item),
-                onSelectHsn: (hsn) => onSelectHsn(r.localId, hsn),
-                onToggleUnit: (v) => onToggleUnit(r.localId, v),
-              );
-            }).toList(),
+          SizedBox(
+            height: rows.length <= 3 ? rows.length * 70 : 200,
+            child: SingleChildScrollView(
+              child: Column(
+                children: rows.map((r) {
+                  return _GlobalItemRowWidget(
+                    key: ValueKey(r.localId),
+                    row: r,
+                    catalogue: catalogue,
+                    hsnList: hsnList,
+                    onUpdate: onUpdateRow,
+                    onRemove: () => onRemoveRow(r.localId),
+                    onSelectCatalog: (item) => onSelectCatalog(r.localId, item),
+                    onSelectHsn: (hsn) => onSelectHsn(r.localId, hsn),
+                    onToggleUnit: (v) => onToggleUnit(r.localId, v),
+                  );
+                }).toList(),
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           DottedBorder(
+            options: RectDottedBorderOptions(
+              color: AppColor.primarydark,
+              dashPattern: [2, 4],
+            ),
+
             child: InkWell(
               onTap: onAddRow,
               child: Container(
@@ -115,7 +126,7 @@ class GlobalItemsTableSection extends StatelessWidget {
           Expanded(child: Text('TAX', textAlign: TextAlign.center)),
           _gap(),
           Expanded(child: Text('AMOUNT (₹)', textAlign: TextAlign.center)),
-          Icon(Icons.delete, color: Colors.transparent),
+          Icon(Icons.cancel, color: Colors.transparent),
         ],
       ),
     );
@@ -432,7 +443,7 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
           // DELETE
           IconButton(
             onPressed: widget.onRemove,
-            icon: const Icon(Icons.delete, color: Colors.red),
+            icon: const Icon(Icons.cancel, color: Colors.red),
           ),
         ],
       ),

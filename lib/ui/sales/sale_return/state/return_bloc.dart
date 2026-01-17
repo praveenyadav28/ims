@@ -859,10 +859,12 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
         );
 
         if (res?['status'] == true) {
+          final ctx = saleReturnNavigatorKey.currentContext!;
           showCustomSnackbarSuccess(
             saleReturnNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+          Navigator.of(ctx).pop(true);
         } else {
           showCustomSnackbarError(
             saleReturnNavigatorKey.currentContext!,

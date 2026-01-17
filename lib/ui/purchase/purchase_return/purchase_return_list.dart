@@ -5,23 +5,46 @@ import 'package:ims/ui/sales/data/transection_list.dart';
 import 'package:ims/ui/sales/models/purchase_return_data.dart';
 import '../../../utils/navigation.dart';
 
-class PurchaseReturnListScreen extends StatelessWidget {
+class PurchaseReturnListScreen extends StatefulWidget {
+  PurchaseReturnListScreen({super.key});
+
+  @override
+  State<PurchaseReturnListScreen> createState() =>
+      _PurchaseReturnListScreenState();
+}
+
+class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
   final repo = GLobalRepository();
 
-  PurchaseReturnListScreen({super.key});
+  /// 🔑 Key to access TransactionListScreen state
+  final GlobalKey<TransactionListScreenState<PurchaseReturnData>> listKey =
+      GlobalKey<TransactionListScreenState<PurchaseReturnData>>();
 
   @override
   Widget build(BuildContext context) {
     return TransactionListScreen<PurchaseReturnData>(
+      key: listKey,
       title: "Purchase Return",
       fetchData: repo.getPurchaseReturn,
       onView: (e) {
         print("VIEW Purchase Return PDF: ${e.no}");
       },
-      onEdit: (e) =>
-          pushTo(CreatePurchaseReturnFullScreen(purchaseReturnData: e)),
+      onEdit: (e) async {
+        final result = await pushTo(
+          CreatePurchaseReturnFullScreen(purchaseReturnData: e),
+        );
+        if (result == true) {
+          listKey.currentState?.load(); // ✅ reload list
+        }
+      },
+      onCreate: () async {
+        final result = await pushTo(CreatePurchaseReturnFullScreen());
+
+        if (result == true) {
+          listKey.currentState?.load(); // ✅ reload list
+        }
+      },
       onDelete: repo.deletePurchaseReturn,
-      onCreate: () => pushTo(CreatePurchaseReturnFullScreen()),
 
       /// EXTRACTORS — REQUIRED
       idGetter: (e) => e.id,
@@ -29,6 +52,7 @@ class PurchaseReturnListScreen extends StatelessWidget {
       numberGetter: (e) => "${e.prefix} ${e.no}",
       customerGetter: (e) => e.supplierName,
       amountGetter: (e) => e.totalAmount,
+      addressGetter: (e) => e.address0,
     );
   }
 }

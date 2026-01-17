@@ -5,11 +5,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:ims/model/ledger_model.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/models/sale_invoice_data.dart';
+import 'package:ims/utils/api.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:intl/intl.dart';
@@ -131,6 +133,20 @@ class SaleInvoiceSetTransNo extends SaleInvoiceEvent {
 }
 
 class SaleInvoiceSearchTransaction extends SaleInvoiceEvent {}
+
+class SaleInvoiceSavePayment extends SaleInvoiceEvent {
+  final String amount;
+  final String voucherNo;
+  final LedgerListModel ledger;
+  final DateTime date;
+
+  SaleInvoiceSavePayment({
+    required this.amount,
+    required this.voucherNo,
+    required this.ledger,
+    required this.date,
+  });
+}
 
 /// ------------------- STATE -------------------
 class SaleInvoiceState {
@@ -319,6 +335,7 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
     });
 
     on<SaleInvoiceSearchTransaction>(_onSearchTransaction);
+    on<SaleInvoiceSavePayment>(_onSaveRecieptVoucher);
   }
 
   Future<void> _onLoad(
@@ -722,6 +739,64 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
     }
   }
 
+  Future<void> _onSaveRecieptVoucher(
+    SaleInvoiceSavePayment e,
+    Emitter<SaleInvoiceState> emit,
+  ) async {
+    final ctx = saleInvoiceNavigatorKey.currentContext!;
+    final state = this.state;
+
+    // ---------- VALIDATIONS ----------
+    if (e.amount.trim().isEmpty || double.tryParse(e.amount) == null) return;
+    if (double.parse(e.amount) <= 0) return;
+
+    if (state.cashSaleDefault == false && state.selectedCustomer == null) {
+      showCustomSnackbarError(ctx, "Select customer");
+      return;
+    }
+
+    try {
+      final body = {
+        "licence_no": Preference.getint(PrefKeys.licenseNo),
+        "branch_id": Preference.getString(PrefKeys.locationId),
+
+        "ledger_id": e.ledger.id,
+        "ledger_name": e.ledger.ledgerName,
+
+        "customer_id": state.cashSaleDefault
+            ? null
+            : state.selectedCustomer!.id,
+        "customer_name": state.cashSaleDefault
+            ? "Cash"
+            : state.selectedCustomer!.name,
+
+        "amount": double.parse(e.amount),
+        "invoice_no": state.saleInvoiceNo,
+
+        "date":
+            "${e.date.year}-${e.date.month.toString().padLeft(2, '0')}-${e.date.day.toString().padLeft(2, '0')}",
+
+        "prefix": state.prefix,
+        "vouncher_no": e.voucherNo,
+        "type": "Sale Invoice",
+      };
+
+      final res = await ApiService.postData(
+        "reciept",
+        body,
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      if (res?['status'] == true) {
+        showCustomSnackbarSuccess(ctx, res['message'] ?? "Payment saved");
+      } else {
+        showCustomSnackbarError(ctx, res?['message'] ?? "Payment failed");
+      }
+    } catch (e) {
+      showCustomSnackbarError(ctx, e.toString());
+    }
+  }
+
   // ------------------- SAVE -------------------
   Future<void> _onSaveWithUIData(
     SaleInvoiceSaveWithUIData e,
@@ -871,10 +946,13 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
         );
 
         if (res?['status'] == true) {
+          final ctx = saleInvoiceNavigatorKey.currentContext!;
           showCustomSnackbarSuccess(
             saleInvoiceNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+
+          Navigator.of(ctx).pop(true);
         } else {
           showCustomSnackbarError(
             saleInvoiceNavigatorKey.currentContext!,

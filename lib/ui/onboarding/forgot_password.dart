@@ -87,7 +87,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                     prefixIcon: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       child: SvgPicture.asset(
-                        'assets/icons/contact.svg',
+                        'assets/icons/hash.svg',
                         height: 20,
                         width: 20,
                       ),
@@ -140,6 +140,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                   SizedBox(height: Sizes.height * 0.04),
 
                   defaultButton(
+                    buttonColor: AppColor.blue,
                     onTap: () {
                       if (_formKey.currentState!.validate() &&
                           otpvarify == true) {
@@ -147,9 +148,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       }
                     },
                     height: 45,
-                    width: Sizes.width < 850
-                        ? Sizes.width * .5
-                        : Sizes.width * .2,
+                    width: double.infinity,
                     text: 'Save',
                   ),
                   SizedBox(height: Sizes.height * 0.02),
@@ -191,10 +190,14 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
   Future<void> getSignupUsersDetails() async {
     try {
-      final response = await ApiService.postData("getlicencebycontect", {
-        "licence_no": licenceNoController.text.toString(),
-        "contact_no": mobileNumberController.text.toString(),
-      }, licenceNo: int.parse( licenceNoController.text.toString()));
+      final response = await ApiService.postData(
+        "getlicencebycontect",
+        {
+          "licence_no": licenceNoController.text.toString(),
+          "contact_no": mobileNumberController.text.toString(),
+        },
+        licenceNo: int.parse(licenceNoController.text.toString()),
+      );
       if (response != null && response['status'] == true) {
         sendOtp(mobileNumberController.text, context);
         _startResendTimer(); // Start the timer after sending OTP

@@ -1,11 +1,11 @@
-// ignore_for_file: unused_local_variable
+// ignore_for_file: unused_local_variable, must_be_immutable
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ims/component/side_menu.dart';
 import 'package:ims/ui/group/group.dart';
 import 'package:ims/ui/group/hsn.dart';
+import 'package:ims/ui/inventry/item_model.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -17,8 +17,8 @@ import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 
 class CreateNewItemScreen extends StatefulWidget {
-  const CreateNewItemScreen({super.key});
-
+  CreateNewItemScreen({super.key, this.editItem});
+  ItemModel? editItem;
   @override
   State<CreateNewItemScreen> createState() => _CreateNewItemScreenState();
 }
@@ -1334,26 +1334,81 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
   }
 
   void _openUnitDialog() {
-    String localBase = baseUnit ?? 'Pieces';
+    String localBase =
+        baseUnit ??
+        (measuringUnitList.isNotEmpty ? measuringUnitList.first : '');
     String localSecondary = secondaryUnit ?? localBase;
+
     final TextEditingController conversionController = TextEditingController(
       text: conversionValue,
     );
+
+    void autoFill() {
+      _autoFillConversion(localBase, localSecondary, conversionController);
+    }
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Select Units"),
+          title: const Text("Select Measuring Units"),
           content: StatefulBuilder(
             builder: (context, setDialog) {
               return Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  defaultButton(
+                    height: 35,
+                    width: 110,
+                    buttonColor: AppColor.primary,
+                    onTap: () async {
+                      await showDialog(
+                        barrierDismissible: false,
+                        context: context,
+                        builder: (context) {
+                          return Dialog(
+                            insetPadding: const EdgeInsets.all(16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: SizedBox(
+                              width: Sizes.width * 0.9,
+                              height: Sizes.height * 0.8,
+                              child: const AddGroupScreen(
+                                miscId: "2",
+                                name: 'Measuring Unit',
+                              ),
+                            ),
+                          );
+                        },
+                      ).then((updateData) async {
+                        if (updateData != null) {
+                          // 🔄 reload from API
+                          await _loadMiscDropdowns();
+
+                          // auto select new unit
+                          setDialog(() {
+                            if (measuringUnitList.isNotEmpty) {
+                              localBase = measuringUnitList.last;
+                              localSecondary = localBase;
+                            }
+                          });
+
+                          autoFill();
+                        }
+                      });
+                    },
+                    text: "Add New",
+                  ),
+                  SizedBox(height: 10),
+                  Divider(),
+
+                  /// -------- BASE + SECONDARY ----------
                   Row(
                     children: [
                       Expanded(
-                        child: DropdownButtonFormField<String>(
+                        child: CommonDropdownField<String>(
                           value: localBase,
                           items: measuringUnitList
                               .map(
@@ -1364,20 +1419,14 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
                           onChanged: (val) {
                             if (val == null) return;
                             setDialog(() => localBase = val);
-                            _autoFillConversion(
-                              val,
-                              localSecondary,
-                              conversionController,
-                            );
+                            autoFill();
                           },
-                          decoration: const InputDecoration(
-                            labelText: "Base Unit",
-                          ),
+                          hintText: "Base Unit",
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: DropdownButtonFormField<String>(
+                        child: CommonDropdownField<String>(
                           value: localSecondary,
                           items: measuringUnitList
                               .map(
@@ -1388,30 +1437,28 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
                           onChanged: (val) {
                             if (val == null) return;
                             setDialog(() => localSecondary = val);
-                            _autoFillConversion(
-                              localBase,
-                              val,
-                              conversionController,
-                            );
+                            autoFill();
                           },
-                          decoration: const InputDecoration(
-                            labelText: "Secondary Unit",
-                          ),
+                          hintText: "Secondary Unit",
                         ),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 16),
-                  TextFormField(
+
+                  /// -------- CONVERSION ----------
+                  TitleTextFeild(
                     controller: conversionController,
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(
-                      labelText: "Conversion (1 Base = ? Secondary)",
-                      border: OutlineInputBorder(),
-                    ),
+                    titleText: "Conversion (1 Base = ? Secondary)",
                   ),
+
+                  const Divider(),
+
+                  /// -------- ADD NEW UNIT ----------
                 ],
               );
             },
@@ -1421,18 +1468,24 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
               onPressed: () => Navigator.pop(context),
               child: const Text("Cancel"),
             ),
-            ElevatedButton(
-              onPressed: () {
+            defaultButton(
+              onTap: () {
                 setState(() {
                   baseUnit = localBase;
                   secondaryUnit = localSecondary;
-                  conversionValue = conversionController.text.trim();
+                  conversionValue = conversionController.text.trim().isEmpty
+                      ? "1"
+                      : conversionController.text.trim();
+
                   selectedMeasuringUnit =
                       "$baseUnit (1 $baseUnit = $conversionValue $secondaryUnit)";
                 });
                 Navigator.pop(context);
               },
-              child: const Text("Save"),
+              text: "Save",
+              buttonColor: AppColor.blue,
+              height: 35,
+              width: 80,
             ),
           ],
         );
@@ -1445,18 +1498,23 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
     String secondary,
     TextEditingController controller,
   ) {
-    if (base == secondary)
+    if (base == secondary) {
       controller.text = '1';
-    else if (base == 'Box' && secondary == 'Pieces')
+    }
+    /// Common presets
+    else if ((base == 'Box' && secondary == 'Pieces') ||
+        (base == 'Dozen' && secondary == 'Pieces')) {
       controller.text = '12';
-    else if (base == 'Dozen' && secondary == 'Pieces')
-      controller.text = '12';
-    else if (base == 'KG' && secondary == 'Gram')
+    } else if ((base == 'KG' && secondary == 'Gram') ||
+        (base == 'Litre' && secondary == 'ML')) {
       controller.text = '1000';
-    else if (base == 'Litre' && secondary == 'ML')
-      controller.text = '1000';
-    else
-      controller.text = '1';
+    } else if (base == 'Meter' && secondary == 'CM') {
+      controller.text = '100';
+    } else if (base == 'Packet' && secondary == 'Pieces') {
+      controller.text = '10';
+    } else {
+      controller.text = '1'; // default safe value
+    }
   }
 
   Widget variantSection() {
@@ -1778,7 +1836,6 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
           ),
         ),
       ),
-      drawer: const SideMenu(),
       body: Row(
         children: [
           // Left sidebar
@@ -1923,6 +1980,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
 
       if (response?['status'] == true) {
         showCustomSnackbarSuccess(context, response?['message']);
+        Navigator.of(context).pop(true);
       } else {
         showCustomSnackbarError(context, response?['message'] ?? 'Save failed');
       }
@@ -1957,6 +2015,8 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
           : "",
       if (openingStockController.text.isNotEmpty)
         'opening_stock': openingStockController.text,
+      if (openingStockController.text.isNotEmpty)
+        'stock_qty': openingStockController.text,
       if (minOrderController.text.isNotEmpty)
         'm_o_qty': minOrderController.text,
       if (minStockController.text.isNotEmpty)
@@ -1980,6 +2040,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         context,
         response?['message'] ?? 'Product saved successfully',
       );
+      Navigator.of(context).pop(true);
     } else {
       showCustomSnackbarError(context, response?['message'] ?? 'Save failed');
     }
@@ -2111,6 +2172,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
           generatedItems.removeWhere((e) => e["item_no"] == item["item_no"]);
         });
         debugPrint("🟢 Saved & removed item: ${item["item_no"]}");
+        Navigator.of(context).pop(true);
       } else {
         showCustomSnackbarError(
           context,
