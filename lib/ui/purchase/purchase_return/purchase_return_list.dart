@@ -52,6 +52,8 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
       numberGetter: (e) => "${e.prefix} ${e.no}",
       customerGetter: (e) => e.supplierName,
       amountGetter: (e) => e.totalAmount,
+      gstGetter: (e) => e.subGst,
+      basicGetter: (e) => e.subTotal,
       addressGetter: (e) => e.address0,
     );
   }

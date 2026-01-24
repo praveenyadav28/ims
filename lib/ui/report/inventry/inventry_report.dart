@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/report/inventry/item_ledger.dart';
+import 'package:ims/ui/report/inventry/item_party.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/navigation.dart';
 import 'package:intl/intl.dart';
@@ -92,6 +93,18 @@ class _InventoryAdvancedReportScreenState
         backgroundColor: AppColor.black,
         title: const Text("Inventory Report"),
         actions: [
+          Center(
+            child: defaultButton(
+              text: "Item By Patry",
+              height: 40,
+              width: 170,
+              buttonColor: AppColor.blue,
+              onTap: () {
+                pushTo(PartyLedgerScreen());
+              },
+            ),
+          ),
+          SizedBox(width: 10),
           Center(
             child: defaultButton(
               text: "Item Ledger",

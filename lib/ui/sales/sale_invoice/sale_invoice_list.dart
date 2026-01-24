@@ -60,6 +60,8 @@ class _SaleInvoiceInvoiceListScreenState
       dateGetter: (e) => e.saleInvoiceDate,
       numberGetter: (e) => "${e.prefix} ${e.no}",
       customerGetter: (e) => e.customerName,
+      gstGetter: (e) => e.subGst,
+      basicGetter: (e) => e.subTotal,
       amountGetter: (e) => e.totalAmount,
       addressGetter: (e) => e.address0,
     );

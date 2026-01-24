@@ -109,36 +109,6 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
       );
     }
 
-    /// SALE
-    for (var s in res['Saleinvoice'] ?? []) {
-      for (var i in s['item_details']) {
-        addEntry(
-          date: DateTime.parse(s['invoice_date']),
-          type: "Sale",
-          no: s['no'],
-          party: s['customer_name'],
-          qty: i['qty'].toDouble(),
-          rate: i['price'].toDouble(),
-          amount: i['amount'].toDouble(),
-        );
-      }
-    }
-
-    /// SALE RETURN
-    for (var s in res['Salereturn'] ?? []) {
-      for (var i in s['item_details']) {
-        addEntry(
-          date: DateTime.parse(s['returnsale_date']),
-          type: "Sale Return",
-          no: s['no'],
-          party: s['customer_name'],
-          qty: i['qty'].toDouble(),
-          rate: i['price'].toDouble(),
-          amount: i['amount'].toDouble(),
-        );
-      }
-    }
-
     /// PURCHASE
     for (var p in res['Purchaseinvoice'] ?? []) {
       for (var i in p['item_details']) {
@@ -162,6 +132,36 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
           type: "Purchase Return",
           no: p['no'],
           party: p['supplier_name'],
+          qty: i['qty'].toDouble(),
+          rate: i['price'].toDouble(),
+          amount: i['amount'].toDouble(),
+        );
+      }
+    }
+
+    /// SALE
+    for (var s in res['Saleinvoice'] ?? []) {
+      for (var i in s['item_details']) {
+        addEntry(
+          date: DateTime.parse(s['invoice_date']),
+          type: "Sale",
+          no: s['no'],
+          party: s['customer_name'],
+          qty: i['qty'].toDouble(),
+          rate: i['price'].toDouble(),
+          amount: i['amount'].toDouble(),
+        );
+      }
+    }
+
+    /// SALE RETURN
+    for (var s in res['Salereturn'] ?? []) {
+      for (var i in s['item_details']) {
+        addEntry(
+          date: DateTime.parse(s['returnsale_date']),
+          type: "Sale Return",
+          no: s['no'],
+          party: s['customer_name'],
           qty: i['qty'].toDouble(),
           rate: i['price'].toDouble(),
           amount: i['amount'].toDouble(),

@@ -34,12 +34,14 @@ class VariantModel {
   final String name;
   final String itemNo;
   final double salePrice; // per secondary unit (piece)
+  final double purchasePrice; // per secondary unit (piece)
   final int stockSecondary;
   VariantModel({
     required this.id,
     required this.name,
     required this.itemNo,
     required this.salePrice,
+    required this.purchasePrice,
     required this.stockSecondary,
   });
   factory VariantModel.fromMap(Map<String, dynamic> m) {
@@ -50,6 +52,11 @@ class VariantModel {
       salePrice:
           double.tryParse(
             (m['sales_price'] ?? m['sale_price'] ?? '0').toString(),
+          ) ??
+          0,
+      purchasePrice:
+          double.tryParse(
+            (m['purchases_price'] ?? m['purchase_price'] ?? '0').toString(),
           ) ??
           0,
       stockSecondary: (m['opening_stock'] != null)
@@ -65,7 +72,8 @@ class ItemServiceModel {
   final String name;
   final String hsn;
   final String variantValue;
-  final double baseSalePrice;
+  final double? baseSalePrice;
+  final double? basePurchasePrice;
   final double gstRate;
   final bool gstIncluded;
   final String baseUnit;
@@ -81,7 +89,8 @@ class ItemServiceModel {
     required this.name,
     required this.hsn,
     required this.variantValue,
-    required this.baseSalePrice,
+    this.baseSalePrice,
+    this.basePurchasePrice,
     required this.gstRate,
     required this.gstIncluded,
     required this.baseUnit,
@@ -109,6 +118,9 @@ class ItemServiceModel {
       variantValue: m['variant_name']?.toString() ?? '',
       baseSalePrice: (m['sales_price'] != null)
           ? double.tryParse(m['sales_price'].toString()) ?? 0
+          : 0,
+      basePurchasePrice: (m['purchase_price'] != null)
+          ? double.tryParse(m['purchase_price'].toString()) ?? 0
           : 0,
       gstRate: (m['gst_tax_rate'] != null)
           ? double.tryParse(m['gst_tax_rate'].toString()) ?? 0

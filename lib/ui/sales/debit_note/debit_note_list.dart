@@ -62,6 +62,8 @@ class _DebitNoteInvoiceListScreenState
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
       addressGetter: (e) => e.address0,
+      gstGetter: (e) => e.subGst,
+      basicGetter: (e) => e.baseAmount,
     );
   }
 }

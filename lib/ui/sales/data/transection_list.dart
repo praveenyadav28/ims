@@ -22,6 +22,8 @@ class TransactionListScreen<T> extends StatefulWidget {
   final DateTime Function(T) dateGetter;
   final String Function(T) numberGetter;
   final String Function(T) customerGetter;
+  final double Function(T) basicGetter;
+  final double Function(T) gstGetter;
   final double Function(T) amountGetter;
   final String Function(T) addressGetter;
 
@@ -36,6 +38,8 @@ class TransactionListScreen<T> extends StatefulWidget {
     required this.dateGetter,
     required this.numberGetter,
     required this.customerGetter,
+    required this.basicGetter,
+    required this.gstGetter,
     required this.amountGetter,
     required this.addressGetter,
     this.onCreate,
@@ -241,7 +245,9 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
           Expanded(flex: 2, child: Text("DATE", style: headerStyle)),
           Expanded(flex: 2, child: Text("NUMBER", style: headerStyle)),
           Expanded(flex: 2, child: Text("PARTY", style: headerStyle)),
-          Expanded(flex: 2, child: Text("AMOUNT", style: headerStyle)),
+          Expanded(flex: 2, child: Text("Basic Value", style: headerStyle)),
+          Expanded(flex: 2, child: Text("GST Value", style: headerStyle)),
+          Expanded(flex: 2, child: Text("Final Value", style: headerStyle)),
           Expanded(flex: 3, child: Text("ADDRESS", style: headerStyle)),
         ],
       ),
@@ -265,7 +271,9 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
     final DateTime baseDate = widget.dateGetter(item);
     final String baseNumber = widget.numberGetter(item);
     final String baseCustomer = widget.customerGetter(item);
-    final double baseAmount = widget.amountGetter(item);
+    final double gstAmount = widget.gstGetter(item);
+    final double basicAmount = widget.basicGetter(item);
+    final double finalAmount = widget.amountGetter(item);
     final String address = widget.addressGetter(item);
     final String baseId = widget.idGetter(item);
 
@@ -299,7 +307,21 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
             Expanded(
               flex: 2,
               child: Text(
-                "₹${baseAmount.toStringAsFixed(2)}",
+                "₹${basicAmount.toStringAsFixed(2)}",
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                "₹${gstAmount.toStringAsFixed(2)}",
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                "₹${finalAmount.toStringAsFixed(2)}",
                 style: GoogleFonts.inter(fontWeight: FontWeight.bold),
               ),
             ),

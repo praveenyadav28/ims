@@ -51,6 +51,8 @@ class _CreditNoteListScreenState extends State<CreditNoteListScreen> {
       numberGetter: (e) => "${e.prefix} ${e.no}",
       customerGetter: (e) => e.ledgerName,
       amountGetter: (e) => e.totalAmount,
+      gstGetter: (e) => e.subGst,
+      basicGetter: (e) => e.subTotal,
       addressGetter: (e) => e.address0,
     );
   }

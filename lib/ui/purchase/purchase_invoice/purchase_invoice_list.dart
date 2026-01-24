@@ -53,6 +53,8 @@ class _PurchaseInvoiceListScreenState extends State<PurchaseInvoiceListScreen> {
       numberGetter: (e) => "${e.prefix} ${e.no}",
       customerGetter: (e) => e.supplierName,
       amountGetter: (e) => e.totalAmount,
+      gstGetter: (e) => e.subGst,
+      basicGetter: (e) => e.subTotal,
       addressGetter: (e) => e.address0,
     );
   }

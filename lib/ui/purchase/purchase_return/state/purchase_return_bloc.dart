@@ -420,7 +420,7 @@ class PurchaseReturnBloc
                   selectedVariant: variant,
                   qty: r.qty == 0 ? 1 : r.qty,
                   pricePerSelectedUnit:
-                      variant?.salePrice ?? item.baseSalePrice,
+                      variant?.purchasePrice ?? item.basePurchasePrice,
                   discountPercent: 0,
                   hsnOverride: item.hsn,
                   taxPercent: item.gstRate,
@@ -447,8 +447,8 @@ class PurchaseReturnBloc
                 .copyWith(
                   selectedVariant: e.variant,
                   pricePerSelectedUnit: r.sellInBaseUnit
-                      ? e.variant.salePrice * (r.product?.conversion ?? 1)
-                      : e.variant.salePrice,
+                      ? e.variant.purchasePrice * (r.product?.conversion ?? 1)
+                      : e.variant.purchasePrice,
                 )
                 .recalc();
           }
@@ -468,7 +468,9 @@ class PurchaseReturnBloc
         rows: state.rows.map((r) {
           if (r.localId == e.rowId) {
             final basePrice =
-                r.selectedVariant?.salePrice ?? r.product?.baseSalePrice ?? 0;
+                r.selectedVariant?.purchasePrice ??
+                r.product?.basePurchasePrice ??
+                0;
 
             return r
                 .copyWith(
@@ -986,7 +988,7 @@ PurchaseReturnState _prefillPurchaseReturnFromTrans(
       name: "",
       hsn: "",
       variantValue: '',
-      baseSalePrice: 0,
+      basePurchasePrice: 0,
       gstRate: 0,
       gstIncluded: false,
       baseUnit: '',
@@ -1138,7 +1140,7 @@ PurchaseReturnState _prefillPurchaseReturn(
       name: "",
       hsn: "",
       variantValue: '',
-      baseSalePrice: 0,
+      basePurchasePrice: 0,
       gstRate: 0,
       gstIncluded: false,
       baseUnit: '',

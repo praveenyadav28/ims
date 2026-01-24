@@ -438,7 +438,7 @@ class PurchaseInvoiceBloc
                   selectedVariant: variant,
                   qty: r.qty == 0 ? 1 : r.qty,
                   pricePerSelectedUnit:
-                      variant?.salePrice ?? item.baseSalePrice,
+                      variant?.purchasePrice ?? item.basePurchasePrice,
                   discountPercent: 0,
                   hsnOverride: item.hsn,
                   taxPercent: item.gstRate,
@@ -465,8 +465,8 @@ class PurchaseInvoiceBloc
                 .copyWith(
                   selectedVariant: e.variant,
                   pricePerSelectedUnit: r.sellInBaseUnit
-                      ? e.variant.salePrice * (r.product?.conversion ?? 1)
-                      : e.variant.salePrice,
+                      ? e.variant.purchasePrice * (r.product?.conversion ?? 1)
+                      : e.variant.purchasePrice,
                 )
                 .recalc();
           }
@@ -486,7 +486,7 @@ class PurchaseInvoiceBloc
         rows: state.rows.map((r) {
           if (r.localId == e.rowId) {
             final basePrice =
-                r.selectedVariant?.salePrice ?? r.product?.baseSalePrice ?? 0;
+                r.selectedVariant?.purchasePrice ?? r.product?.basePurchasePrice ?? 0;
 
             return r
                 .copyWith(
@@ -1063,7 +1063,7 @@ PurchaseInvoiceState _prefillPurchaseInvoiceFromTrans(
       name: "",
       hsn: "",
       variantValue: '',
-      baseSalePrice: 0,
+      basePurchasePrice: 0,
       gstRate: 0,
       gstIncluded: false,
       baseUnit: '',
@@ -1215,7 +1215,7 @@ PurchaseInvoiceState _prefillPurchaseInvoice(
       name: "",
       hsn: "",
       variantValue: '',
-      baseSalePrice: 0,
+      basePurchasePrice: 0,
       gstRate: 0,
       gstIncluded: false,
       baseUnit: '',
