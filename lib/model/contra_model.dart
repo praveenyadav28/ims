@@ -24,7 +24,7 @@ class ContraModel {
       id: json['_id'],
       ledgerName: json['ledger_name'],
       supplierName: json['account_name'] ?? json['customer_name'],
-      amount: double.parse(json['amount']),
+      amount: double.parse(json['amount'].toString()),
       date: DateTime.parse(json['date']),
       prefix: json['prefix'],
       voucherNo: json['vouncher_no'],

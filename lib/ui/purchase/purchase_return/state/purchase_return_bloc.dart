@@ -22,7 +22,7 @@ class PurchaseReturnLoadInit extends PurchaseReturnEvent {
 }
 
 class PurchaseReturnSelectCustomer extends PurchaseReturnEvent {
-  final CustomerModel? c;
+  final LedgerModelDrop? c;
   PurchaseReturnSelectCustomer(this.c);
 }
 
@@ -127,8 +127,8 @@ class PurchaseReturnSearchTransaction extends PurchaseReturnEvent {}
 
 /// ------------------- STATE -------------------
 class PurchaseReturnState {
-  final List<CustomerModel> customers;
-  final CustomerModel? selectedCustomer;
+  final List<LedgerModelDrop> customers;
+  final LedgerModelDrop? selectedCustomer;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
@@ -182,8 +182,8 @@ class PurchaseReturnState {
   });
 
   PurchaseReturnState copyWith({
-    List<CustomerModel>? customers,
-    CustomerModel? selectedCustomer,
+    List<LedgerModelDrop>? customers,
+    LedgerModelDrop? selectedCustomer,
     bool? cashSaleDefault,
     String? prefix,
     String? purchaseReturnNo,
@@ -309,7 +309,7 @@ class PurchaseReturnBloc
     Emitter<PurchaseReturnState> emit,
   ) async {
     try {
-      final customers = await repo.fetchSupplier();
+      final customers = await repo.fetchLedger(false);
       final purchaseReturnNo = await repo.fetchPurchaseReturnNo();
       final catalogue = await repo.fetchOnyItem();
       final hsnList = await repo.fetchHsnList();
@@ -896,10 +896,10 @@ PurchaseReturnState _prefillPurchaseReturnFromTrans(
 ) {
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
-    (c) => c.id == data.supplierId,
-    orElse: () => CustomerModel(
-      id: data.supplierId ?? "",
-      name: data.supplierName,
+    (c) => c.id == data.ledgerId,
+    orElse: () => LedgerModelDrop(
+      id: data.ledgerId ?? "",
+      name: data.ledgerName,
       mobile: data.mobile,
       billingAddress: data.address0,
       shippingAddress: data.address1,
@@ -1048,7 +1048,7 @@ PurchaseReturnState _prefillPurchaseReturn(
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.supplierId,
-    orElse: () => CustomerModel(
+    orElse: () => LedgerModelDrop(
       id: data.supplierId ?? "",
       name: data.supplierName,
       mobile: data.mobile,

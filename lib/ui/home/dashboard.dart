@@ -269,21 +269,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ===================== WIDGETS =====================
+  // // ===================== WIDGETS =====================
 
-  Widget _topButton(String title, {Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color ?? const Color(0xff1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-        ),
-        onPressed: () {},
-        child: Text(title),
-      ),
-    );
-  }
+  // Widget _topButton(String title, {Color? color}) {
+  //   return Padding(
+  //     padding: const EdgeInsets.only(right: 8),
+  //     child: ElevatedButton(
+  //       style: ElevatedButton.styleFrom(
+  //         backgroundColor: color ?? const Color(0xff1E293B),
+  //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+  //       ),
+  //       onPressed: () {},
+  //       child: Text(title),
+  //     ),
+  //   );
+  // }
 
   Widget _statCard({
     required String title,

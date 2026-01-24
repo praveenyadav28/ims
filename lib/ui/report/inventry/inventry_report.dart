@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ims/ui/inventry/item_model.dart';
+import 'package:ims/ui/report/inventry/item_ledger.dart';
+import 'package:ims/utils/button.dart';
+import 'package:ims/utils/navigation.dart';
 import 'package:intl/intl.dart';
+import 'package:ims/ui/inventry/item_model.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
@@ -22,10 +25,12 @@ class _InventoryAdvancedReportScreenState
   List<ItemModel> allItems = [];
   List<ItemModel> filtered = [];
 
-  // Filters
-  String searchText = "";
-  String? selectedCategory;
-  bool showLowStock = false;
+  String? selectedCategoryFilter;
+
+  /// Filters
+  final searchCtrl = TextEditingController();
+  final fromDateCtrl = TextEditingController();
+  final toDateCtrl = TextEditingController();
 
   DateTime? fromDate;
   DateTime? toDate;
@@ -41,9 +46,7 @@ class _InventoryAdvancedReportScreenState
     setState(() => loading = true);
 
     final res = await ApiService.fetchData(
-      "get/inventoryreport"
-      "?from_date=${_fmt(fromDate)}"
-      "&to_date=${_fmt(toDate)}",
+      "get/inventoryreport?from_date=${_fmt(fromDate)}&to_date=${_fmt(toDate)}",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
@@ -60,38 +63,25 @@ class _InventoryAdvancedReportScreenState
   void applyFilters() {
     List<ItemModel> temp = List.from(allItems);
 
-    if (searchText.isNotEmpty) {
+    // 🔍 Search filter
+    if (searchCtrl.text.isNotEmpty) {
+      final q = searchCtrl.text.toLowerCase();
+
       temp = temp.where((e) {
-        return e.itemName.toLowerCase().contains(searchText.toLowerCase()) ||
-            e.itemNo.toLowerCase().contains(searchText.toLowerCase());
+        return e.itemName.toLowerCase().contains(q) ||
+            e.varientName.toLowerCase().contains(q) ||
+            e.itemNo.toLowerCase().contains(q);
       }).toList();
     }
 
-    if (selectedCategory != null) {
-      temp = temp.where((e) => e.group == selectedCategory).toList();
-    }
-
-    if (showLowStock) {
-      temp = temp.where((e) {
-        final qty = double.tryParse(e.openingStock) ?? 0;
-        final min = double.tryParse(e.minStockQty) ?? 0;
-        return qty <= min && min > 0;
-      }).toList();
+    // 📦 Category filter
+    if (selectedCategoryFilter != null && selectedCategoryFilter!.isNotEmpty) {
+      temp = temp.where((e) => e.group == selectedCategoryFilter).toList();
     }
 
     filtered = temp;
     setState(() {});
   }
-
-  // ================= STATS =================
-  double get openingTotal => filtered.fold(0, (p, e) => p + _d(e.openingStock));
-
-  double get closingTotal => filtered.fold(0, (p, e) => p + _d(e.openingStock));
-
-  double get stockValue =>
-      filtered.fold(0, (p, e) => p + (_d(e.openingStock) * _d(e.salesPrice)));
-
-  double _d(String? v) => double.tryParse(v ?? "0") ?? 0;
 
   // ================= UI =================
   @override
@@ -101,13 +91,26 @@ class _InventoryAdvancedReportScreenState
       appBar: AppBar(
         backgroundColor: AppColor.black,
         title: const Text("Inventory Report"),
+        actions: [
+          Center(
+            child: defaultButton(
+              text: "Item Ledger",
+              height: 40,
+              width: 170,
+              buttonColor: AppColor.blue,
+              onTap: () {
+                pushTo(ItemLedgerScreen());
+              },
+            ),
+          ),
+          SizedBox(width: 10),
+        ],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 _filterBar(),
-                _summaryBar(),
                 Expanded(child: _table()),
               ],
             ),
@@ -117,139 +120,119 @@ class _InventoryAdvancedReportScreenState
   // ================= FILTER BAR =================
   Widget _filterBar() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      width: double.infinity,
       margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children: [
-          _textField("Search Item", (v) {
-            searchText = v;
-            applyFilters();
-          }),
-
-          _dropdown(
-            "Category",
-            selectedCategory,
-            [
-              null,
-              ...{for (var i in allItems) i.group},
-            ],
-            (v) {
-              selectedCategory = v;
-              applyFilters();
-            },
-          ),
-
-          _dateBtn("From", fromDate, (d) {
-            fromDate = d;
-            fetchReport();
-          }),
-          _dateBtn("To", toDate, (d) {
-            toDate = d;
-            fetchReport();
-          }),
-
-          Row(
-            children: [
-              Checkbox(
-                value: showLowStock,
-                onChanged: (v) {
-                  showLowStock = v!;
-                  applyFilters();
-                },
-              ),
-              const Text("Low Stock"),
-            ],
-          ),
-
-          TextButton(
-            onPressed: () {
-              searchText = "";
-              selectedCategory = null;
-              showLowStock = false;
-              fromDate = null;
-              toDate = null;
-              fetchReport();
-            },
-            child: const Text("Clear"),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-    );
-  }
-
-  // ================= SUMMARY =================
-  Widget _summaryBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
+        spacing: 12,
         children: [
-          _summary("Opening Stock", openingTotal.toStringAsFixed(2)),
-          _summary("Closing Stock", closingTotal.toStringAsFixed(2)),
-          _summary("Stock Value", "₹ ${stockValue.toStringAsFixed(2)}"),
-        ],
-      ),
-    );
-  }
+          _textField(
+            "Search Item",
+            searchCtrl,
+            onChanged: ((value) {
+              applyFilters();
+            }),
+          ),
 
-  Widget _summary(String title, String value) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.all(6),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xffEEF2FF),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
+          _dateField("From Date", fromDateCtrl, (d) {
+            fromDate = d;
+          }),
+
+          _dateField("To Date", toDateCtrl, (d) {
+            toDate = d;
+          }),
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Group",
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColor.textColor,
+                  ),
+                ),
+                SizedBox(height: 8),
+                CommonDropdownField<String>(
+                  value: selectedCategoryFilter,
+                  items: [
+                    DropdownMenuItem(
+                      value: null,
+                      child: Text("All Categories"),
+                    ),
+                    ...allItems
+                        .map((e) => e.group)
+                        .toSet()
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c))),
+                  ],
+                  onChanged: (val) => setState(() {
+                    selectedCategoryFilter = val;
+                    applyFilters();
+                  }),
+                  hintText: "Select Group",
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
+          ),
+
+          Spacer(flex: 1),
+
+          defaultButton(
+            onTap: () => fetchReport(),
+            text: "Apply Filter",
+            height: 40,
+            width: 180,
+            buttonColor: AppColor.blue,
+          ),
+        ],
       ),
     );
   }
 
   // ================= TABLE =================
   Widget _table() {
+    if (filtered.isEmpty) {
+      return const Center(child: Text("No data found"));
+    }
+
     return ListView(
       padding: const EdgeInsets.all(12),
-      children: [_header(), ...filtered.map(_row).toList()],
+      children: [_header(), ...filtered.map(_row)],
     );
   }
 
   Widget _header() {
     return Container(
       padding: const EdgeInsets.all(12),
-      color: AppColor.black,
-      child: const Row(
+      decoration: BoxDecoration(
+        color: AppColor.black,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(10),
+          topRight: Radius.circular(10),
+        ),
+      ),
+      child: Row(
         children: [
-          Expanded(flex: 2, child: Text("Item", style: _th)),
-          Expanded(child: Text("Opening", style: _th)),
-          Expanded(child: Text("In", style: _th)),
-          Expanded(child: Text("Out", style: _th)),
-          Expanded(child: Text("Closing", style: _th)),
-          Expanded(child: Text("Value", style: _th)),
+          Expanded(flex: 2, child: Text("Item No", style: _th)),
+          Expanded(flex: 3, child: Text("Item Name", style: _th)),
+          Expanded(flex: 2, child: Text("Variant", style: _th)),
+          Expanded(flex: 2, child: Text("Opening", style: _th)),
+          Expanded(flex: 2, child: Text("Inward", style: _th)),
+          Expanded(flex: 2, child: Text("Outward", style: _th)),
+          Expanded(flex: 2, child: Text("Closing", style: _th)),
         ],
       ),
     );
@@ -263,71 +246,77 @@ class _InventoryAdvancedReportScreenState
       ),
       child: Row(
         children: [
-          Expanded(flex: 2, child: Text(i.itemName)),
-          Expanded(child: Text(i.openingStock)),
-          Expanded(child: Text(i.stockQty)),
-          Expanded(child: Text(i.stockQty)),
-          Expanded(child: Text(i.openingStock)),
+          Expanded(flex: 2, child: Text(i.itemNo, style: _tt)),
+          Expanded(flex: 3, child: Text(i.itemName, style: _tt)),
           Expanded(
+            flex: 2,
             child: Text(
-              "₹ ${(double.tryParse(i.openingStock)! * double.tryParse(i.salesPrice)!).toStringAsFixed(2)}",
+              i.varientName.isNotEmpty == true ? i.varientName : "-",
+              style: _tt,
             ),
           ),
+          Expanded(flex: 2, child: Text(i.openingStock, style: _tt)),
+          Expanded(flex: 2, child: Text(i.inword, style: _tt)),
+          Expanded(flex: 2, child: Text(i.outword, style: _tt)),
+          Expanded(flex: 2, child: Text(i.closingStock, style: _tt)),
         ],
       ),
     );
   }
 
-  // ================= SMALL WIDGETS =================
-  Widget _textField(String hint, Function(String) onChange) {
-    return SizedBox(
-      width: 220,
+  // ================= HELPERS =================
+  Widget _textField(
+    String hint,
+    TextEditingController c, {
+    void Function(String)? onChanged,
+  }) {
+    return Expanded(
+      flex: 3,
       child: TitleTextFeild(
+        controller: c,
         hintText: hint,
         titleText: hint,
-        onChanged: onChange,
-      ),
-    );
-  }
-
-  Widget _dropdown(
-    String title,
-    String? value,
-    List<String?> items,
-    Function(String?) onChanged,
-  ) {
-    return SizedBox(
-      width: 200,
-      child: CommonDropdownField<String>(
-        hintText: title,
-        value: value,
-        items: items
-            .map((e) => DropdownMenuItem(value: e, child: Text(e ?? "All")))
-            .toList(),
         onChanged: onChanged,
       ),
     );
   }
 
-  Widget _dateBtn(String title, DateTime? date, Function(DateTime) onPick) {
-    return OutlinedButton(
-      onPressed: () async {
-        final d = await showDatePicker(
-          context: context,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
-          initialDate: date ?? DateTime.now(),
-        );
-        if (d != null) onPick(d);
-      },
-      child: Text(
-        date == null ? title : DateFormat("dd MMM yyyy").format(date),
+  Widget _dateField(
+    String label,
+    TextEditingController ctrl,
+    Function(DateTime) onPick,
+  ) {
+    return Expanded(
+      flex: 2,
+      child: TitleTextFeild(
+        controller: ctrl,
+        readOnly: true,
+        titleText: label,
+        hintText: "Enter date",
+        suffixIcon: const Icon(Icons.calendar_today),
+        onTap: () async {
+          final d = await showDatePicker(
+            context: context,
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now(),
+            initialDate: DateTime.now(),
+          );
+          if (d != null) {
+            ctrl.text = DateFormat("dd-MM-yyyy").format(d);
+            onPick(d);
+          }
+        },
       ),
     );
   }
 }
 
-const TextStyle _th = TextStyle(
+TextStyle _th = GoogleFonts.inter(
   color: Colors.white,
   fontWeight: FontWeight.bold,
+);
+
+TextStyle _tt = GoogleFonts.inter(
+  color: Colors.black,
+  fontWeight: FontWeight.w500,
 );

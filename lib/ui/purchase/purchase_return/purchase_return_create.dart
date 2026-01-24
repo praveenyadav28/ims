@@ -113,7 +113,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
             final cands = context.read<PurchaseReturnBloc>().state.customers;
             final found = cands.firstWhere(
               (c) => c.id == e.supplierId,
-              orElse: () => CustomerModel(
+              orElse: () => LedgerModelDrop(
                 id: e.supplierId ?? "",
                 name: e.supplierName,
                 mobile: e.mobile,
@@ -518,7 +518,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Create Supploer'),
+        title: const Text('Create Supplier'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -607,8 +607,8 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                 final index = state.customers.indexWhere(
                   (c) => c.id == state.selectedCustomer!.id,
                 );
-                final updatedList = List<CustomerModel>.from(state.customers);
-                updatedList[index] = CustomerModel(
+                final updatedList = List<LedgerModelDrop>.from(state.customers);
+                updatedList[index] = LedgerModelDrop(
                   id: state.selectedCustomer!.id,
                   name: state.selectedCustomer!.name,
                   mobile: state.selectedCustomer!.mobile,

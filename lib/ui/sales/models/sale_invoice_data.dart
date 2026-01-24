@@ -108,7 +108,7 @@ class SaleInvoiceData {
     mobile: j["mobile"].toString(),
     transType: j["trans_type"] ?? "",
     transId: j["trans_id"] ?? "",
-    transNo: j["trans_no"]??0,
+    transNo: j["trans_no"] ?? 0,
 
     prefix: j["prefix"] ?? "",
     no: j["no"],

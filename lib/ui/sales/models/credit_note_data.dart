@@ -33,8 +33,8 @@ class CreditNoteData {
   final int licenceNo;
   final String branchId;
 
-  final String? supplierId;
-  final String supplierName;
+  final String? ledgerId;
+  final String ledgerName;
   final String address0;
   final String address1;
   final String mobile;
@@ -67,8 +67,8 @@ class CreditNoteData {
     required this.id,
     required this.licenceNo,
     required this.branchId,
-    this.supplierId,
-    required this.supplierName,
+    this.ledgerId,
+    required this.ledgerName,
     required this.address0,
     required this.address1,
     required this.mobile,
@@ -95,8 +95,8 @@ class CreditNoteData {
     id: j["_id"],
     licenceNo: j["licence_no"],
     branchId: j["branch_id"],
-    supplierId: j["supplier_id"],
-    supplierName: j["supplier_name"],
+    ledgerId: j["supplier_id"],
+    ledgerName: j["supplier_name"],
     address0: j["address_0"],
     address1: j["address_1"],
     mobile: j["mobile"].toString(),

@@ -43,6 +43,9 @@ class _CreateCusSupState extends State<CreateCusSup>
   TextEditingController cityDistrictController = TextEditingController();
   TextEditingController addressLine1Controller = TextEditingController();
   TextEditingController addressLine2Controller = TextEditingController();
+  TextEditingController openingBalanceController = TextEditingController(
+    text: "0",
+  );
 
   String selectedType = "Individual";
   late TabController _tabController;
@@ -52,6 +55,9 @@ class _CreateCusSupState extends State<CreateCusSup>
 
   List<String> titleParentList = ["S/O", "D/O", "W/O", "C/O"];
   String selectedTitleParent = "S/O";
+
+  String _selectedBalance = 'Cr';
+  final List<String> _balanceType = ['Cr', 'Dr'];
 
   List<String> gstTypeList = [
     "Unregistered Dealer",
@@ -352,6 +358,49 @@ class _CreateCusSupState extends State<CreateCusSup>
                 ],
               ),
             ),
+            if (widget.cusSupData == null) SizedBox(height: Sizes.height * .02),
+            if (widget.cusSupData == null)
+              nameField(
+                text: "Opeing Balance",
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: CommonTextField(
+                        controller: openingBalanceController,
+                        hintText: 'Opening Balance',
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: CommonDropdownField<String>(
+                        value: _selectedBalance,
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedBalance = newValue ?? 'Dr';
+                          });
+                        },
+                        items: _balanceType.map<DropdownMenuItem<String>>((
+                          String value,
+                        ) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(
+                              value,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: AppColor.lightblack,
+                                fontSize: 17,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             SizedBox(height: Sizes.height * .05),
             Align(
               alignment: Alignment.centerLeft,
@@ -738,6 +787,15 @@ class _CreateCusSupState extends State<CreateCusSup>
         MapEntry("address", cityDistrictController.text.trim()),
         MapEntry("city", selectedCity?.item ?? ""),
         MapEntry("state", selectedState?.item ?? ""),
+        MapEntry(
+          'opening_balance',
+          openingBalanceController.text.trim().isEmpty
+              ? "0"
+              : _selectedBalance == "Cr"
+              ? "${int.tryParse(openingBalanceController.text.trim())}"
+              : "-${int.tryParse(openingBalanceController.text.trim())}",
+        ),
+        MapEntry("opening_type", _selectedBalance),
         MapEntry("district", cityDistrictController.text.trim()),
         MapEntry("address_0", addressLine1Controller.text.trim()),
         MapEntry("address_1", addressLine2Controller.text.trim()),

@@ -63,7 +63,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       bool matchesLowStock = true;
       if (showLowStockOnly) {
         final qty = double.tryParse(item.stockQty) ?? 0;
-        final min = double.tryParse(item.minStockQty) ?? 0;
+        final min = double.tryParse(item.reorderLevel) ?? 0;
         matchesLowStock = qty <= min && min > 0;
       }
 
@@ -95,7 +95,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   int get lowStockCount {
     return list.where((i) {
       final qty = double.tryParse(i.stockQty) ?? 0;
-      final min = double.tryParse(i.minStockQty) ?? 0;
+      final min = double.tryParse(i.reorderLevel) ?? 0;
       return qty <= min && min > 0;
     }).length;
   }
@@ -104,57 +104,57 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return list.where((i) {
       final qty = double.tryParse(i.stockQty) ?? 0;
       final re = double.tryParse(i.reorderLevel) ?? 0;
-      return qty <= re && re > 0;
+      return qty <= re && re > 1;
     }).length;
   }
 
-  // ---------------- ACTIONS ----------------
-  void _editItem(ItemModel item) async {
-    final res = await pushTo(CreateNewItemScreen(editItem: item));
+  // // ---------------- ACTIONS ----------------
+  // void _editItem(ItemModel item) async {
+  //   final res = await pushTo(CreateNewItemScreen(editItem: item));
 
-    if (res == true) fetchItems();
-  }
+  //   if (res == true) fetchItems();
+  // }
 
-  void _deleteItemConfirm(ItemModel item) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Delete Item"),
-        content: Text("Are you sure you want to delete ${item.itemName}?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteItem(item);
-            },
-            child: const Text("Delete"),
-          ),
-        ],
-      ),
-    );
-  }
+  // void _deleteItemConfirm(ItemModel item) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (_) => AlertDialog(
+  //       title: const Text("Delete Item"),
+  //       content: Text("Are you sure you want to delete ${item.itemName}?"),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context),
+  //           child: const Text("Cancel"),
+  //         ),
+  //         ElevatedButton(
+  //           onPressed: () {
+  //             Navigator.pop(context);
+  //             _deleteItem(item);
+  //           },
+  //           child: const Text("Delete"),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
-  Future<void> _deleteItem(ItemModel item) async {
-    final res = await ApiService.deleteData(
-      'item/${item.id}',
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
+  // Future<void> _deleteItem(ItemModel item) async {
+  //   final res = await ApiService.deleteData(
+  //     'item/${item.id}',
+  //     licenceNo: Preference.getint(PrefKeys.licenseNo),
+  //   );
 
-    if (res?['status'] == true) {
-      setState(() => list.removeWhere((e) => e.id == item.id));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Item deleted successfully")),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res?['message'] ?? "Delete failed")),
-      );
-    }
-  }
+  //   if (res?['status'] == true) {
+  //     setState(() => list.removeWhere((e) => e.id == item.id));
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text("Item deleted successfully")),
+  //     );
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text(res?['message'] ?? "Delete failed")),
+  //     );
+  //   }
+  // }
 
   // ---------------- UI ----------------
   @override
@@ -205,7 +205,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   icon: Icons.trending_up,
                 ),
                 _infoCard(
-                  title: "Stock on Re-order Level",
+                  title: "Dead Stock",
                   value: reorderCount.toString(),
                   bgColor: const Color(0xffFFE4E6),
                   textColor: Colors.red,
@@ -272,7 +272,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   buttonColor: AppColor.blue,
                   height: 35,
                   width: 100,
-                  onTap: () => pushTo(CreateNewItemScreen()),
+                  onTap: () async {
+                    var data = await pushTo(CreateNewItemScreen());
+                    if (data != null) {
+                      fetchItems();
+                    }
+                  },
                   text: "Create Item",
                 ),
               ],
@@ -372,7 +377,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           Expanded(child: Text("Selling Price")),
           Expanded(child: Text("Purchase Price")),
           Expanded(child: Text("HSN Code")),
-          Expanded(child: Text("Actions")),
+          // Expanded(child: Text("Actions")),
         ],
       ),
     );
@@ -391,20 +396,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
           Expanded(child: Text(item.hsnCode)),
 
           // ACTIONS
-          Expanded(
-            child: Row(
-              children: [
-                // IconButton(
-                //   icon: const Icon(Icons.edit, color: Colors.blue),
-                //   onPressed: () => _editItem(item),
-                // ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => _deleteItemConfirm(item),
-                ),
-              ],
-            ),
-          ),
+          // Expanded(
+          //   child: Row(
+          //     children: [
+          //       // IconButton(
+          //       //   icon: const Icon(Icons.edit, color: Colors.blue),
+          //       //   onPressed: () => _editItem(item),
+          //       // ),
+          //       IconButton(
+          //         icon: const Icon(Icons.delete, color: Colors.red),
+          //         onPressed: () => _deleteItemConfirm(item),
+          //       ),
+          //     ],
+          //   ),
+          // ),
         ],
       ),
     );

@@ -8,6 +8,7 @@ class PaymentModel {
   final String prefix;
   final int voucherNo;
   final String note;
+  final String type;
 
   PaymentModel({
     required this.id,
@@ -19,6 +20,7 @@ class PaymentModel {
     required this.prefix,
     required this.voucherNo,
     required this.note,
+    required this.type,
   });
 
   factory PaymentModel.fromJson(Map<String, dynamic> json) {
@@ -27,11 +29,12 @@ class PaymentModel {
       ledgerName: json['ledger_name'],
       supplierName: json['supplier_name'] ?? json['customer_name'],
       amount: (json['amount'] as num).toDouble(),
-      invoiceNo: json['invoice_no'],
+      invoiceNo: json['invoice_no'] ?? 0,
       date: DateTime.parse(json['date']),
       prefix: json['prefix'],
       voucherNo: json['vouncher_no'],
       note: json['note'] ?? '',
+      type: json['type'] ?? '',
     );
   }
 }

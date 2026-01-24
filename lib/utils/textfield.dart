@@ -294,6 +294,7 @@ class CommonSearchableDropdownField<T> extends StatelessWidget {
       readOnly: readOnly,
       validator: validator,
       onSuggestionTap: onSuggestionTap,
+      
       searchInputDecoration: SearchInputDecoration(
         isDense: true,
         filled: true,

@@ -21,7 +21,7 @@ class DiliveryChallanLoadInit extends DiliveryChallanEvent {
 }
 
 class DiliveryChallanSelectCustomer extends DiliveryChallanEvent {
-  final CustomerModel? c;
+  final LedgerModelDrop? c;
   DiliveryChallanSelectCustomer(this.c);
 }
 
@@ -119,8 +119,8 @@ class DiliveryChallanToggleRoundOff extends DiliveryChallanEvent {
 
 /// ------------------- STATE -------------------
 class DiliveryChallanState {
-  final List<CustomerModel> customers;
-  final CustomerModel? selectedCustomer;
+  final List<LedgerModelDrop> customers;
+  final LedgerModelDrop? selectedCustomer;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
@@ -174,8 +174,8 @@ class DiliveryChallanState {
   });
 
   DiliveryChallanState copyWith({
-    List<CustomerModel>? customers,
-    CustomerModel? selectedCustomer,
+    List<LedgerModelDrop>? customers,
+    LedgerModelDrop? selectedCustomer,
     bool? cashSaleDefault,
     String? prefix,
     String? diliveryChallanNo,
@@ -295,7 +295,7 @@ class DiliveryChallanBloc
     Emitter<DiliveryChallanState> emit,
   ) async {
     try {
-      final customers = await repo.fetchCustomers();
+      final customers = await repo.fetchLedger(true);
       final diliveryChallanNo = await repo.fetchDiliveryChallanNo();
       final catalogue = await repo.fetchCatalogue();
       final hsnList = await repo.fetchHsnList();
@@ -850,7 +850,7 @@ DiliveryChallanState _prefillDiliveryChallan(
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.customerId,
-    orElse: () => CustomerModel(
+    orElse: () => LedgerModelDrop(
       id: data.customerId ?? "",
       name: data.customerName,
       mobile: data.mobile,

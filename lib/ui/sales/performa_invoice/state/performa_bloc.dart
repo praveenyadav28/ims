@@ -22,7 +22,7 @@ class PerformaLoadInit extends PerformaEvent {
 }
 
 class PerfromaSelectCustomer extends PerformaEvent {
-  final CustomerModel? c;
+  final LedgerModelDrop? c;
   PerfromaSelectCustomer(this.c);
 }
 
@@ -120,8 +120,8 @@ class PerfromaToggleRoundOff extends PerformaEvent {
 
 /// ------------------- STATE -------------------
 class PerformaState {
-  final List<CustomerModel> customers;
-  final CustomerModel? selectedCustomer;
+  final List<LedgerModelDrop> customers;
+  final LedgerModelDrop? selectedCustomer;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
@@ -175,8 +175,8 @@ class PerformaState {
   });
 
   PerformaState copyWith({
-    List<CustomerModel>? customers,
-    CustomerModel? selectedCustomer,
+    List<LedgerModelDrop>? customers,
+    LedgerModelDrop? selectedCustomer,
     bool? cashSaleDefault,
     String? prefix,
     String? performaNo,
@@ -292,7 +292,7 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
 
   Future<void> _onLoad(PerformaLoadInit e, Emitter<PerformaState> emit) async {
     try {
-      final customers = await repo.fetchCustomers();
+      final customers = await repo.fetchLedger(true);
       final performaNo = await repo.fetchPerformaNo();
       final catalogue = await repo.fetchCatalogue();
       final hsnList = await repo.fetchHsnList();
@@ -821,7 +821,7 @@ PerformaState _prefillPerforma(PerformaData data, PerformaState s) {
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.customerId,
-    orElse: () => CustomerModel(
+    orElse: () => LedgerModelDrop(
       id: data.customerId ?? "",
       name: data.customerName,
       mobile: data.mobile,

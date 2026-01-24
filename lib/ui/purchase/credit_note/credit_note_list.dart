@@ -23,10 +23,10 @@ class _CreditNoteListScreenState extends State<CreditNoteListScreen> {
   Widget build(BuildContext context) {
     return TransactionListScreen<CreditNoteData>(
       key: listKey,
-      title: "Credit Note",
+      title: "Debit Note",
       fetchData: repo.getCreditNote,
       onView: (e) {
-        print("VIEW Credit Note PDF: ${e.no}");
+        print("VIEW Debit Note PDF: ${e.no}");
       },
       onEdit: (e) async {
         final result = await pushTo(
@@ -49,7 +49,7 @@ class _CreditNoteListScreenState extends State<CreditNoteListScreen> {
       idGetter: (e) => e.id,
       dateGetter: (e) => e.creditNoteDate,
       numberGetter: (e) => "${e.prefix} ${e.no}",
-      customerGetter: (e) => e.supplierName,
+      customerGetter: (e) => e.ledgerName,
       amountGetter: (e) => e.totalAmount,
       addressGetter: (e) => e.address0,
     );

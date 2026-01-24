@@ -29,8 +29,8 @@ class _CreateLedgerState extends State<CreateLedger> {
   final List<String> _groupLedgerList = [
     'Bank Account',
     'Cash In Hand',
-    'Sundry Debtors',
-    'Sundry Creditors',
+    'Sundry Debtor',
+    'Sundry Creditor',
     'Expense',
     'Fixed Asset',
     'Capital',
@@ -359,8 +359,10 @@ class _CreateLedgerState extends State<CreateLedger> {
       'ledger_group': _selectedLedgerGroup,
       // Safely parse int, using null if empty.
       'opening_balance': openingBalanceController.text.trim().isEmpty
-          ? null
-          : int.tryParse(openingBalanceController.text.trim()),
+          ? "0"
+          : _selectedBalance == "Cr"
+          ? "${int.tryParse(openingBalanceController.text.trim())}"
+          : "-${int.tryParse(openingBalanceController.text.trim())}",
       'address': addressLine1Controller.text.trim().toString(),
       'town': permanentareaController.text.trim().toString(),
       'opening_type': _selectedBalance,

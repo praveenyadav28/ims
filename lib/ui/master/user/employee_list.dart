@@ -41,7 +41,7 @@ class _EmployeeTableScreenState extends State<EmployeeTableScreen> {
 
   Future deleteApi(String id) async {
     var response = await ApiService.deleteData(
-      "user/$id",
+      "employee/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 

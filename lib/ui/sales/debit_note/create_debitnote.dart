@@ -102,7 +102,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
             final cands = context.read<DebitNoteBloc>().state.customers;
             final found = cands.firstWhere(
               (c) => c.id == e.customerId,
-              orElse: () => CustomerModel(
+              orElse: () => LedgerModelDrop(
                 id: e.customerId ?? "",
                 name: e.customerName,
                 mobile: e.mobile,
@@ -224,7 +224,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
           ),
           titleSpacing: 0,
           title: Text(
-            '${widget.debitNoteData == null ? "Create" : "Update"} Debit Note',
+            '${widget.debitNoteData == null ? "Create" : "Update"} Credit Note',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -245,7 +245,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Debit Note",
+                  text: "Save Credit Note",
                   height: 40,
                   width: 179,
                   onTap: () {
@@ -588,8 +588,8 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                 final index = state.customers.indexWhere(
                   (c) => c.id == state.selectedCustomer!.id,
                 );
-                final updatedList = List<CustomerModel>.from(state.customers);
-                updatedList[index] = CustomerModel(
+                final updatedList = List<LedgerModelDrop>.from(state.customers);
+                updatedList[index] = LedgerModelDrop(
                   id: state.selectedCustomer!.id,
                   name: state.selectedCustomer!.name,
                   mobile: state.selectedCustomer!.mobile,

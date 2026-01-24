@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ims/model/payment_model.dart';
-import 'package:ims/ui/voucher/payment/create.dart';
+import 'package:ims/model/contra_model.dart';
+import 'package:ims/ui/voucher/journal/create.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -9,16 +9,16 @@ import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:intl/intl.dart';
 
-class PaymentListTableScreen extends StatefulWidget {
-  const PaymentListTableScreen({super.key});
+class JournalListTableScreen extends StatefulWidget {
+  const JournalListTableScreen({super.key});
 
   @override
-  State<PaymentListTableScreen> createState() => _PaymentListTableScreenState();
+  State<JournalListTableScreen> createState() => _JournalListTableScreenState();
 }
 
-class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
+class _JournalListTableScreenState extends State<JournalListTableScreen> {
   bool loading = false;
-  List<PaymentModel> list = [];
+  List<ContraModel> list = [];
 
   @override
   void initState() {
@@ -30,18 +30,18 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
     setState(() => loading = true);
 
     final res = await ApiService.fetchData(
-      'get/payment',
+      'get/journal',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    list = (res['data'] as List).map((e) => PaymentModel.fromJson(e)).toList();
+    list = (res['data'] as List).map((e) => ContraModel.fromJson(e)).toList();
 
     setState(() => loading = false);
   }
 
   Future<void> deletePayment(String id) async {
     await ApiService.deleteData(
-      'payment/$id',
+      'journal/$id',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     fetchPayments();
@@ -56,7 +56,7 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
         backgroundColor: AppColor.white,
         iconTheme: IconThemeData(color: AppColor.black),
         title: Text(
-          "Payments",
+          "Journal",
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -74,7 +74,7 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
                 const Icon(Icons.currency_rupee, color: Colors.deepPurple),
                 const SizedBox(width: 6),
                 Text(
-                  "Payment Received",
+                  "Journal",
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.w600,
                     color: Colors.deepPurple,
@@ -89,15 +89,13 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
                 const SizedBox(width: 12),
                 defaultButton(
                   onTap: () async {
-                    var data = await pushTo(PaymentEntry());
+                    var data = await pushTo(JournalEntry());
                     if (data != null) {
-                      fetchPayments().then((onValue) {
-                        setState(() {});
-                      });
+                      fetchPayments();
                     }
                   },
                   buttonColor: AppColor.blue,
-                  text: "Create Payment",
+                  text: "Create Journal",
                   height: 40,
                   width: 150,
                 ),
@@ -154,8 +152,9 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
       child: Row(
         children: const [
           Expanded(flex: 2, child: Text("Date")),
-          Expanded(flex: 3, child: Text("Payment Number")),
-          Expanded(flex: 3, child: Text("Party Name")),
+          Expanded(flex: 3, child: Text("Journal Number")),
+          Expanded(flex: 3, child: Text("Account Name")),
+          Expanded(flex: 3, child: Text("Payment Mode")),
           Expanded(flex: 2, child: Text("Amount")),
           Expanded(flex: 3, child: Text("Narration")),
           SizedBox(width: 70),
@@ -165,7 +164,7 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
   }
 
   // ---------- ROW ----------
-  Widget _tableRow(PaymentModel p) {
+  Widget _tableRow(ContraModel p) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       child: Row(
@@ -176,6 +175,7 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
           ),
           Expanded(flex: 3, child: Text("${p.prefix} ${p.voucherNo}")),
           Expanded(flex: 3, child: Text(p.supplierName)),
+          Expanded(flex: 3, child: Text(p.ledgerName)),
           Expanded(
             flex: 2,
             child: Text(
@@ -191,13 +191,8 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () async {
-                  var data = await pushTo(PaymentEntry(data: p,));
-                  if (data != null) {
-                    fetchPayments().then((onValue) {
-                        setState(() {});
-                      });
-                  }
+                onPressed: () {
+                  // TODO: OPEN EDIT
                 },
               ),
               IconButton(
@@ -216,8 +211,8 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Delete Payment"),
-        content: const Text("Are you sure you want to delete this payment?"),
+        title: const Text("Delete Journal"),
+        content: const Text("Are you sure you want to delete this journal?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

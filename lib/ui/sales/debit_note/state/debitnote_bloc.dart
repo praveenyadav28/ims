@@ -25,7 +25,7 @@ class DebitNoteLoadInit extends DebitNoteEvent {
 }
 
 class DebitNoteSelectCustomer extends DebitNoteEvent {
-  final CustomerModel? c;
+  final LedgerModelDrop? c;
   DebitNoteSelectCustomer(this.c);
 }
 
@@ -126,8 +126,8 @@ class DebitNoteSavePayment extends DebitNoteEvent {
 
 /// ------------------- STATE -------------------
 class DebitNoteState {
-  final List<CustomerModel> customers;
-  final CustomerModel? selectedCustomer;
+  final List<LedgerModelDrop> customers;
+  final LedgerModelDrop? selectedCustomer;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
@@ -183,8 +183,8 @@ class DebitNoteState {
   });
 
   DebitNoteState copyWith({
-    List<CustomerModel>? customers,
-    CustomerModel? selectedCustomer,
+    List<LedgerModelDrop>? customers,
+    LedgerModelDrop? selectedCustomer,
     bool? cashSaleDefault,
     String? prefix,
     String? debitNoteNo,
@@ -309,7 +309,7 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
     Emitter<DebitNoteState> emit,
   ) async {
     try {
-      final customers = await repo.fetchCustomers();
+      final customers = await repo.fetchLedger(true);
       final debitNoteNo = await repo.fetchDebitNoteNo();
       final hsnList = await repo.fetchHsnList();
 
@@ -829,7 +829,7 @@ DebitNoteState _prefillDebitNoteFromTrans(
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.customerId,
-    orElse: () => CustomerModel(
+    orElse: () => LedgerModelDrop(
       id: data.customerId ?? "",
       name: data.customerName,
       mobile: data.mobile,
@@ -849,7 +849,7 @@ DebitNoteState _prefillDebitNote(DebitNoteData data, DebitNoteState s) {
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.customerId,
-    orElse: () => CustomerModel(
+    orElse: () => LedgerModelDrop(
       id: data.customerId ?? "",
       name: data.customerName,
       mobile: data.mobile,

@@ -22,9 +22,9 @@ class CreditNoteLoadInit extends CreditNoteEvent {
   CreditNoteLoadInit({this.existing});
 }
 
-class CreditNoteSelectCustomer extends CreditNoteEvent {
-  final CustomerModel? c;
-  CreditNoteSelectCustomer(this.c);
+class CreditNoteSelectLedger extends CreditNoteEvent {
+  final LedgerModelDrop? c;
+  CreditNoteSelectLedger(this.c);
 }
 
 class CreditNoteToggleCashSale extends CreditNoteEvent {
@@ -110,8 +110,8 @@ class CreditNoteSearchTransaction extends CreditNoteEvent {}
 
 /// ------------------- STATE -------------------
 class CreditNoteState {
-  final List<CustomerModel> customers;
-  final CustomerModel? selectedCustomer;
+  final List<LedgerModelDrop> ledgers;
+  final LedgerModelDrop? selectedLedger;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
@@ -138,8 +138,8 @@ class CreditNoteState {
   final List<String> terms;
 
   CreditNoteState({
-    this.customers = const [],
-    this.selectedCustomer,
+    this.ledgers = const [],
+    this.selectedLedger,
     this.cashSaleDefault = false,
     this.prefix = 'PO',
     this.creditNoteNo = '',
@@ -163,8 +163,8 @@ class CreditNoteState {
   });
 
   CreditNoteState copyWith({
-    List<CustomerModel>? customers,
-    CustomerModel? selectedCustomer,
+    List<LedgerModelDrop>? ledgers,
+    LedgerModelDrop? selectedLedger,
     bool? cashSaleDefault,
     String? prefix,
     String? creditNoteNo,
@@ -187,8 +187,8 @@ class CreditNoteState {
     String? transId,
   }) {
     return CreditNoteState(
-      customers: customers ?? this.customers,
-      selectedCustomer: selectedCustomer ?? this.selectedCustomer,
+      ledgers: ledgers ?? this.ledgers,
+      selectedLedger: selectedLedger ?? this.selectedLedger,
       cashSaleDefault: cashSaleDefault ?? this.cashSaleDefault,
       prefix: prefix ?? this.prefix,
       creditNoteNo: creditNoteNo ?? this.creditNoteNo,
@@ -215,7 +215,7 @@ class CreditNoteState {
 
 /// ------------------- SAVE EVENT (UI) -------------------
 class CreditNoteSaveWithUIData extends CreditNoteEvent {
-  final String supplierName;
+  final String ledgerName;
   final String? updateId;
   final String mobile;
   final String billingAddress;
@@ -225,7 +225,7 @@ class CreditNoteSaveWithUIData extends CreditNoteEvent {
   final File? signatureImage; // NEW
 
   CreditNoteSaveWithUIData({
-    required this.supplierName,
+    required this.ledgerName,
     required this.mobile,
     required this.billingAddress,
     required this.shippingAddress,
@@ -251,7 +251,7 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
         add(CreditNoteCalculate());
       }
     });
-    on<CreditNoteSelectCustomer>(_onSelectCustomer);
+    on<CreditNoteSelectLedger>(_onSelectLedger);
     on<CreditNoteToggleCashSale>(_onToggleCashSale);
     on<CreditNoteAddRow>(_onAddRow);
     on<CreditNoteRemoveRow>(_onRemoveRow);
@@ -284,7 +284,7 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
     Emitter<CreditNoteState> emit,
   ) async {
     try {
-      final customers = await repo.fetchSupplier();
+      final ledgers = await repo.fetchLedger(false);
       final creditNoteNo = await repo.fetchCreditNoteNo();
       final hsnList = await repo.fetchHsnList();
 
@@ -298,7 +298,7 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
 
       emit(
         state.copyWith(
-          customers: customers,
+          ledgers: ledgers,
           creditNoteNo: creditNoteNo,
           hsnMaster: hsnList,
           miscMasterList: miscMaster,
@@ -313,10 +313,10 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
     }
   }
 
-  void _onSelectCustomer(
-    CreditNoteSelectCustomer e,
+  void _onSelectLedger(
+    CreditNoteSelectLedger e,
     Emitter<CreditNoteState> emit,
-  ) => emit(state.copyWith(selectedCustomer: e.c));
+  ) => emit(state.copyWith(selectedLedger: e.c));
   void _onToggleCashSale(
     CreditNoteToggleCashSale e,
     Emitter<CreditNoteState> emit,
@@ -325,14 +325,14 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
       emit(
         state.copyWith(
           cashSaleDefault: true,
-          selectedCustomer: null, // MUST CLEAR
+          selectedLedger: null, // MUST CLEAR
         ),
       );
     } else {
       emit(
         state.copyWith(
           cashSaleDefault: false,
-          // Do NOT set selectedCustomer here; UI will set when user picks
+          // Do NOT set selectedLedger here; UI will set when user picks
         ),
       );
     }
@@ -600,22 +600,22 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
 
       final bool isCash = state.cashSaleDefault;
 
-      // ---------------- CUSTOMER ----------------
-      final supplierId = isCash ? null : state.selectedCustomer?.id;
+      // ---------------- Ledger ----------------
+      final ledgerId = isCash ? null : state.selectedLedger?.id;
 
-      final supplierName = isCash
-          ? e.supplierName
-          : state.selectedCustomer?.name ?? "";
+      final ledgerName = isCash
+          ? e.ledgerName
+          : state.selectedLedger?.name ?? "";
 
-      final mobile = isCash ? e.mobile : state.selectedCustomer?.mobile ?? "";
+      final mobile = isCash ? e.mobile : state.selectedLedger?.mobile ?? "";
 
-      // Address — prefer selectedCustomer's addresses (autofill). If cash sale use provided fields.
+      // Address — prefer selectedLedger's addresses (autofill). If cash sale use provided fields.
       final billing = isCash
           ? e.billingAddress
-          : state.selectedCustomer?.billingAddress ?? e.billingAddress;
+          : state.selectedLedger?.billingAddress ?? e.billingAddress;
       final shipping = isCash
           ? e.shippingAddress
-          : state.selectedCustomer?.shippingAddress ?? e.shippingAddress;
+          : state.selectedLedger?.shippingAddress ?? e.shippingAddress;
 
       // ---------------- ROWS ----------------
       final itemRows = <Map<String, dynamic>>[];
@@ -664,8 +664,8 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
       Map<String, dynamic> payload = {
         "licence_no": Preference.getint(PrefKeys.licenseNo),
         "branch_id": Preference.getString(PrefKeys.locationId),
-        "supplier_id": supplierId,
-        "supplier_name": supplierName,
+        "supplier_id": ledgerId,
+        "supplier_name": ledgerName,
         "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
@@ -758,12 +758,12 @@ CreditNoteState _prefillCreditNoteFromTrans(
   GlobalDataAllPurchase data,
   CreditNoteState s,
 ) {
-  // find customer from loaded list (or create fallback)
-  final selectedCustomer = s.customers.firstWhere(
-    (c) => c.id == data.supplierId,
-    orElse: () => CustomerModel(
-      id: data.supplierId ?? "",
-      name: data.supplierName,
+  // find ledger from loaded list (or create fallback)
+  final selectedLedger = s.ledgers.firstWhere(
+    (c) => c.id == data.ledgerId,
+    orElse: () => LedgerModelDrop(
+      id: data.ledgerId ?? "",
+      name: data.ledgerName,
       mobile: data.mobile,
       billingAddress: data.address0,
       shippingAddress: data.address1,
@@ -771,20 +771,20 @@ CreditNoteState _prefillCreditNoteFromTrans(
   );
 
   return s.copyWith(
-    customers: s.customers,
-    selectedCustomer: data.caseSale ? null : selectedCustomer,
+    ledgers: s.ledgers,
+    selectedLedger: data.caseSale ? null : selectedLedger,
     cashSaleDefault: data.caseSale,
   );
 }
 
 /// ------------------- PREFILL HELPER -------------------
 CreditNoteState _prefillCreditNote(CreditNoteData data, CreditNoteState s) {
-  // find customer from loaded list (or create fallback)
-  final selectedCustomer = s.customers.firstWhere(
-    (c) => c.id == data.supplierId,
-    orElse: () => CustomerModel(
-      id: data.supplierId ?? "",
-      name: data.supplierName,
+  // find ledger from loaded list (or create fallback)
+  final selectedLedger = s.ledgers.firstWhere(
+    (c) => c.id == data.ledgerId,
+    orElse: () => LedgerModelDrop(
+      id: data.ledgerId ?? "",
+      name: data.ledgerName,
       mobile: data.mobile,
       billingAddress: data.address0,
       shippingAddress: data.address1,
@@ -883,8 +883,8 @@ CreditNoteState _prefillCreditNote(CreditNoteData data, CreditNoteState s) {
   ];
 
   return s.copyWith(
-    customers: s.customers,
-    selectedCustomer: data.caseSale ? null : selectedCustomer,
+    ledgers: s.ledgers,
+    selectedLedger: data.caseSale ? null : selectedLedger,
     prefix: data.prefix,
     creditNoteNo: data.no.toString(),
     rows: rows,

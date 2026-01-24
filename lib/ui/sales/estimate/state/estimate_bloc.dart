@@ -22,7 +22,7 @@ class EstLoadInit extends EstEvent {
 }
 
 class EstSelectCustomer extends EstEvent {
-  final CustomerModel? c;
+  final LedgerModelDrop? c;
   EstSelectCustomer(this.c);
 }
 
@@ -120,8 +120,8 @@ class EstToggleRoundOff extends EstEvent {
 
 /// ------------------- STATE -------------------
 class EstState {
-  final List<CustomerModel> customers;
-  final CustomerModel? selectedCustomer;
+  final List<LedgerModelDrop> customers;
+  final LedgerModelDrop? selectedCustomer;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
@@ -175,8 +175,8 @@ class EstState {
   });
 
   EstState copyWith({
-    List<CustomerModel>? customers,
-    CustomerModel? selectedCustomer,
+    List<LedgerModelDrop>? customers,
+    LedgerModelDrop? selectedCustomer,
     bool? cashSaleDefault,
     String? prefix,
     String? estimateNo,
@@ -292,7 +292,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
   Future<void> _onLoad(EstLoadInit e, Emitter<EstState> emit) async {
     try {
-      final customers = await repo.fetchCustomers();
+      final customers = await repo.fetchLedger(true);
       final estimateNo = await repo.fetchEstimateNo();
       final catalogue = await repo.fetchCatalogue();
       final hsnList = await repo.fetchHsnList();
@@ -802,7 +802,7 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.customerId,
-    orElse: () => CustomerModel(
+    orElse: () => LedgerModelDrop(
       id: data.customerId ?? "",
       name: data.customerName,
       mobile: data.mobile,

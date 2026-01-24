@@ -23,7 +23,7 @@ class SaleReturnLoadInit extends SaleReturnEvent {
 }
 
 class SaleReturnSelectCustomer extends SaleReturnEvent {
-  final CustomerModel? c;
+  final LedgerModelDrop? c;
   SaleReturnSelectCustomer(this.c);
 }
 
@@ -128,8 +128,8 @@ class SaleReturnSearchTransaction extends SaleReturnEvent {}
 
 /// ------------------- STATE -------------------
 class SaleReturnState {
-  final List<CustomerModel> customers;
-  final CustomerModel? selectedCustomer;
+  final List<LedgerModelDrop> customers;
+  final LedgerModelDrop? selectedCustomer;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
@@ -187,8 +187,8 @@ class SaleReturnState {
   });
 
   SaleReturnState copyWith({
-    List<CustomerModel>? customers,
-    CustomerModel? selectedCustomer,
+    List<LedgerModelDrop>? customers,
+    LedgerModelDrop? selectedCustomer,
     bool? cashSaleDefault,
     String? prefix,
     String? saleReturnNo,
@@ -317,7 +317,7 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
     Emitter<SaleReturnState> emit,
   ) async {
     try {
-      final customers = await repo.fetchCustomers();
+      final customers = await repo.fetchLedger(true);
       final saleReturnNo = await repo.fetchSaleReturnNo();
       final catalogue = await repo.fetchCatalogue();
       final hsnList = await repo.fetchHsnList();
@@ -909,7 +909,7 @@ SaleReturnState _prefillSaleReturnFromTrans(
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.customerId,
-    orElse: () => CustomerModel(
+    orElse: () => LedgerModelDrop(
       id: data.customerId ?? "",
       name: data.customerName,
       mobile: data.mobile,
@@ -1079,7 +1079,7 @@ SaleReturnState _prefillSaleReturn(SaleReturnData data, SaleReturnState s) {
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.customerId,
-    orElse: () => CustomerModel(
+    orElse: () => LedgerModelDrop(
       id: data.customerId ?? "",
       name: data.customerName,
       mobile: data.mobile,

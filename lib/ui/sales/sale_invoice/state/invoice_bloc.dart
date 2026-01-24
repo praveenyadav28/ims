@@ -25,7 +25,7 @@ class SaleInvoiceLoadInit extends SaleInvoiceEvent {
 }
 
 class SaleInvoiceSelectCustomer extends SaleInvoiceEvent {
-  final CustomerModel? c;
+  final LedgerModelDrop? c;
   SaleInvoiceSelectCustomer(this.c);
 }
 
@@ -150,8 +150,8 @@ class SaleInvoiceSavePayment extends SaleInvoiceEvent {
 
 /// ------------------- STATE -------------------
 class SaleInvoiceState {
-  final List<CustomerModel> customers;
-  final CustomerModel? selectedCustomer;
+  final List<LedgerModelDrop> customers;
+  final LedgerModelDrop? selectedCustomer;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
@@ -209,8 +209,8 @@ class SaleInvoiceState {
   });
 
   SaleInvoiceState copyWith({
-    List<CustomerModel>? customers,
-    CustomerModel? selectedCustomer,
+    List<LedgerModelDrop>? customers,
+    LedgerModelDrop? selectedCustomer,
     bool? cashSaleDefault,
     String? prefix,
     String? saleInvoiceNo,
@@ -343,7 +343,7 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
     Emitter<SaleInvoiceState> emit,
   ) async {
     try {
-      final customers = await repo.fetchCustomers();
+      final customers = await repo.fetchLedger(true);
       final saleInvoiceNo = await repo.fetchSaleInvoiceNo();
       final catalogue = await repo.fetchCatalogue();
       final hsnList = await repo.fetchHsnList();
@@ -1000,7 +1000,7 @@ SaleInvoiceState _prefillSaleInvoiceFromTrans(
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.customerId,
-    orElse: () => CustomerModel(
+    orElse: () => LedgerModelDrop(
       id: data.customerId ?? "",
       name: data.customerName,
       mobile: data.mobile,
@@ -1172,7 +1172,7 @@ SaleInvoiceState _prefillSaleInvoice(SaleInvoiceData data, SaleInvoiceState s) {
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.customerId,
-    orElse: () => CustomerModel(
+    orElse: () => LedgerModelDrop(
       id: data.customerId ?? "",
       name: data.customerName,
       mobile: data.mobile,

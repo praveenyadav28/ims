@@ -14,6 +14,10 @@ class ItemModel {
   final bool gstIncludePurchase;
   final String gstRate;
   final String openingStock;
+  final String closingStock;
+  final String inword;
+  final String outword;
+  final String varientName;
   final String stockQty;
   final String minOrderQty;
   final String minStockQty;
@@ -39,6 +43,10 @@ class ItemModel {
     required this.gstIncludePurchase,
     required this.gstRate,
     required this.openingStock,
+    required this.inword,
+    required this.outword,
+    required this.closingStock,
+    required this.varientName,
     required this.stockQty,
     required this.minOrderQty,
     required this.minStockQty,
@@ -55,7 +63,7 @@ class ItemModel {
       itemType: json['item_type']?.toString() ?? '',
       itemName: json['item_name']?.toString() ?? '',
       itemNo: json['item_no']?.toString() ?? '',
-      group: json['group']?.toString() ?? '',
+      group: (json['group'] ?? json['Group'])?.toString() ?? '',
       salesPrice: json['sales_price']?.toString() ?? '0',
       purchasePrice: json['purchase_price']?.toString() ?? '0',
       hsnCode: json['hsn_code']?.toString() ?? '',
@@ -66,6 +74,10 @@ class ItemModel {
       gstIncludePurchase: json['gstinclude_purchase'] == true,
       gstRate: json['gst_tax_rate']?.toString() ?? '',
       openingStock: json['opening_stock']?.toString() ?? '0',
+      inword: json['inward']?.toString() ?? '0',
+      outword: json['outward']?.toString() ?? '0',
+      closingStock: json['closing_stock']?.toString() ?? '0',
+      varientName: json['varient_name']?.toString() ?? '',
       stockQty: json['stock_qty']?.toString() ?? '0',
       minOrderQty: json['m_o_qty']?.toString() ?? '0',
       minStockQty: json['m_s_qty']?.toString() ?? '0',

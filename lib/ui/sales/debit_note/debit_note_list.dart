@@ -34,10 +34,10 @@ class _DebitNoteInvoiceListScreenState
   Widget build(BuildContext context) {
     return TransactionListScreen<DebitNoteData>(
       key: listKey,
-      title: "Debit Note",
+      title: "Credit Note",
       fetchData: repo.getDebitNote,
       onView: (e) {
-        print("VIEW Debit Note PDF: ${e.baseNumber}");
+        print("VIEW Credit Note PDF: ${e.baseNumber}");
       },
       onEdit: (e) async {
         final result = await pushTo(

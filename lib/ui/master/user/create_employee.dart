@@ -94,7 +94,7 @@ class _UserEmpCreateState extends State<UserEmpCreate>
     super.initState();
     statesSuggestions = stateCities.keys.toList();
     citiesSuggestions = [];
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -118,7 +118,7 @@ class _UserEmpCreateState extends State<UserEmpCreate>
         elevation: .4,
         shadowColor: AppColor.grey,
         title: Text(
-          "Create New User",
+          "Create New Employee",
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             height: 1,
@@ -557,7 +557,7 @@ class _UserEmpCreateState extends State<UserEmpCreate>
           children: [
             defaultButton(
               buttonColor: Color(0xff8947E5),
-              text: "Create User",
+              text: "Create Employee",
               height: 40,
               width: 149,
               onTap: () => saveOrUpdate(),
@@ -569,6 +569,7 @@ class _UserEmpCreateState extends State<UserEmpCreate>
               text: "Cancel",
               height: 40,
               width: 93,
+                  onTap: () => Navigator.pop(context),
             ),
           ],
         ),
@@ -686,12 +687,11 @@ class _UserEmpCreateState extends State<UserEmpCreate>
         data: formData,
         options: Options(headers: headers, contentType: 'multipart/form-data'),
       );
-
       if (response.statusCode == 200) {
         var data = json.decode("$response");
-        print(data);
+
         if (data['status'] == true) {
-          // Navigator.pop(context, "data");
+          Navigator.pop(context, "data");
           showCustomSnackbarSuccess(context, data['message']);
         } else {
           showCustomSnackbarError(context, "${data['message']}");

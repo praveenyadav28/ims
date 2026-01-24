@@ -118,7 +118,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
             final cands = context.read<EstBloc>().state.customers;
             final found = cands.firstWhere(
               (c) => c.id == e.customerId,
-              orElse: () => CustomerModel(
+              orElse: () => LedgerModelDrop(
                 id: e.customerId ?? "",
                 name: e.customerName,
                 mobile: e.mobile,
@@ -655,8 +655,8 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 final index = state.customers.indexWhere(
                   (c) => c.id == state.selectedCustomer!.id,
                 );
-                final updatedList = List<CustomerModel>.from(state.customers);
-                updatedList[index] = CustomerModel(
+                final updatedList = List<LedgerModelDrop>.from(state.customers);
+                updatedList[index] = LedgerModelDrop(
                   id: state.selectedCustomer!.id,
                   name: state.selectedCustomer!.name,
                   mobile: state.selectedCustomer!.mobile,

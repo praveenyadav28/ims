@@ -4,13 +4,14 @@ import 'package:ims/ui/inventry/list.dart';
 import 'package:ims/ui/master/customer_supplier/supplier_list.dart';
 import 'package:ims/ui/master/ledger/ledger_list.dart';
 import 'package:ims/ui/master/user/employee_list.dart';
-import 'package:ims/ui/report/customer/customer_report.dart';
 import 'package:ims/ui/report/inventry/inventry_report.dart';
+import 'package:ims/ui/report/ledger_report/particular_ledger.dart';
 import 'package:ims/ui/report/purchase/purchase_inv_report.dart';
 import 'package:ims/ui/report/sale/sale_inv_report.dart';
 import 'package:ims/ui/report/supplier/supplier_repost.dart';
 import 'package:ims/ui/voucher/contra/contra_list.dart';
 import 'package:ims/ui/voucher/expanse/expanse_list.dart';
+import 'package:ims/ui/voucher/journal/journal_list.dart';
 import 'package:ims/ui/voucher/payment/payment_list.dart';
 import 'package:ims/ui/voucher/recipt/reciept_list.dart';
 import 'menu_screen.dart';
@@ -49,8 +50,8 @@ class _FullScreenState extends State<FullScreen> {
         return const DashboardScreen();
       case MenuScreen.customerList:
         return const CustomerTableScreen();
-      case MenuScreen.customerReport:
-        return const CustomerReportScreen();
+      case MenuScreen.ledgerReport:
+        return const LedgerReportScreen();
       case MenuScreen.supplierReport:
         return const SupplierReportScreen();
       case MenuScreen.purchaseInvReport:
@@ -73,6 +74,8 @@ class _FullScreenState extends State<FullScreen> {
         return const RecieptListTableScreen();
       case MenuScreen.contra:
         return const ContraListTableScreen();
+      case MenuScreen.journal:
+        return const JournalListTableScreen();
       case MenuScreen.expanse:
         return const ExpanseListTableScreen();
       case MenuScreen.companyProfile:

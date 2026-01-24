@@ -200,7 +200,7 @@ class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
                 {"Delivery": MenuScreen.deliveryChallan},
                 {"Sale Invoice": MenuScreen.saleInvoice},
                 {"Sales Return": MenuScreen.saleReturn},
-                {"Debit Note": MenuScreen.debitNote},
+                {"Credit Note": MenuScreen.debitNote},
               ],
             ),
 
@@ -212,7 +212,7 @@ class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
                 {"Purchase Order": MenuScreen.purchaseOrder},
                 {"Purchase Invoice": MenuScreen.purchaseInvoice},
                 {"Purchase Return": MenuScreen.purchaseReturn},
-                {"Credit Note": MenuScreen.creditNote},
+                {"Debit Note": MenuScreen.creditNote},
               ],
             ),
 
@@ -221,8 +221,8 @@ class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
               icon: "assets/icons/reports.svg",
               title: "Reports",
               children: [
-                {"Customer Report": MenuScreen.customerReport},
-                {"Supplier Report": MenuScreen.supplierReport},
+                {"Ledger Report": MenuScreen.ledgerReport},
+                // {"Supplier Report": MenuScreen.supplierReport},
                 {"P Invoice Report": MenuScreen.purchaseInvReport},
                 {"S Invoice Report": MenuScreen.saleInvReport},
                 {"Inventory Report": MenuScreen.inventoryReport},
@@ -236,8 +236,9 @@ class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
               children: [
                 {"Payment": MenuScreen.payment},
                 {"Reciept": MenuScreen.reciept},
-                {"Contra": MenuScreen.contra},
                 {"Expense": MenuScreen.expanse},
+                {"Contra": MenuScreen.contra},
+                {"Journal": MenuScreen.journal},
               ],
             ),
             expandableMenu(

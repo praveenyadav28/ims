@@ -81,7 +81,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
       final e = widget.creditNoteData!;
 
       // Prefill names / mobile
-      cusNameController.text = e.supplierName;
+      cusNameController.text = e.ledgerName;
       cashMobileController.text = e.mobile;
 
       cashBillingController.text = e.address0;
@@ -101,20 +101,20 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
         // Ensure BLoC reflects non-cash mode for editing
         WidgetsBinding.instance.addPostFrameCallback((_) {
           context.read<CreditNoteBloc>().add(CreditNoteToggleCashSale(false));
-          if (e.supplierId != null && e.supplierId!.isNotEmpty) {
+          if (e.ledgerId != null && e.ledgerId!.isNotEmpty) {
             // find customer from loaded list (may be empty until load completes)
-            final cands = context.read<CreditNoteBloc>().state.customers;
+            final cands = context.read<CreditNoteBloc>().state.ledgers;
             final found = cands.firstWhere(
-              (c) => c.id == e.supplierId,
-              orElse: () => CustomerModel(
-                id: e.supplierId ?? "",
-                name: e.supplierName,
+              (c) => c.id == e.ledgerId,
+              orElse: () => LedgerModelDrop(
+                id: e.ledgerId ?? "",
+                name: e.ledgerName,
                 mobile: e.mobile,
                 billingAddress: e.address0,
                 shippingAddress: e.address1,
               ),
             );
-            context.read<CreditNoteBloc>().add(CreditNoteSelectCustomer(found));
+            context.read<CreditNoteBloc>().add(CreditNoteSelectLedger(found));
           }
         });
       }
@@ -186,8 +186,8 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
 
     return BlocListener<CreditNoteBloc, CreditNoteState>(
       listenWhen: (previous, current) {
-        // Only listen when selectedCustomer or cashSaleDefault or creditNoteNo changes
-        return previous.selectedCustomer != current.selectedCustomer ||
+        // Only listen when selectedLedger or cashSaleDefault or creditNoteNo changes
+        return previous.selectedLedger != current.selectedLedger ||
             previous.cashSaleDefault != current.cashSaleDefault ||
             previous.creditNoteNo != current.creditNoteNo;
       },
@@ -195,7 +195,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
         // When customer selected via dropdown, autofill name/mobile/address fields
         bool isUpdateMode = widget.creditNoteData != null;
 
-        final customer = state.selectedCustomer;
+        final customer = state.selectedLedger;
 
         // Only autofill addresses when user selects customer in CREATE mode
         if (!isUpdateMode && customer != null && !state.cashSaleDefault) {
@@ -205,13 +205,12 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
           cashShippingController.text = customer.shippingAddress;
         }
         if (state.cashSaleDefault) {
-          // If a selectedCustomer existed earlier, use that name as default cash name
-          if (state.selectedCustomer != null) {
-            cusNameController.text = state.selectedCustomer!.name;
-            cashMobileController.text = state.selectedCustomer!.mobile;
-            cashBillingController.text = state.selectedCustomer!.billingAddress;
-            cashShippingController.text =
-                state.selectedCustomer!.shippingAddress;
+          // If a selectedLedger existed earlier, use that name as default cash name
+          if (state.selectedLedger != null) {
+            cusNameController.text = state.selectedLedger!.name;
+            cashMobileController.text = state.selectedLedger!.mobile;
+            cashBillingController.text = state.selectedLedger!.billingAddress;
+            cashShippingController.text = state.selectedLedger!.shippingAddress;
           }
         }
 
@@ -233,7 +232,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
           ),
           titleSpacing: 0,
           title: Text(
-            '${widget.creditNoteData == null ? "Create" : "Update"} Credit Note',
+            '${widget.creditNoteData == null ? "Create" : "Update"} Debit Note',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -254,13 +253,13 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Credit Note",
+                  text: "Save Debit Note",
                   height: 40,
                   width: 189,
                   onTap: () {
                     bloc.add(
                       CreditNoteSaveWithUIData(
-                        supplierName: cusNameController.text,
+                        ledgerName: cusNameController.text,
                         mobile: cashMobileController.text,
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
@@ -289,8 +288,8 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                   GlobalHeaderCard(
                     billTo: GlobalBillToCard(
                       isCashSale: state.cashSaleDefault,
-                      customers: state.customers,
-                      selectedCustomer: state.selectedCustomer,
+                      customers: state.ledgers,
+                      selectedCustomer: state.selectedLedger,
 
                       cusNameController: cusNameController,
                       mobileController: cashMobileController,
@@ -311,7 +310,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                       },
 
                       onCustomerSelected: (customer) {
-                        bloc.add(CreditNoteSelectCustomer(customer));
+                        bloc.add(CreditNoteSelectLedger(customer));
                         cashMobileController.text = customer.mobile;
                         cashBillingController.text = customer.billingAddress;
                         cashShippingController.text = customer.shippingAddress;
@@ -551,12 +550,12 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
     final billing = TextEditingController(
       text: state.cashSaleDefault
           ? cashBillingController.text
-          : state.selectedCustomer?.billingAddress ?? '',
+          : state.selectedLedger?.billingAddress ?? '',
     );
     final shipping = TextEditingController(
       text: state.cashSaleDefault
           ? cashShippingController.text
-          : state.selectedCustomer?.shippingAddress ?? '',
+          : state.selectedLedger?.shippingAddress ?? '',
     );
 
     showDialog(
@@ -586,23 +585,23 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
               if (state.cashSaleDefault) {
                 cashBillingController.text = billing.text;
                 cashShippingController.text = shipping.text;
-              } else if (state.selectedCustomer != null) {
-                final index = state.customers.indexWhere(
-                  (c) => c.id == state.selectedCustomer!.id,
+              } else if (state.selectedLedger != null) {
+                final index = state.ledgers.indexWhere(
+                  (c) => c.id == state.selectedLedger!.id,
                 );
-                final updatedList = List<CustomerModel>.from(state.customers);
-                updatedList[index] = CustomerModel(
-                  id: state.selectedCustomer!.id,
-                  name: state.selectedCustomer!.name,
-                  mobile: state.selectedCustomer!.mobile,
+                final updatedList = List<LedgerModelDrop>.from(state.ledgers);
+                updatedList[index] = LedgerModelDrop(
+                  id: state.selectedLedger!.id,
+                  name: state.selectedLedger!.name,
+                  mobile: state.selectedLedger!.mobile,
                   billingAddress: billing.text,
                   shippingAddress: shipping.text,
                 );
-                // emit updated customers + selectedCustomer
+                // emit updated customers + selectedLedger
                 bloc.emit(
                   state.copyWith(
-                    customers: updatedList,
-                    selectedCustomer: updatedList[index],
+                    ledgers: updatedList,
+                    selectedLedger: updatedList[index],
                   ),
                 );
               }

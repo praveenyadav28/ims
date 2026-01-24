@@ -25,8 +25,8 @@ class GlobalBillToCard extends StatelessWidget {
 
   /// DATA
   final bool isCashSale;
-  final List<CustomerModel> customers;
-  final CustomerModel? selectedCustomer;
+  final List<LedgerModelDrop> customers;
+  final LedgerModelDrop? selectedCustomer;
 
   /// CONTROLLERS
   final TextEditingController cusNameController;
@@ -36,7 +36,7 @@ class GlobalBillToCard extends StatelessWidget {
 
   /// CALLBACKS
   final VoidCallback onToggleCashSale;
-  final Function(CustomerModel customer) onCustomerSelected;
+  final Function(LedgerModelDrop customer) onCustomerSelected;
   final VoidCallback onCreateCustomer;
   final bool ispurchase;
 
@@ -162,28 +162,28 @@ class _CustomerDropdown extends StatelessWidget {
     required this.onSelectCustomer,
   });
 
-  final List<CustomerModel> customers;
-  final CustomerModel? selectedCustomer;
+  final List<LedgerModelDrop> customers;
+  final LedgerModelDrop? selectedCustomer;
 
   final VoidCallback onCreateCustomer;
-  final Function(CustomerModel customer) onSelectCustomer;
+  final Function(LedgerModelDrop customer) onSelectCustomer;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        SearchField<CustomerModel>(
+        SearchField<LedgerModelDrop>(
           key: ValueKey(selectedCustomer?.id),
 
           selectedValue: selectedCustomer != null
-              ? SearchFieldListItem<CustomerModel>(
+              ? SearchFieldListItem<LedgerModelDrop>(
                   selectedCustomer!.name,
                   item: selectedCustomer!,
                 )
               : null,
 
           suggestions: customers
-              .map((c) => SearchFieldListItem<CustomerModel>(c.name, item: c))
+              .map((c) => SearchFieldListItem<LedgerModelDrop>(c.name, item: c))
               .toList(),
 
           suggestionState: Suggestion.expand,

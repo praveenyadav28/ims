@@ -88,8 +88,13 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
                 // ),
                 const SizedBox(width: 12),
                 defaultButton(
-                  onTap: () {
-                    pushTo(RecieptEntry());
+                  onTap: () async {
+                    var data = await pushTo(RecieptEntry());
+                    if (data != null) {
+                      fetchReciepts().then((onValue) {
+                        setState(() {});
+                      });
+                    }
                   },
                   buttonColor: AppColor.blue,
                   text: "Create Reciept",

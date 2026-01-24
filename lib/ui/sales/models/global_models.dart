@@ -1,6 +1,6 @@
 enum ItemServiceType { item, service }
 
-class CustomerModel {
+class LedgerModelDrop {
   final String id;
   final String name;
   final String mobile;
@@ -8,7 +8,7 @@ class CustomerModel {
   final String billingAddress;
   final String shippingAddress;
   final String gstin;
-  CustomerModel({
+  LedgerModelDrop({
     required this.id,
     required this.name,
     required this.mobile,
@@ -17,17 +17,15 @@ class CustomerModel {
     this.gstin = '',
   });
 
-  factory CustomerModel.fromMap(Map<String, dynamic> m) => CustomerModel(
+  factory LedgerModelDrop.fromMap(Map<String, dynamic> m) => LedgerModelDrop(
     id: (m['_id'] ?? '').toString(),
-    name: ((m['first_name'] ?? '').toString().trim().isNotEmpty)
-        ? '${m['first_name']} ${m['last_name'] ?? ''}'.trim()
-        : (m['company_name'] ?? '').toString(),
-    mobile: (m['mobile'] ?? '').toString(),
+    name: (m['ledger_name'] ?? '').toString(),
+    mobile: (m['contact_no'] ?? '').toString(),
     billingAddress:
         "${(m['address'] ?? '')}, ${(m['city'] ?? "")}, ${(m['state'] ?? "")}",
     shippingAddress:
         "${(m['address'] ?? '')}, ${(m['city'] ?? "")}, ${(m['state'] ?? "")}",
-    gstin: (m['gstin'] ?? '').toString(),
+    gstin: (m['gst_no'] ?? '').toString(),
   );
 }
 

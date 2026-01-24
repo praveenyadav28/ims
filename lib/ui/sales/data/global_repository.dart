@@ -16,27 +16,19 @@ import 'package:ims/utils/api.dart';
 import 'package:ims/utils/prefence.dart';
 
 class GLobalRepository {
-  //
-  //Get Cust/Supp
-  Future<List<CustomerModel>> fetchCustomers() async {
+  Future<List<LedgerModelDrop>> fetchLedger(bool isCustomer) async {
     final res = await ApiService.fetchData(
-      'get/customer',
+      'get/ledger',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['data'] as List?) ?? [];
     return data
-        .map((e) => CustomerModel.fromMap(Map<String, dynamic>.from(e)))
-        .toList();
-  }
-
-  Future<List<CustomerModel>> fetchSupplier() async {
-    final res = await ApiService.fetchData(
-      'get/supplier',
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-    final data = (res?['data'] as List?) ?? [];
-    return data
-        .map((e) => CustomerModel.fromMap(Map<String, dynamic>.from(e)))
+        .where(
+          (e) =>
+              e['ledger_group'] ==
+              (isCustomer ? 'Sundry Debtor' : 'Sundry Creditor'),
+        )
+        .map((e) => LedgerModelDrop.fromMap(Map<String, dynamic>.from(e)))
         .toList();
   }
 

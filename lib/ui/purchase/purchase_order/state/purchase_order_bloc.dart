@@ -21,7 +21,7 @@ class PurchaseOrderLoadInit extends PurchaseOrderEvent {
 }
 
 class PurchaseOrderSelectCustomer extends PurchaseOrderEvent {
-  final CustomerModel? c;
+  final LedgerModelDrop? c;
   PurchaseOrderSelectCustomer(this.c);
 }
 
@@ -119,8 +119,8 @@ class PurchaseOrderToggleRoundOff extends PurchaseOrderEvent {
 
 /// ------------------- STATE -------------------
 class PurchaseOrderState {
-  final List<CustomerModel> customers;
-  final CustomerModel? selectedCustomer;
+  final List<LedgerModelDrop> customers;
+  final LedgerModelDrop? selectedCustomer;
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
@@ -174,8 +174,8 @@ class PurchaseOrderState {
   });
 
   PurchaseOrderState copyWith({
-    List<CustomerModel>? customers,
-    CustomerModel? selectedCustomer,
+    List<LedgerModelDrop>? customers,
+    LedgerModelDrop? selectedCustomer,
     bool? cashSaleDefault,
     String? prefix,
     String? purchaseOrderNo,
@@ -294,7 +294,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     Emitter<PurchaseOrderState> emit,
   ) async {
     try {
-      final customers = await repo.fetchSupplier();
+      final customers = await repo.fetchLedger(false);
       final purchaseOrderNo = await repo.fetchPurchaseOrderNo();
       final catalogue = await repo.fetchOnyItem();
       final hsnList = await repo.fetchHsnList();
@@ -831,7 +831,7 @@ PurchaseOrderState _prefillPurchaseOrder(
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
     (c) => c.id == data.supplierId,
-    orElse: () => CustomerModel(
+    orElse: () => LedgerModelDrop(
       id: data.supplierId ?? "",
       name: data.supplierName,
       mobile: data.mobile,
