@@ -303,6 +303,22 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
                     subtitle: i.variantValue.isEmpty
                         ? null
                         : Text(i.variantValue),
+                    trailing: Text(
+                      i.stockQty.toString(),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color:
+                            (int.parse(
+                                  i.stockQty.toString().isEmpty
+                                      ? "0"
+                                      : i.stockQty!,
+                                )) <=
+                                0
+                            ? AppColor.red
+                            : AppColor.darkGreen,
+                      ),
+                    ),
                   ),
                 );
               }).toList(),

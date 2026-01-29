@@ -23,7 +23,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   TextEditingController licenceNoController = TextEditingController(
-    text: "10001",
+    text: "10002",
   );
   TextEditingController userIdController = TextEditingController(text: "Vijay");
   TextEditingController passwordController = TextEditingController(

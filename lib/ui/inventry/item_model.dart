@@ -61,7 +61,7 @@ class ItemModel {
     return ItemModel(
       id: json['_id']?.toString() ?? '',
       itemType: json['item_type']?.toString() ?? '',
-      itemName: json['item_name']?.toString() ?? '',
+      itemName: json['item_name'] ?? '',
       itemNo: json['item_no']?.toString() ?? '',
       group: (json['group'] ?? json['Group'])?.toString() ?? '',
       salesPrice: json['sales_price']?.toString() ?? '0',
@@ -86,6 +86,50 @@ class ItemModel {
       margin: json['margin']?.toString() ?? '0',
       marginAmt: json['margin_amt']?.toString() ?? '0',
       reorderLevel: json['re_o_level']?.toString() ?? '0',
+    );
+  }
+}
+
+class FifoReportModel {
+  final String itemName;
+  final String itemNo;
+  final String purchaseAmount;
+  final String purchaseReturnAmount;
+  final String saleAmount;
+  final String saleReturnAmount;
+  final String openingStock;
+  final String closingStock;
+  final String taxReceivable;
+  final String taxPayable;
+  final String netProfitLoss;
+
+  FifoReportModel({
+    required this.itemName,
+    required this.itemNo,
+    required this.openingStock,
+    required this.saleAmount,
+    required this.saleReturnAmount,
+    required this.purchaseAmount,
+    required this.purchaseReturnAmount,
+    required this.closingStock,
+    required this.taxReceivable,
+    required this.taxPayable,
+    required this.netProfitLoss,
+  });
+
+  factory FifoReportModel.fromJson(Map<String, dynamic> json) {
+    return FifoReportModel(
+      itemName: json['item_name'] ?? '',
+      itemNo: json['item_no'] ?? '',
+      openingStock: json['opening_stock'].toString(),
+      saleAmount: json['sale'].toString(),
+      saleReturnAmount: json['sale_return'].toString(),
+      purchaseAmount: json['purchase'].toString(),
+      purchaseReturnAmount: json['purchase_return'].toString(),
+      closingStock: json['closing_stock'].toString(),
+      taxReceivable: json['tax_receivable'] ?? '0',
+      taxPayable: json['tax_payable'] ?? '0',
+      netProfitLoss: json['net_profit_loss'] ?? '0',
     );
   }
 }

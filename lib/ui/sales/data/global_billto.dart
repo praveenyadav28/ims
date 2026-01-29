@@ -179,12 +179,17 @@ class _CustomerDropdown extends StatelessWidget {
               ? SearchFieldListItem<LedgerModelDrop>(
                   selectedCustomer!.name,
                   item: selectedCustomer!,
+                  child: _customerTile(selectedCustomer!),
                 )
               : null,
 
-          suggestions: customers
-              .map((c) => SearchFieldListItem<LedgerModelDrop>(c.name, item: c))
-              .toList(),
+          suggestions: customers.map((c) {
+            return SearchFieldListItem<LedgerModelDrop>(
+              c.name,
+              item: c,
+              child: _customerTile(c), // 👈 custom UI
+            );
+          }).toList(),
 
           suggestionState: Suggestion.expand,
 
@@ -216,14 +221,7 @@ class _CustomerDropdown extends StatelessWidget {
               borderSide: BorderSide(color: Color(0xFFDEE1E6)),
             ),
           ),
-
-          suggestionStyle: GoogleFonts.inter(
-            color: Color(0xFF565D6D),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
         ),
-
         SizedBox(height: Sizes.height * .02),
 
         CommonTextField(
@@ -234,7 +232,6 @@ class _CustomerDropdown extends StatelessWidget {
         ),
 
         SizedBox(height: Sizes.height * .02),
-
         SizedBox(
           width: double.infinity,
           child: OutlinedButton(
@@ -254,6 +251,28 @@ class _CustomerDropdown extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _customerTile(LedgerModelDrop c) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          c.name,
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+        Text(
+          "₹ ${(double.parse(c.closingBalance ?? "0").abs())} ${(double.tryParse(c.closingBalance ?? "0") ?? 0) < 0 ? "Cr" : "Dr"}",
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: (double.tryParse(c.closingBalance ?? "0") ?? 0) < 0
+                ? Colors.red
+                : Colors.green,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],

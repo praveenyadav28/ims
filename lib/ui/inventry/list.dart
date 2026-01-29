@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/inventry/item/create.dart';
+import 'package:ims/ui/sales/models/sale_invoice_data.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';
+import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/textfield.dart';
+import 'package:intl/intl.dart';
 
 import 'item_model.dart';
 
@@ -29,7 +32,34 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   void initState() {
     super.initState();
-    fetchItems();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    await fetchItems(); // pehle items
+    await fetchDeadStockItems(); // phir dead stock
+    await fetchStockValueNDP();
+  }
+
+  double stockValueNDP = 0;
+
+  Future<void> fetchStockValueNDP() async {
+    final res = await ApiService.fetchData(
+      "get/fiforeports?from_date=${DateFormat("yyyy-MM-dd").format(DateTime.now())}&to_date=${DateFormat("yyyy-MM-dd").format(DateTime.now())}",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    double total = 0;
+
+    for (var item in res['data']) {
+      final closing = double.tryParse(item['closing_stock'].toString()) ?? 0;
+
+      total += closing;
+    }
+
+    setState(() {
+      stockValueNDP = total;
+    });
   }
 
   // ---------------- API ----------------
@@ -40,13 +70,54 @@ class _InventoryScreenState extends State<InventoryScreen> {
       'get/item',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-
-    list = (res['data'] as List).map((e) => ItemModel.fromJson(e)).toList();
+    if (res['status'] == true) {
+      list = ((res?['data'] ?? []) as List)
+          .map((e) => ItemModel.fromJson(e))
+          .toList();
+    }
 
     setState(() => loading = false);
   }
 
-  // ---------------- FILTERED LIST ----------------
+  bool showDeadStock = false;
+  String deadStockMonth = "1";
+  Set<String> deadStockItemIds = {};
+  Future<void> fetchDeadStockItems() async {
+    final res = await ApiService.fetchData(
+      "get/invoice",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    final sales = SaleInvoiceListResponse.fromJson(res).data;
+
+    final limitDate = DateTime.now().subtract(
+      Duration(days: int.parse(deadStockMonth) * 30),
+    );
+
+    final Set<String> soldItemIds = {};
+
+    for (var invoice in sales) {
+      if (invoice.saleInvoiceDate.isAfter(limitDate)) {
+        for (var item in invoice.itemDetails) {
+          soldItemIds.add(item.itemId);
+        }
+      }
+    }
+
+    deadStockItemIds.clear();
+
+    for (var item in list) {
+      final stock = double.tryParse(item.stockQty) ?? 0;
+
+      if (stock > 0 && !soldItemIds.contains(item.id)) {
+        deadStockItemIds.add(item.id);
+      }
+    }
+
+    setState(() {});
+  }
+
+  int get deadStockCount => deadStockItemIds.length;
   List<ItemModel> get filteredList {
     return list.where((item) {
       final name = item.itemName.toLowerCase();
@@ -63,11 +134,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
       bool matchesLowStock = true;
       if (showLowStockOnly) {
         final qty = double.tryParse(item.stockQty) ?? 0;
-        final min = double.tryParse(item.reorderLevel) ?? 0;
-        matchesLowStock = qty <= min && min > 0;
+        final reorder = double.tryParse(item.reorderLevel) ?? 0;
+        matchesLowStock = reorder > 0 && qty <= reorder;
       }
 
-      return matchesSearch && matchesCategory && matchesLowStock;
+      bool matchesDeadStock = true;
+      if (showDeadStock) {
+        matchesDeadStock = deadStockItemIds.contains(item.id);
+      }
+
+      return matchesSearch &&
+          matchesCategory &&
+          matchesLowStock &&
+          matchesDeadStock;
     }).toList();
   }
 
@@ -82,79 +161,65 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return total;
   }
 
-  double get stockValueNDP {
-    double total = 0;
-    for (var i in list) {
-      final qty = double.tryParse(i.stockQty) ?? 0;
-      final price = double.tryParse(i.purchasePrice) ?? 0;
-      total += qty * price;
-    }
-    return total;
-  }
-
   int get lowStockCount {
-    return list.where((i) {
-      final qty = double.tryParse(i.stockQty) ?? 0;
-      final min = double.tryParse(i.reorderLevel) ?? 0;
-      return qty <= min && min > 0;
+    return list.where((item) {
+      final qty = double.tryParse(item.stockQty) ?? 0;
+      final reorder = double.tryParse(item.reorderLevel) ?? 0;
+
+      // ✅ Valid reorder level hona chahiye
+      if (reorder <= 0) return false;
+
+      // ✅ Stock hona chahiye
+      if (qty <= 0) return false;
+
+      // ✅ Low stock condition
+      return qty <= reorder;
     }).length;
   }
 
-  int get reorderCount {
-    return list.where((i) {
-      final qty = double.tryParse(i.stockQty) ?? 0;
-      final re = double.tryParse(i.reorderLevel) ?? 0;
-      return qty <= re && re > 1;
-    }).length;
+  // ---------------- ACTIONS ----------------
+  void _editItem(ItemModel item) async {
+    final res = await pushTo(CreateNewItemScreen(editItem: item));
+
+    if (res == true) fetchItems();
   }
 
-  // // ---------------- ACTIONS ----------------
-  // void _editItem(ItemModel item) async {
-  //   final res = await pushTo(CreateNewItemScreen(editItem: item));
+  void _deleteItemConfirm(ItemModel item) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Delete Item"),
+        content: Text("Are you sure you want to delete ${item.itemName}?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteItem(item);
+            },
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+  }
 
-  //   if (res == true) fetchItems();
-  // }
+  Future<void> _deleteItem(ItemModel item) async {
+    final res = await ApiService.deleteData(
+      'item/${item.id}',
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
 
-  // void _deleteItemConfirm(ItemModel item) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (_) => AlertDialog(
-  //       title: const Text("Delete Item"),
-  //       content: Text("Are you sure you want to delete ${item.itemName}?"),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.pop(context),
-  //           child: const Text("Cancel"),
-  //         ),
-  //         ElevatedButton(
-  //           onPressed: () {
-  //             Navigator.pop(context);
-  //             _deleteItem(item);
-  //           },
-  //           child: const Text("Delete"),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  // Future<void> _deleteItem(ItemModel item) async {
-  //   final res = await ApiService.deleteData(
-  //     'item/${item.id}',
-  //     licenceNo: Preference.getint(PrefKeys.licenseNo),
-  //   );
-
-  //   if (res?['status'] == true) {
-  //     setState(() => list.removeWhere((e) => e.id == item.id));
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text("Item deleted successfully")),
-  //     );
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text(res?['message'] ?? "Delete failed")),
-  //     );
-  //   }
-  // }
+    if (res?['status'] == true) {
+      setState(() => list.removeWhere((e) => e.id == item.id));
+      showCustomSnackbarSuccess(context, "Item deleted successfully");
+    } else {
+      showCustomSnackbarError(context, res?['message'] ?? "Delete failed");
+    }
+  }
 
   // ---------------- UI ----------------
   @override
@@ -206,10 +271,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 _infoCard(
                   title: "Dead Stock",
-                  value: reorderCount.toString(),
+                  value: deadStockCount.toString(),
                   bgColor: const Color(0xffFFE4E6),
                   textColor: Colors.red,
                   icon: Icons.error,
+                  onTap: () async {
+                    showDeadStock = true;
+                    showLowStockOnly = false;
+
+                    await fetchDeadStockItems();
+                  },
                 ),
               ],
             ),
@@ -254,19 +325,72 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
                 // LOW STOCK TOGGLE
                 Expanded(
+                  flex: 3,
                   child: Row(
                     children: [
                       Checkbox(
                         value: showLowStockOnly,
-                        onChanged: (v) =>
-                            setState(() => showLowStockOnly = v ?? false),
+                        onChanged: (v) {
+                          setState(() {
+                            showLowStockOnly = v ?? false;
+                            showDeadStock = false;
+                          });
+                        },
                       ),
                       const Text("Low Stock"),
+
+                      const SizedBox(width: 16),
+
+                      Checkbox(
+                        value: showDeadStock,
+                        onChanged: (v) async {
+                          showDeadStock = v ?? false;
+                          showLowStockOnly = false;
+
+                          if (showDeadStock) {
+                            await fetchDeadStockItems();
+                          }
+
+                          setState(() {});
+                        },
+                      ),
+                      const Text("Dead Stock"),
+
+                      if (showDeadStock)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 12),
+                          child: SizedBox(
+                            width: 200,
+                            child: CommonDropdownField<String>(
+                              value: deadStockMonth,
+                              items: const [
+                                DropdownMenuItem(
+                                  value: "1",
+                                  child: Text("1 Month"),
+                                ),
+                                DropdownMenuItem(
+                                  value: "3",
+                                  child: Text("3 Month"),
+                                ),
+                                DropdownMenuItem(
+                                  value: "6",
+                                  child: Text("6 Month"),
+                                ),
+                                DropdownMenuItem(
+                                  value: "12",
+                                  child: Text("12 Month"),
+                                ),
+                              ],
+                              onChanged: (v) async {
+                                deadStockMonth = v!;
+                                await fetchDeadStockItems();
+                              },
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
-
-                const Spacer(),
 
                 defaultButton(
                   buttonColor: AppColor.blue,
@@ -318,49 +442,53 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   /// ================== WIDGETS ==================
-
   Widget _infoCard({
     required String title,
     required String value,
     IconData? icon,
     Color bgColor = Colors.white,
     Color textColor = Colors.black,
+    VoidCallback? onTap, // 👈 ADD THIS
   }) {
     return Expanded(
-      child: Container(
-        height: 110,
-        margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xffE5E7EB)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                if (icon != null) Icon(icon, size: 18, color: textColor),
-                const SizedBox(width: 6),
-                Text(
-                  title,
-                  style: GoogleFonts.inter(fontSize: 13, color: textColor),
-                ),
-                const Spacer(),
-                const Icon(Icons.open_in_new, size: 16),
-              ],
-            ),
-            const Spacer(),
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: textColor,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 110,
+          margin: const EdgeInsets.only(right: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xffE5E7EB)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  if (icon != null) Icon(icon, size: 18, color: textColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(fontSize: 13, color: textColor),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.open_in_new, size: 16),
+                ],
               ),
-            ),
-          ],
+              const Spacer(),
+              Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -377,7 +505,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           Expanded(child: Text("Selling Price")),
           Expanded(child: Text("Purchase Price")),
           Expanded(child: Text("HSN Code")),
-          // Expanded(child: Text("Actions")),
+          Expanded(child: Text("Actions")),
         ],
       ),
     );
@@ -396,20 +524,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
           Expanded(child: Text(item.hsnCode)),
 
           // ACTIONS
-          // Expanded(
-          //   child: Row(
-          //     children: [
-          //       // IconButton(
-          //       //   icon: const Icon(Icons.edit, color: Colors.blue),
-          //       //   onPressed: () => _editItem(item),
-          //       // ),
-          //       IconButton(
-          //         icon: const Icon(Icons.delete, color: Colors.red),
-          //         onPressed: () => _deleteItemConfirm(item),
-          //       ),
-          //     ],
-          //   ),
-          // ),
+          Expanded(
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () => _editItem(item),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _deleteItemConfirm(item),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

@@ -473,16 +473,11 @@ class GLobalRepository {
     required int transNo,
     required String transType,
   }) async {
-    print(transType);
-    final res = await ApiService.fetchDataWithBody(
-      "get/getreletedrecode",
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-      body: {
-        "trans_no": transNo,
-        "trans_type": transType,
-        "licence_no": Preference.getint(PrefKeys.licenseNo),
-      },
-    );
+    final res = await ApiService.postData("get/getreletedrecode", {
+      "trans_no": transNo,
+      "trans_type": transType,
+      "licence_no": Preference.getint(PrefKeys.licenseNo),
+    }, licenceNo: Preference.getint(PrefKeys.licenseNo));
     return GlobalDataAll.fromJson(res['data']);
   }
 

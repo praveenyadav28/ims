@@ -104,8 +104,6 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
   Future<void> fetchCompanyProfile() async {
     try {
       final response = await CompanyProfileAPi.getCompanyProfile();
-      print(response);
-
       if (response["status"] == true && response["data"] != null) {
         final data = response["data"];
         final company = data is List && data.isNotEmpty ? data.first : data;
@@ -194,7 +192,6 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
               data: data,
               images: images,
             );
-      print(response);
       if (response["status"] == true) {
         showCustomSnackbarSuccess(context, response["message"]);
         fetchCompanyProfile();

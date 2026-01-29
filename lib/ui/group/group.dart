@@ -237,7 +237,6 @@ class _AddGroupScreenState extends State<AddGroupScreen> {
         data,
         licenceNo: Preference.getint(PrefKeys.licenseNo),
       );
-      print(Preference.getString(PrefKeys.token));
       if (response["status"] == true) {
         showCustomSnackbarSuccess(context, response["message"]);
         groupController.clear();

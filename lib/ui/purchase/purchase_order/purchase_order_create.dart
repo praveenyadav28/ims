@@ -677,6 +677,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                   id: state.selectedCustomer!.id,
                   name: state.selectedCustomer!.name,
                   mobile: state.selectedCustomer!.mobile,
+                  closingBalance: state.selectedCustomer!.closingBalance,
                   billingAddress: billing.text,
                   shippingAddress: shipping.text,
                 );

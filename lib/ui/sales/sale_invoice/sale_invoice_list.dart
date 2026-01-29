@@ -63,7 +63,7 @@ class _SaleInvoiceInvoiceListScreenState
       gstGetter: (e) => e.subGst,
       basicGetter: (e) => e.subTotal,
       amountGetter: (e) => e.totalAmount,
-      addressGetter: (e) => e.address0,
+      mobile: (e) => e.mobile,
     );
   }
 }

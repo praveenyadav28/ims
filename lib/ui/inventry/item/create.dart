@@ -109,7 +109,58 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
     salePriceController.addListener(_computeDerivedPrices);
     purchasePriceController.addListener(_computeDerivedPrices);
 
+    /// 👇 IMPORTANT
+    if (widget.editItem != null) {
+      _fillEditData(widget.editItem!);
+    }
     // keep margin text fields reactive via onChanged in UI (not listeners here)
+  }
+
+  void _fillEditData(ItemModel item) {
+    // Basic
+    itemNameController.text = item.itemName;
+    itemNoController.text = item.itemNo;
+    selectedCategory = item.group;
+
+    // Stock
+    openingStockController.text = item.openingStock;
+    minOrderController.text = item.minOrderQty;
+    minStockController.text = item.minStockQty;
+    reorderController.text = item.reorderLevel;
+
+    // Price
+    salePriceController.text = item.salesPrice;
+    purchasePriceController.text = item.purchasePrice;
+
+    // GST
+    gstRateController.text = item.gstRate;
+    gstIncluded = item.gstInclude;
+
+    // Unit
+    baseUnit = item.baseUnit;
+    secondaryUnit = item.secondaryUnit;
+    conversionValue = item.conversionAmount;
+
+    // Dates
+    mfgDateController.text = item.mfgDate;
+    expDateController.text = item.expiryDate;
+
+    // Margin
+    marginPercentController.text = item.margin;
+    marginAmtController.text = item.marginAmt;
+
+    // Stock qty
+    openingStockController.text = item.openingStock;
+
+    // Variant
+    selectedItemType = item.itemType == "Service" ? 1 : 0;
+
+    // Tax mode
+    saleTaxMode = item.gstInclude ? "With Tax" : "Without Tax";
+    purchaseTaxMode = item.gstIncludePurchase ? "With Tax" : "Without Tax";
+    selectedHsn = item.hsnCode;
+    // UI refresh
+    setState(() {});
   }
 
   @override
@@ -1828,7 +1879,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         shadowColor: AppColor.grey,
         iconTheme: IconThemeData(color: AppColor.black),
         title: Text(
-          "Create New Item",
+          "${widget.editItem == null ? "Create New" : "Update"} Item",
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -1904,7 +1955,8 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
           children: [
             defaultButton(
               buttonColor: const Color(0xff8947E5),
-              text: "Save New ${selectedItemType == 0 ? "Item" : "Service"}",
+              text:
+                  "${widget.editItem == null ? "Save New " : "Update "}${selectedItemType == 0 ? "Item" : "Service"}",
               height: 40,
               width: 149,
               onTap: saveItemAPi,
@@ -2026,15 +2078,23 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         'expiry_date': expDateController.text,
       'margin': marginPercentController.text,
       'margin_amt': marginAmtController.text,
-      're_o_level': marginAmtController.text,
+      're_o_level': reorderController.text.trim().isEmpty
+          ? 0
+          : reorderController.text,
       'variant_list': [],
     };
 
-    final response = await ApiService.postData(
-      'item',
-      payload,
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
+    final response = widget.editItem == null
+        ? await ApiService.postData(
+            'item',
+            payload,
+            licenceNo: Preference.getint(PrefKeys.licenseNo),
+          )
+        : await ApiService.putData(
+            'item/${widget.editItem!.id}',
+            payload,
+            licenceNo: Preference.getint(PrefKeys.licenseNo),
+          );
     if (response?['status'] == true) {
       showCustomSnackbarSuccess(
         context,
@@ -2137,7 +2197,9 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         "item_name": itemNameController.text.trim(),
         "variant_type": item["variant_type"],
         "variant_name": item["variant_value"],
-        "item_no": item["item_no"],
+        "item_no": item["item_no"].toString().isEmpty
+            ? itemNameController.text.trim()
+            : item["item_no"],
         "group": selectedCategory,
         "purchase_price": purchaseEntered.toStringAsFixed(2),
         "sales_price": saleEntered.toStringAsFixed(2),

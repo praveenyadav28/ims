@@ -61,7 +61,7 @@ class _DebitNoteInvoiceListScreenState
       numberGetter: (e) => "${e.prefix} ${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
-      addressGetter: (e) => e.address0,
+      mobile: (e) => e.mobile,
       gstGetter: (e) => e.subGst,
       basicGetter: (e) => e.baseAmount,
     );

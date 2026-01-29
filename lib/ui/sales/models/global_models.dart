@@ -4,7 +4,7 @@ class LedgerModelDrop {
   final String id;
   final String name;
   final String mobile;
-
+  final String? closingBalance;
   final String billingAddress;
   final String shippingAddress;
   final String gstin;
@@ -12,6 +12,7 @@ class LedgerModelDrop {
     required this.id,
     required this.name,
     required this.mobile,
+    this.closingBalance,
     required this.billingAddress,
     required this.shippingAddress,
     this.gstin = '',
@@ -21,6 +22,7 @@ class LedgerModelDrop {
     id: (m['_id'] ?? '').toString(),
     name: (m['ledger_name'] ?? '').toString(),
     mobile: (m['contact_no'] ?? '').toString(),
+    closingBalance: (m['closing_balance'] ?? '').toString(),
     billingAddress:
         "${(m['address'] ?? '')}, ${(m['city'] ?? "")}, ${(m['state'] ?? "")}",
     shippingAddress:
@@ -78,10 +80,12 @@ class ItemServiceModel {
   final bool gstIncluded;
   final String baseUnit;
   final String secondaryUnit;
+  final String? stockQty;
   final int conversion;
   final List<VariantModel> variants;
   final String itemNo;
   final String group;
+  final String reOLevel;
 
   ItemServiceModel({
     required this.id,
@@ -93,12 +97,14 @@ class ItemServiceModel {
     this.basePurchasePrice,
     required this.gstRate,
     required this.gstIncluded,
+    this.stockQty,
     required this.baseUnit,
     required this.secondaryUnit,
     required this.conversion,
     required this.variants,
     this.itemNo = '',
     this.group = '',
+    this.reOLevel = '',
   });
 
   factory ItemServiceModel.fromItem(Map<String, dynamic> m) {
@@ -114,6 +120,7 @@ class ItemServiceModel {
       id: (m['_id'] ?? '').toString(),
       type: ItemServiceType.item,
       name: m['item_name']?.toString() ?? '',
+      stockQty: m['stock_qty']?.toString() ?? '0',
       hsn: m['hsn_code']?.toString() ?? '',
       variantValue: m['variant_name']?.toString() ?? '',
       baseSalePrice: (m['sales_price'] != null)
@@ -134,6 +141,7 @@ class ItemServiceModel {
       variants: varList,
       itemNo: m['item_no']?.toString() ?? '',
       group: m['group']?.toString() ?? '',
+      reOLevel: m['re_o_level']?.toString() ?? '',
     );
   }
 
@@ -143,6 +151,7 @@ class ItemServiceModel {
       type: ItemServiceType.service,
       name: m['service_name']?.toString() ?? '',
       hsn: m['hsn']?.toString() ?? '',
+      stockQty: '',
       variantValue: m['variant_name']?.toString() ?? '',
       baseSalePrice: (m['basic_price'] != null)
           ? double.tryParse(m['basic_price'].toString()) ?? 0

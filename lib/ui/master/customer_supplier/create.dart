@@ -796,6 +796,15 @@ class _CreateCusSupState extends State<CreateCusSup>
               : "-${int.tryParse(openingBalanceController.text.trim())}",
         ),
         MapEntry("opening_type", _selectedBalance),
+        if (widget.cusSupData == null)
+          MapEntry(
+            "closing_balance",
+            openingBalanceController.text.trim().isEmpty
+                ? "0"
+                : _selectedBalance != "Cr"
+                ? "${int.tryParse(openingBalanceController.text.trim())}"
+                : "-${int.tryParse(openingBalanceController.text.trim())}",
+          ),
         MapEntry("district", cityDistrictController.text.trim()),
         MapEntry("address_0", addressLine1Controller.text.trim()),
         MapEntry("address_1", addressLine2Controller.text.trim()),

@@ -33,8 +33,7 @@ class _EstimateListScreenState extends State<EstimateListScreen> {
       onView: generateEstimatePdf,
 
       onEdit: (e) async {
-        final result =
-            await pushTo(CreateEstimateFullScreen(estimateData: e));
+        final result = await pushTo(CreateEstimateFullScreen(estimateData: e));
 
         if (result == true) {
           listKey.currentState?.load(); // ✅ reload list
@@ -57,7 +56,7 @@ class _EstimateListScreenState extends State<EstimateListScreen> {
       numberGetter: (e) => "${e.prefix}-${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
-      addressGetter: (e) => e.address0,
+      mobile: (e) => e.mobile,
       gstGetter: (e) => e.subGst,
       basicGetter: (e) => e.subTotal,
     );

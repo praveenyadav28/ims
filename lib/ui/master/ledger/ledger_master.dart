@@ -360,7 +360,7 @@ class _CreateLedgerState extends State<CreateLedger> {
       // Safely parse int, using null if empty.
       'opening_balance': openingBalanceController.text.trim().isEmpty
           ? "0"
-          : _selectedBalance == "Cr"
+          : _selectedBalance != "Cr"
           ? "${int.tryParse(openingBalanceController.text.trim())}"
           : "-${int.tryParse(openingBalanceController.text.trim())}",
       'address': addressLine1Controller.text.trim().toString(),

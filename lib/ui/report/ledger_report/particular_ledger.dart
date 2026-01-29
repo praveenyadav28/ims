@@ -410,7 +410,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           _box("Debit", debitTotal),
-          _box("Credit", creditTotal),
+          _box("Credit", -creditTotal),
           _box("Balance", balance),
         ],
       ),

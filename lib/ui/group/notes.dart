@@ -268,7 +268,6 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
         data,
         licenceNo: Preference.getint(PrefKeys.licenseNo),
       );
-      print(Preference.getString(PrefKeys.token));
       if (response["status"] == true) {
         showCustomSnackbarSuccess(context, response["message"]);
         groupController.clear();

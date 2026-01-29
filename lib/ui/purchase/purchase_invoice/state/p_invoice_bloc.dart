@@ -486,7 +486,9 @@ class PurchaseInvoiceBloc
         rows: state.rows.map((r) {
           if (r.localId == e.rowId) {
             final basePrice =
-                r.selectedVariant?.purchasePrice ?? r.product?.basePurchasePrice ?? 0;
+                r.selectedVariant?.purchasePrice ??
+                r.product?.basePurchasePrice ??
+                0;
 
             return r
                 .copyWith(
