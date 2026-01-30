@@ -417,7 +417,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? Center(child: GlowLoader())
                     : Column(
                         children: [
                           _tableHeader(),

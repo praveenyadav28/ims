@@ -133,7 +133,7 @@ class _InventoryAdvancedReportScreenState
         ],
       ),
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: GlowLoader())
           : Column(
               children: [
                 _filterBar(),

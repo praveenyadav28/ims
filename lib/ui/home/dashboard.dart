@@ -184,7 +184,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: GlowLoader())
           : Padding(
               padding: const EdgeInsets.all(16),
               child: Column(

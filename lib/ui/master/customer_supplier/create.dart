@@ -259,15 +259,26 @@ class _CreateCusSupState extends State<CreateCusSup>
                           flex: 1,
                           child: CommonDropdownField<String>(
                             hintText: "",
-                            value: selectedTitle,
+                            value: titleList.contains(selectedTitle)
+                                ? selectedTitle
+                                : null,
                             items: titleList.map((title) {
                               return DropdownMenuItem(
                                 value: title,
                                 child: Text(title),
                               );
                             }).toList(),
-                            onChanged: (val) {
-                              setState(() => selectedTitle = val!);
+                            onChanged: (value) {
+                              setState(() {
+                                selectedType = value!;
+
+                                if (selectedType == "Business") {
+                                  selectedTitle = "Mr"; // valid for business
+                                } else {
+                                  selectedTitleParent =
+                                      "S/O"; // valid for individual
+                                }
+                              });
                             },
                           ),
                         ),
@@ -298,15 +309,25 @@ class _CreateCusSupState extends State<CreateCusSup>
                           flex: 1,
                           child: CommonDropdownField<String>(
                             hintText: "",
-                            value: selectedTitleParent,
+                            value: titleParentList.contains(selectedTitleParent)
+                                ? selectedTitleParent
+                                : null,
                             items: titleParentList.map((title) {
                               return DropdownMenuItem(
                                 value: title,
                                 child: Text(title),
                               );
                             }).toList(),
-                            onChanged: (val) {
-                              setState(() => selectedTitle = val!);
+                            onChanged: (value) {
+                              setState(() {
+                                selectedType = value!;
+                                if (selectedType == "Business") {
+                                  selectedTitle = "Mr"; // valid for business
+                                } else {
+                                  selectedTitleParent =
+                                      "S/O"; // valid for individual
+                                }
+                              });
                             },
                           ),
                         ),
@@ -374,7 +395,9 @@ class _CreateCusSupState extends State<CreateCusSup>
                     SizedBox(width: 10),
                     Expanded(
                       child: CommonDropdownField<String>(
-                        value: _selectedBalance,
+                        value: _balanceType.contains(_selectedBalance)
+                            ? _selectedBalance
+                            : null,
                         onChanged: (String? newValue) {
                           setState(() {
                             _selectedBalance = newValue ?? 'Dr';
@@ -448,7 +471,9 @@ class _CreateCusSupState extends State<CreateCusSup>
                         text: "GST Type",
                         child: CommonDropdownField<String>(
                           hintText: "--Select GST Type--",
-                          value: selectedGstType,
+                          value: gstTypeList.contains(selectedGstType)
+                              ? selectedGstType
+                              : null,
                           items: gstTypeList.map((gstType) {
                             return DropdownMenuItem(
                               value: gstType,

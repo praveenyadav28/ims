@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
+import 'package:ims/utils/api.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
@@ -166,7 +167,7 @@ class _PurchaseInvoiceAdvancedReportScreenState
         backgroundColor: AppColor.black,
       ),
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: GlowLoader())
           : Column(
               children: [
                 _filterBar(),

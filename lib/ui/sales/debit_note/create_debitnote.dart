@@ -317,6 +317,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                       onCreateCustomer: () => _showCreateCustomerDialog(
                         context.read<DebitNoteBloc>(),
                       ),
+                      isReturn: false,
                     ),
                     shipTo: GlobalShipToCard(
                       billingController: cashBillingController,

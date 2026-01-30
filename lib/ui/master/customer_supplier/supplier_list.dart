@@ -7,7 +7,9 @@ import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';
+import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
+import 'package:ims/utils/textfield.dart';
 
 class SupplierTableScreen extends StatefulWidget {
   const SupplierTableScreen({super.key});
@@ -18,14 +20,31 @@ class SupplierTableScreen extends StatefulWidget {
 
 class _SupplierTableScreenState extends State<SupplierTableScreen> {
   List<Customer> supplierList = [];
+  List<Customer> filteredList = [];
+  final TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     gstApi();
+    searchController.addListener(() {
+      _filterSuppliers();
+    });
   }
 
-  // ---------------- API ----------------
+  void _filterSuppliers() {
+    final query = searchController.text.toLowerCase();
+
+    setState(() {
+      filteredList = supplierList.where((s) {
+        final name = s.companyName.toLowerCase();
+        final mobile = s.mobile.toLowerCase();
+
+        return name.contains(query) || mobile.contains(query);
+      }).toList();
+    });
+  }
+
   Future gstApi() async {
     var response = await ApiService.fetchData(
       "get/supplier",
@@ -35,6 +54,7 @@ class _SupplierTableScreenState extends State<SupplierTableScreen> {
     List responseData = response['data'] ?? [];
     setState(() {
       supplierList = responseData.map((e) => Customer.fromJson(e)).toList();
+      filteredList = supplierList; // 🔥 IMPORTANT
     });
   }
 
@@ -88,7 +108,15 @@ class _SupplierTableScreenState extends State<SupplierTableScreen> {
       // ================= BODY =================
       body: Column(
         children: [
-          const SizedBox(height: 16),
+          SizedBox(height: Sizes.height * .02),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: CommonTextField(
+              controller: searchController,
+              hintText: "Search by name or mobile",
+              perfixIcon: const Icon(Icons.search),
+            ),
+          ),
 
           Expanded(
             child: Container(
@@ -113,11 +141,11 @@ class _SupplierTableScreenState extends State<SupplierTableScreen> {
                     child: supplierList.isEmpty
                         ? const Center(child: Text("No Data Found"))
                         : ListView.separated(
-                            itemCount: supplierList.length,
                             separatorBuilder: (_, __) =>
                                 Divider(height: 1, color: Colors.grey.shade200),
+                            itemCount: filteredList.length,
                             itemBuilder: (context, i) {
-                              return _tableRow(supplierList[i], i);
+                              return _tableRow(filteredList[i], i);
                             },
                           ),
                   ),
@@ -143,9 +171,9 @@ class _SupplierTableScreenState extends State<SupplierTableScreen> {
         children: [
           Expanded(flex: 3, child: Text("Party Name", style: _headStyle)),
           Expanded(flex: 2, child: Text("Type", style: _headStyle)),
-          Expanded(flex: 3, child: Text("Contact Name", style: _headStyle)),
           Expanded(flex: 2, child: Text("Mobile", style: _headStyle)),
           Expanded(flex: 3, child: Text("Email", style: _headStyle)),
+          Expanded(flex: 2, child: Text("GST Type", style: _headStyle)),
           SizedBox(width: 110, child: Text("Action", style: _headStyle)),
         ],
       ),
@@ -170,12 +198,9 @@ class _SupplierTableScreenState extends State<SupplierTableScreen> {
         children: [
           Expanded(flex: 3, child: _cell(c.companyName)),
           Expanded(flex: 2, child: _typeChip(c.customerType)),
-          Expanded(
-            flex: 3,
-            child: _cell("${c.title} ${c.firstName} ${c.lastName}"),
-          ),
           Expanded(flex: 2, child: _cell(c.mobile)),
           Expanded(flex: 3, child: _cell(c.email)),
+          Expanded(flex: 2, child: _cell(c.gstType)),
           _actionButtons(c),
         ],
       ),

@@ -276,62 +276,87 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
       child: Scaffold(
         key: purchaseOrderNavigatorKey,
         backgroundColor: AppColor.white,
-        appBar: AppBar(
-          backgroundColor: AppColor.white,
-          elevation: 0.5,
-          leading: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: Colors.black87,
-            ),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          titleSpacing: 0,
-          title: Text(
-            '${widget.purchaseOrderData == null ? "Create" : "Update"} Purchase Order',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColor.blackText,
-            ),
-          ),
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                defaultButton(
-                  buttonColor: const Color(0xffE11414),
-                  text: "Cancel",
-                  height: 40,
-                  width: 93,
-                  onTap: () => Navigator.of(context).pop(),
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
+            builder: (context, state) {
+              return AppBar(
+                backgroundColor: AppColor.white,
+                elevation: 0.5,
+                leading: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 18,
+                    color: Colors.black87,
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
-                const SizedBox(width: 18),
-                defaultButton(
-                  buttonColor: const Color(0xff8947E5),
-                  text: "Save Purchase Order",
-                  height: 40,
-                  width: 189,
-                  onTap: () {
-                    bloc.add(
-                      PurchaseOrderSaveWithUIData(
-                        supplierName: cusNameController.text,
-                        mobile: cashMobileController.text,
-                        billingAddress: cashBillingController.text,
-                        shippingAddress: cashShippingController.text,
-                        notes: selectedNotesList,
-                        terms: selectedTermsList,
-                        signatureImage: signatureImage,
-                        updateId: widget.purchaseOrderData?.id,
+                titleSpacing: 0,
+                title: Text(
+                  '${widget.purchaseOrderData == null ? "Create" : "Update"} Purchase Order',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColor.blackText,
+                  ),
+                ),
+                actions: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (state.catalogue.any((i) {
+                        final stock = int.tryParse(i.stockQty ?? '0') ?? 0;
+                        final reorder = int.tryParse(i.reOLevel) ?? 0;
+                        return stock <= reorder;
+                      }))
+                        defaultButton(
+                          buttonColor: const Color.fromARGB(255, 225, 157, 20),
+                          text: "Fill Low Stock",
+                          height: 40,
+                          width: 163,
+                          onTap: () {
+                            context.read<PurchaseOrderBloc>().add(
+                              PurchaseOrderAddLowStockItems(),
+                            );
+                          },
+                        ),
+
+                      const SizedBox(width: 18),
+                      defaultButton(
+                        buttonColor: const Color(0xffE11414),
+                        text: "Cancel",
+                        height: 40,
+                        width: 93,
+                        onTap: () => Navigator.of(context).pop(),
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(width: 18),
-              ],
-            ),
-          ],
+                      const SizedBox(width: 18),
+                      defaultButton(
+                        buttonColor: const Color(0xff8947E5),
+                        text: "Save Purchase Order",
+                        height: 40,
+                        width: 189,
+                        onTap: () {
+                          bloc.add(
+                            PurchaseOrderSaveWithUIData(
+                              supplierName: cusNameController.text,
+                              mobile: cashMobileController.text,
+                              billingAddress: cashBillingController.text,
+                              shippingAddress: cashShippingController.text,
+                              notes: selectedNotesList,
+                              terms: selectedTermsList,
+                              signatureImage: signatureImage,
+                              updateId: widget.purchaseOrderData?.id,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 18),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
         ),
         body: BlocBuilder<PurchaseOrderBloc, PurchaseOrderState>(
           builder: (context, state) {

@@ -1,6 +1,9 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:ims/utils/colors.dart';
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:ims/utils/prefence.dart';
@@ -98,7 +101,7 @@ class ApiService {
           },
         ),
       );
-                                                                                                                                                      
+
       return response.data;
     } catch (e) {
       throw _formatError(e);
@@ -263,4 +266,70 @@ class ApiService {
     }
     return ApiException(e.toString(), statusCode: 500);
   }
+}
+
+class GlowLoader extends StatefulWidget {
+  const GlowLoader({super.key});
+
+  @override
+  State<GlowLoader> createState() => _GlowLoaderState();
+}
+
+class _GlowLoaderState extends State<GlowLoader>
+    with SingleTickerProviderStateMixin {
+  late AnimationController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RotationTransition(
+      turns: controller,
+      child: CustomPaint(size: const Size(50, 50), painter: GlowPainter()),
+    );
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+}
+
+class GlowPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2;
+
+    final paint = Paint()
+      ..shader = SweepGradient(
+        colors: [
+          Colors.transparent,
+          AppColor.primary.withValues(alpha: .4),
+          AppColor.primary,
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: radius))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 8
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      0,
+      2 * pi,
+      false,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -112,7 +112,7 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
                   border: Border.all(color: AppColor.borderColor),
                 ),
                 child: loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? Center(child: GlowLoader())
                     : list.isEmpty
                     ? const Center(child: Text("No record Found"))
                     : Column(

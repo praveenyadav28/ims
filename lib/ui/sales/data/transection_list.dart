@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/textfield.dart';
@@ -154,9 +155,7 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
           ),
         ),
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : _layout(),
+      body: loading ? Center(child: GlowLoader()) : _layout(),
     );
   }
 

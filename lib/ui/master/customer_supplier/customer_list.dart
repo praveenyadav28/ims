@@ -9,6 +9,7 @@ import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
+import 'package:ims/utils/textfield.dart';
 
 class CustomerTableScreen extends StatefulWidget {
   const CustomerTableScreen({super.key});
@@ -19,15 +20,33 @@ class CustomerTableScreen extends StatefulWidget {
 
 class _CustomerTableScreenState extends State<CustomerTableScreen> {
   List<Customer> customerList = [];
+  List<Customer> filteredList = [];
+  final TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    gstApi();
+    getCustomerApi();
+    searchController.addListener(() {
+      _filterCustomers();
+    });
+  }
+
+  void _filterCustomers() {
+    final query = searchController.text.toLowerCase();
+
+    setState(() {
+      filteredList = customerList.where((s) {
+        final name = s.companyName.toLowerCase();
+        final mobile = s.mobile.toLowerCase();
+
+        return name.contains(query) || mobile.contains(query);
+      }).toList();
+    });
   }
 
   // ---------------- API ----------------
-  Future gstApi() async {
+  Future getCustomerApi() async {
     var response = await ApiService.fetchData(
       "get/customer",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
@@ -36,6 +55,7 @@ class _CustomerTableScreenState extends State<CustomerTableScreen> {
     List responseData = response['data'] ?? [];
     setState(() {
       customerList = responseData.map((e) => Customer.fromJson(e)).toList();
+      filteredList = customerList; // 🔥 IMPORTANT
     });
   }
 
@@ -47,7 +67,7 @@ class _CustomerTableScreenState extends State<CustomerTableScreen> {
 
     if (response['status'] == true) {
       showCustomSnackbarSuccess(context, response['message']);
-      gstApi();
+      getCustomerApi();
     } else {
       showCustomSnackbarError(context, response['message']);
     }
@@ -76,7 +96,7 @@ class _CustomerTableScreenState extends State<CustomerTableScreen> {
               width: 150,
               onTap: () async {
                 var data = await pushTo(CreateCusSup(isCustomer: true));
-                if (data == "data") gstApi();
+                if (data == "data") getCustomerApi();
               },
               text: "Create Customer",
               buttonColor: AppColor.blue,
@@ -88,7 +108,14 @@ class _CustomerTableScreenState extends State<CustomerTableScreen> {
       body: Column(
         children: [
           SizedBox(height: Sizes.height * .02),
-
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: CommonTextField(
+              controller: searchController,
+              hintText: "Search by name or mobile",
+              perfixIcon: const Icon(Icons.search),
+            ),
+          ),
           // ================= TABLE =================
           Expanded(
             child: Container(
@@ -113,11 +140,11 @@ class _CustomerTableScreenState extends State<CustomerTableScreen> {
                     child: customerList.isEmpty
                         ? const Center(child: Text("No Data Found"))
                         : ListView.separated(
-                            itemCount: customerList.length,
                             separatorBuilder: (_, __) =>
                                 Divider(height: 1, color: Colors.grey.shade200),
+                            itemCount: filteredList.length,
                             itemBuilder: (context, i) {
-                              return _tableRow(customerList[i], i);
+                              return _tableRow(filteredList[i], i);
                             },
                           ),
                   ),
@@ -143,9 +170,9 @@ class _CustomerTableScreenState extends State<CustomerTableScreen> {
         children: [
           Expanded(flex: 3, child: Text("Party Name", style: _headStyle)),
           Expanded(flex: 2, child: Text("Type", style: _headStyle)),
-          Expanded(flex: 3, child: Text("Contact Name", style: _headStyle)),
           Expanded(flex: 2, child: Text("Mobile", style: _headStyle)),
           Expanded(flex: 3, child: Text("Email", style: _headStyle)),
+          Expanded(flex: 2, child: Text("GST Type", style: _headStyle)),
           SizedBox(width: 110, child: Text("Action", style: _headStyle)),
         ],
       ),
@@ -170,9 +197,9 @@ class _CustomerTableScreenState extends State<CustomerTableScreen> {
         children: [
           Expanded(flex: 3, child: _cell(c.companyName)),
           Expanded(flex: 2, child: _typeChip(c.customerType)),
-          Expanded(flex: 3, child: _cell("${c.firstName} ${c.lastName}")),
           Expanded(flex: 2, child: _cell(c.mobile)),
           Expanded(flex: 3, child: _cell(c.email)),
+          Expanded(flex: 2, child: _cell(c.gstType)),
           _actionButtons(c),
         ],
       ),
@@ -225,7 +252,7 @@ class _CustomerTableScreenState extends State<CustomerTableScreen> {
               CreateCusSup(isCustomer: true, cusSupData: c),
             );
             if (data != null) {
-              gstApi();
+              getCustomerApi();
             }
           }),
           SizedBox(width: 10),

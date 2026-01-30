@@ -112,7 +112,7 @@ class _ContraListTableScreenState extends State<ContraListTableScreen> {
                   border: Border.all(color: AppColor.borderColor),
                 ),
                 child: loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? Center(child: GlowLoader())
                     : list.isEmpty
                     ? const Center(
                         child: Text(

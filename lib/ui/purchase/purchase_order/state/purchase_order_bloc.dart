@@ -117,6 +117,8 @@ class PurchaseOrderToggleRoundOff extends PurchaseOrderEvent {
   PurchaseOrderToggleRoundOff(this.value);
 }
 
+class PurchaseOrderAddLowStockItems extends PurchaseOrderEvent {}
+
 /// ------------------- STATE -------------------
 class PurchaseOrderState {
   final List<LedgerModelDrop> customers;
@@ -287,6 +289,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
     on<PurchaseOrderToggleRoundOff>(_onToggleRoundOff);
     on<PurchaseOrderCalculate>(_onCalculate);
+    on<PurchaseOrderAddLowStockItems>(_onAddLowStockItems);
   }
 
   Future<void> _onLoad(
@@ -453,7 +456,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         rows: state.rows.map((r) {
           if (r.localId == e.rowId) {
             final basePrice =
-                r.selectedVariant?.purchasePrice ?? r.product?.basePurchasePrice ?? 0;
+                r.selectedVariant?.purchasePrice ??
+                r.product?.basePurchasePrice ??
+                0;
 
             return r
                 .copyWith(
@@ -657,6 +662,38 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         totalAmount: total,
       ),
     );
+  }
+
+  void _onAddLowStockItems(
+    PurchaseOrderAddLowStockItems e,
+    Emitter<PurchaseOrderState> emit,
+  ) {
+    final List<GlobalItemRow> newRows = [];
+
+    for (final item in state.catalogue) {
+      final stock = int.tryParse(item.stockQty ?? '0') ?? 0;
+      final reorder = int.tryParse(item.reOLevel) ?? 0;
+
+      if (stock <= reorder) {
+        final row = GlobalItemRow(
+          localId: UniqueKey().toString(),
+          product: item,
+          qty: 1,
+          pricePerSelectedUnit:
+              item.basePurchasePrice ?? item.baseSalePrice ?? 0,
+          taxPercent: item.gstRate,
+          gstInclusiveToggle: item.gstIncluded,
+        ).recalc();
+
+        newRows.add(row);
+      }
+    }
+
+    if (newRows.isEmpty) return;
+
+    emit(state.copyWith(rows: [...state.rows, ...newRows]));
+
+    add(PurchaseOrderCalculate());
   }
 
   // ------------------- SAVE -------------------

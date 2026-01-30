@@ -112,7 +112,7 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
                   border: Border.all(color: AppColor.borderColor),
                 ),
                 child: loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? Center(child: GlowLoader())
                     : list.isEmpty
                     ? const Center(
                         child: Text(

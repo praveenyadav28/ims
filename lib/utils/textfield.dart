@@ -262,6 +262,7 @@ class CommonSearchableDropdownField<T> extends StatelessWidget {
   final Widget? prefixIcon;
   final Widget? suffixIcon;
   final bool readOnly;
+  final bool enableSearch; // ✅ NEW
   final String? Function(String?)? validator;
   final FocusNode? focusNode;
   final EdgeInsetsGeometry? contentPadding;
@@ -277,6 +278,7 @@ class CommonSearchableDropdownField<T> extends StatelessWidget {
     this.prefixIcon,
     this.suffixIcon,
     this.readOnly = false,
+    this.enableSearch = true, // ✅ default enabled
     this.validator,
     this.focusNode,
     this.contentPadding,
@@ -290,15 +292,23 @@ class CommonSearchableDropdownField<T> extends StatelessWidget {
     return SearchField<T>(
       controller: controller,
       focusNode: focusNode,
-      suggestions: suggestions,
-      readOnly: readOnly,
+
+      // ✅ KEY LINE — disables dropdown completely
+      enabled: enableSearch,
+
+      // ✅ Prevent suggestion opening
+      suggestions: enableSearch ? suggestions : const [],
+
+      readOnly: readOnly || !enableSearch,
+
+      onSuggestionTap: enableSearch ? onSuggestionTap : null,
+
       validator: validator,
-      onSuggestionTap: onSuggestionTap,
-      
+
       searchInputDecoration: SearchInputDecoration(
         isDense: true,
         filled: true,
-        fillColor: bgClr,
+        fillColor: enableSearch ? bgClr : Colors.grey.shade100,
         contentPadding:
             contentPadding ??
             const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -323,6 +333,7 @@ class CommonSearchableDropdownField<T> extends StatelessWidget {
           borderSide: BorderSide(color: const Color(0xFF565D6D), width: 1),
         ),
       ),
+
       suggestionStyle: GoogleFonts.inter(
         color: const Color(0xFF565D6D),
         fontSize: 14,

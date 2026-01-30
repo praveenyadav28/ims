@@ -146,7 +146,7 @@ class _SupplierReportScreenState extends State<SupplierReportScreen> {
         ],
       ),
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: GlowLoader())
           : Column(
               children: [
                 _filterBar(),

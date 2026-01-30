@@ -126,7 +126,7 @@ class _FifoReportScreenState extends State<FifoReportScreen> {
   // ================= TABLE =================
   Widget _table() {
     if (loading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: GlowLoader());
     }
 
     if (list.isEmpty) {

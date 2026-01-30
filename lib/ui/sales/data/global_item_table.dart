@@ -1,4 +1,6 @@
 // global_items_table_section.dart
+// ignore_for_file: must_be_immutable
+
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,6 +21,7 @@ class GlobalItemsTableSection extends StatelessWidget {
     required this.onSelectCatalog,
     required this.onSelectHsn,
     required this.onToggleUnit,
+    this.isReturn,
   });
 
   final List<GlobalItemRow> rows;
@@ -31,6 +34,7 @@ class GlobalItemsTableSection extends StatelessWidget {
   final Function(String rowId, ItemServiceModel item) onSelectCatalog;
   final Function(String rowId, HsnModel hsn) onSelectHsn;
   final Function(String rowId, bool value) onToggleUnit;
+  final bool? isReturn;
 
   @override
   Widget build(BuildContext context) {
@@ -71,30 +75,32 @@ class GlobalItemsTableSection extends StatelessWidget {
                     onSelectCatalog: (item) => onSelectCatalog(r.localId, item),
                     onSelectHsn: (hsn) => onSelectHsn(r.localId, hsn),
                     onToggleUnit: (v) => onToggleUnit(r.localId, v),
+                    isReturn: isReturn,
                   );
                 }).toList(),
               ),
             ),
           ),
           const SizedBox(height: 12),
-          DottedBorder(
-            options: RectDottedBorderOptions(
-              color: AppColor.primarydark,
-              dashPattern: [2, 4],
-            ),
+          if (isReturn ?? true == true)
+            DottedBorder(
+              options: RectDottedBorderOptions(
+                color: AppColor.primarydark,
+                dashPattern: [2, 4],
+              ),
 
-            child: InkWell(
-              onTap: onAddRow,
-              child: Container(
-                height: 46,
-                alignment: Alignment.center,
-                child: const Text(
-                  '+ Add Item or Service',
-                  style: TextStyle(color: Colors.purple),
+              child: InkWell(
+                onTap: onAddRow,
+                child: Container(
+                  height: 46,
+                  alignment: Alignment.center,
+                  child: const Text(
+                    '+ Add Item or Service',
+                    style: TextStyle(color: Colors.purple),
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -134,7 +140,7 @@ class GlobalItemsTableSection extends StatelessWidget {
 }
 
 class _GlobalItemRowWidget extends StatefulWidget {
-  const _GlobalItemRowWidget({
+  _GlobalItemRowWidget({
     super.key,
     required this.row,
     required this.catalogue,
@@ -144,6 +150,7 @@ class _GlobalItemRowWidget extends StatefulWidget {
     required this.onSelectCatalog,
     required this.onSelectHsn,
     required this.onToggleUnit,
+    required this.isReturn,
   });
 
   final GlobalItemRow row;
@@ -155,6 +162,7 @@ class _GlobalItemRowWidget extends StatefulWidget {
   final Function(ItemServiceModel) onSelectCatalog;
   final Function(HsnModel) onSelectHsn;
   final Function(bool) onToggleUnit;
+  late bool? isReturn;
 
   @override
   State<_GlobalItemRowWidget> createState() => _GlobalItemRowWidgetState();
@@ -279,64 +287,9 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
           // ITEM SELECTOR
           Expanded(
             flex: 2,
-            child: SearchField<ItemServiceModel>(
-              key: ValueKey(r.localId + "_item"),
-              itemHeight: 68,
-              suggestions: widget.catalogue.map((i) {
-                return SearchFieldListItem<ItemServiceModel>(
-                  "${i.name} - ${i.itemNo}",
-                  item: i,
-                  child: ListTile(
-                    dense: true,
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.shopping_bag_outlined, size: 20),
-                    ),
-                    title: Text(
-                      "${i.name}  •  ${i.itemNo}",
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: i.variantValue.isEmpty
-                        ? null
-                        : Text(i.variantValue),
-                    trailing: Text(
-                      i.stockQty.toString(),
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color:
-                            (int.parse(
-                                  i.stockQty.toString().isEmpty
-                                      ? "0"
-                                      : i.stockQty!,
-                                )) <=
-                                0
-                            ? AppColor.red
-                            : AppColor.darkGreen,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-              searchInputDecoration: input.copyWith(
-                labelText: "Item / Service",
-              ),
-              suggestionStyle: GoogleFonts.inter(
-                color: const Color(0xFF565D6D),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-              selectedValue: r.product != null
-                  ? SearchFieldListItem(
-                      "${r.product!.name} - ${r.product!.itemNo}",
-                    )
-                  : null,
-              onSuggestionTap: (s) => widget.onSelectCatalog(s.item!),
-            ),
+            child: widget.isReturn == false
+                ? _readonlyItemField(r)
+                : _searchableItemField(r, input),
           ),
           _gap(),
 
@@ -493,6 +446,71 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
         widget.onToggleUnit(sellInBase);
         widget.onUpdate(updated);
       },
+    );
+  }
+
+  Widget _readonlyItemField(GlobalItemRow r) {
+    return CommonTextField(
+      readOnly: true,
+      hintText: "Item",
+      controller: TextEditingController(
+        text: r.product != null
+            ? "${r.product!.name} - ${r.product!.itemNo}"
+            : "",
+      ),
+    );
+  }
+
+  Widget _searchableItemField(GlobalItemRow r, SearchInputDecoration input) {
+    return SearchField<ItemServiceModel>(
+      key: ValueKey(r.localId + "_item"),
+      itemHeight: 68,
+      suggestions: widget.catalogue.map((i) {
+        return SearchFieldListItem<ItemServiceModel>(
+          "${i.name} - ${i.itemNo}",
+          item: i,
+          child: ListTile(
+            dense: true,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.shopping_bag_outlined, size: 20),
+            ),
+            title: Text(
+              "${i.name}  •  ${i.itemNo}",
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: i.variantValue.isEmpty ? null : Text(i.variantValue),
+            trailing: Text(
+              i.stockQty.toString(),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color:
+                    (int.parse(
+                          i.stockQty.toString().isEmpty ? "0" : i.stockQty!,
+                        )) <=
+                        0
+                    ? AppColor.red
+                    : AppColor.darkGreen,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+      searchInputDecoration: input.copyWith(labelText: "Item / Service"),
+      suggestionStyle: GoogleFonts.inter(
+        color: const Color(0xFF565D6D),
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      ),
+      selectedValue: r.product != null
+          ? SearchFieldListItem("${r.product!.name} - ${r.product!.itemNo}")
+          : null,
+      onSuggestionTap: (s) => widget.onSelectCatalog(s.item!),
     );
   }
 }

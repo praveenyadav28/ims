@@ -320,6 +320,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                         context.read<CreditNoteBloc>(),
                       ),
                       ispurchase: true,
+                      isReturn: false,
                     ),
 
                     shipTo: GlobalShipToCard(

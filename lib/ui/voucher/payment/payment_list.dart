@@ -114,7 +114,7 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
                   border: Border.all(color: AppColor.borderColor),
                 ),
                 child: loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? Center(child: GlowLoader())
                     : list.isEmpty
                     ? const Center(
                         child: Text(
@@ -192,11 +192,11 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
               IconButton(
                 icon: const Icon(Icons.edit, color: Colors.blue),
                 onPressed: () async {
-                  var data = await pushTo(PaymentEntry(data: p,));
+                  var data = await pushTo(PaymentEntry(data: p));
                   if (data != null) {
                     fetchPayments().then((onValue) {
-                        setState(() {});
-                      });
+                      setState(() {});
+                    });
                   }
                 },
               ),

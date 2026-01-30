@@ -2133,7 +2133,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
     showDialog(
       barrierDismissible: false,
       context: context,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => Center(child: GlowLoader()),
     );
 
     // Clone list to avoid modification while looping

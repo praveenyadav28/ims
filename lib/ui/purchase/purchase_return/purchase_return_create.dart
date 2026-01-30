@@ -330,6 +330,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                         context.read<PurchaseReturnBloc>(),
                       ),
                       ispurchase: true,
+                      isReturn: false,
                     ),
 
                     shipTo: GlobalShipToCard(
@@ -364,6 +365,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                         bloc.add(PurchaseReturnApplyHsnToRow(id, hsn)),
                     onToggleUnit: (id, value) =>
                         bloc.add(PurchaseReturnToggleUnitForRow(id, value)),
+                    isReturn: false,
                   ),
                   SizedBox(height: Sizes.height * .02),
 

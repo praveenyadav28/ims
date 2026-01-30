@@ -319,6 +319,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                       onCreateCustomer: () => _showCreateCustomerDialog(
                         context.read<SaleReturnBloc>(),
                       ),
+                      isReturn: false,
                     ),
                     shipTo: GlobalShipToCard(
                       billingController: cashBillingController,
@@ -356,6 +357,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
 
                     onToggleUnit: (rowId, value) =>
                         bloc.add(SaleReturnToggleUnitForRow(rowId, value)),
+                    isReturn: false,
                   ),
                   SizedBox(height: Sizes.height * .02),
 
