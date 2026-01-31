@@ -150,7 +150,6 @@ class SaleInvoiceSavePayment extends SaleInvoiceEvent {
 
 /// ------------------- STATE -------------------
 class SaleInvoiceState {
-  final String placeOfSupply;
   final List<LedgerModelDrop> customers;
   final LedgerModelDrop? selectedCustomer;
   final bool cashSaleDefault;
@@ -183,7 +182,6 @@ class SaleInvoiceState {
   final String? transId; // loaded transaction id (from backend) if any
 
   SaleInvoiceState({
-    this.placeOfSupply = "",
     this.customers = const [],
     this.selectedCustomer,
     this.cashSaleDefault = false,
@@ -211,7 +209,6 @@ class SaleInvoiceState {
   });
 
   SaleInvoiceState copyWith({
-    String? placeOfSupply,
     List<LedgerModelDrop>? customers,
     LedgerModelDrop? selectedCustomer,
     bool? cashSaleDefault,
@@ -238,7 +235,6 @@ class SaleInvoiceState {
     String? transId,
   }) {
     return SaleInvoiceState(
-      placeOfSupply: placeOfSupply ?? this.placeOfSupply,
       customers: customers ?? this.customers,
       selectedCustomer: selectedCustomer ?? this.selectedCustomer,
       cashSaleDefault: cashSaleDefault ?? this.cashSaleDefault,
@@ -269,7 +265,6 @@ class SaleInvoiceState {
 
 /// ------------------- SAVE EVENT (UI) -------------------
 class SaleInvoiceSaveWithUIData extends SaleInvoiceEvent {
-  final String placeOfSupply;
   final String customerName;
   final String? updateId;
   final String mobile;
@@ -280,7 +275,6 @@ class SaleInvoiceSaveWithUIData extends SaleInvoiceEvent {
   final File? signatureImage; // NEW
 
   SaleInvoiceSaveWithUIData({
-    required this.placeOfSupply,
     required this.customerName,
     required this.mobile,
     required this.billingAddress,
@@ -810,7 +804,7 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
   ) async {
     try {
       final state = this.state;
-      emit(state.copyWith(placeOfSupply: e.placeOfSupply));
+
       final bool isCash = state.cashSaleDefault;
 
       // ---------------- CUSTOMER ----------------
@@ -906,7 +900,6 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-        "place_of_supply": state.placeOfSupply,
         "prefix": state.prefix,
         "no": int.tryParse(state.saleInvoiceNo),
         "invoice_date": DateFormat(
@@ -1158,7 +1151,6 @@ SaleInvoiceState _prefillSaleInvoiceFromTrans(
   ];
 
   return s.copyWith(
-    placeOfSupply: data.placeOfSupply ,
     customers: s.customers,
     selectedCustomer: data.caseSale ? null : selectedCustomer,
     // NOTE: Intentionally NOT overwriting prefix, saleInvoiceNo, saleInvoiceDate
@@ -1331,7 +1323,6 @@ SaleInvoiceState _prefillSaleInvoice(SaleInvoiceData data, SaleInvoiceState s) {
   ];
 
   return s.copyWith(
-    placeOfSupply: data.placeOfSupply ,
     customers: s.customers,
     selectedCustomer: data.caseSale ? null : selectedCustomer,
     prefix: data.prefix,

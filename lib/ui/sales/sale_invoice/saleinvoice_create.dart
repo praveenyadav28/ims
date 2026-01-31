@@ -283,7 +283,6 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                   onTap: () {
                     bloc.add(
                       SaleInvoiceSaveWithUIData(
-                        placeOfSupply: stateController.text,
                         customerName: cusNameController.text,
                         mobile: cashMobileController.text,
                         billingAddress: cashBillingController.text,

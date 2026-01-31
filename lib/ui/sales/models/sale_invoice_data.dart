@@ -37,7 +37,6 @@ class SaleInvoiceData {
   final String customerName;
   final String address0;
   final String address1;
-  final String placeOfSupply;
   final String mobile;
   final String transId;
   final int transNo;
@@ -75,7 +74,6 @@ class SaleInvoiceData {
     required this.customerName,
     required this.address0,
     required this.address1,
-    required this.placeOfSupply,
     required this.mobile,
     required this.prefix,
     required this.transId,
@@ -107,7 +105,6 @@ class SaleInvoiceData {
     customerName: j["customer_name"] ?? "",
     address0: j["address_0"] ?? "",
     address1: j["address_1"] ?? "",
-    placeOfSupply: j["place_of_supply"] ?? "",
     mobile: (j["mobile"] ?? "").toString(),
     transType: j["trans_type"] ?? "",
     transId: j["trans_id"] ?? "",
