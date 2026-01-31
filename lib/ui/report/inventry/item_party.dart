@@ -32,7 +32,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
   final TextEditingController fromCtrl = TextEditingController();
   final TextEditingController toCtrl = TextEditingController();
 
-  DateTime fromDate = DateTime.now().subtract(const Duration(days: 30));
+  DateTime fromDate = DateTime.now();
   DateTime toDate = DateTime.now();
 
   List<PartyLedgerRow> ledger = [];
@@ -42,9 +42,26 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
   @override
   void initState() {
     super.initState();
+    setFinancialYear();
     fromCtrl.text = df.format(fromDate);
     toCtrl.text = df.format(toDate);
     loadParties();
+  }
+
+  // ================= FINANCIAL YEAR =================
+  void setFinancialYear() {
+    final now = DateTime.now();
+
+    if (now.month >= 4) {
+      fromDate = DateTime(now.year, 4, 1);
+      toDate = DateTime(now.year + 1, 3, 31);
+    } else {
+      fromDate = DateTime(now.year - 1, 4, 1);
+      toDate = DateTime(now.year, 3, 31);
+    }
+
+    fromCtrl.text = DateFormat("dd/MM/yyyy").format(fromDate);
+    toCtrl.text = DateFormat("dd/MM/yyyy").format(toDate);
   }
 
   // ================= LOAD PARTY =================

@@ -193,6 +193,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
               images: images,
             );
       if (response["status"] == true) {
+        Preference.setString(PrefKeys.state, stateController.text.trim());
         showCustomSnackbarSuccess(context, response["message"]);
         fetchCompanyProfile();
       } else {

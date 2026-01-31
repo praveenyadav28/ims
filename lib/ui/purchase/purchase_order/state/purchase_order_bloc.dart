@@ -777,7 +777,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         "branch_id": Preference.getString(PrefKeys.locationId),
         "supplier_id": supplierId,
         "supplier_name": supplierName,
-        "mobile": mobile,
+        if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
         "prefix": state.prefix,

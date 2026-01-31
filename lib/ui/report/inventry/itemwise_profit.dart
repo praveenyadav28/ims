@@ -43,7 +43,24 @@ class _FifoReportScreenState extends State<FifoReportScreen> {
   @override
   void initState() {
     super.initState();
+    setFinancialYear();
     fetchReport();
+  }
+
+  // ================= FINANCIAL YEAR =================
+  void setFinancialYear() {
+    final now = DateTime.now();
+
+    if (now.month >= 4) {
+      fromDate = DateTime(now.year, 4, 1);
+      toDate = DateTime(now.year + 1, 3, 31);
+    } else {
+      fromDate = DateTime(now.year - 1, 4, 1);
+      toDate = DateTime(now.year, 3, 31);
+    }
+
+    fromDateCtrl.text = DateFormat("dd/MM/yyyy").format(fromDate!);
+    toDateCtrl.text = DateFormat("dd/MM/yyyy").format(toDate!);
   }
 
   String _fmt(DateTime? d) =>

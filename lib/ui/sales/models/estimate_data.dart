@@ -27,7 +27,6 @@ class EstimateListResponse {
       );
 }
 
-
 class EstimateData {
   final String id;
   final int licenceNo;
@@ -103,7 +102,7 @@ class EstimateData {
     customerName: j["customer_name"] ?? "",
     address0: j["address_0"] ?? "",
     address1: j["address_1"] ?? "",
-    mobile: j["mobile"].toString(),
+    mobile: (j["mobile"] ?? "").toString(),
 
     prefix: j["prefix"] ?? "",
     no: j["no"] ?? 0,

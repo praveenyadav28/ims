@@ -520,7 +520,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           Expanded(child: Text(item.itemNo)),
           Expanded(child: Text("${item.stockQty} ${item.baseUnit}")),
           Expanded(child: Text("₹ ${item.salesPrice}")),
-          Expanded(child: Text("₹ ${item.purchasePrice}")),
+          Expanded(child: Text("₹ ${item.purchasePriceSe}")),
           Expanded(child: Text(item.hsnCode)),
 
           // ACTIONS

@@ -27,7 +27,9 @@ import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
+import 'package:ims/utils/state_cities.dart';
 import 'package:ims/utils/textfield.dart';
+import 'package:searchfield/searchfield.dart';
 
 class CreateSaleInvoiceFullScreen extends StatelessWidget {
   final GLobalRepository repo;
@@ -71,6 +73,10 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
   final cashShippingController = TextEditingController();
   final voucherNoController = TextEditingController();
   DateTime pickedInvoiceDate = DateTime.now();
+  final stateController = TextEditingController();
+  SearchFieldListItem<String>? selectedState;
+  late List<String> statesSuggestions;
+
   String signatureImageUrl = '';
   List<LedgerListModel> ledgerList = [];
   LedgerListModel? selectedLedger;
@@ -95,6 +101,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
   @override
   void initState() {
     super.initState();
+    statesSuggestions = stateCities.keys.toList();
 
     getAutoVoucherApi();
     ledgerApi();
@@ -276,6 +283,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                   onTap: () {
                     bloc.add(
                       SaleInvoiceSaveWithUIData(
+                        placeOfSupply: stateController.text,
                         customerName: cusNameController.text,
                         mobile: cashMobileController.text,
                         billingAddress: cashBillingController.text,
@@ -360,8 +368,14 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                     shipTo: GlobalShipToCard(
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
+                      stateController: stateController,
+                      statesSuggestions: statesSuggestions,
+                      onStateSelected: (state) {
+                        selectedState = SearchFieldListItem(state);
+                      },
                       onEditAddresses: () => _editAddresses(state, bloc),
                     ),
+
                     details: SaleInvoiceDetailsCard(
                       prefixController: prefixController,
                       invoiceNoController: invoiceNoController,

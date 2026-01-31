@@ -152,7 +152,7 @@ class _CreateCusSupState extends State<CreateCusSup>
                   },
                 )
                 .toList();
-    }
+    } else {}
   }
 
   @override
@@ -189,7 +189,7 @@ class _CreateCusSupState extends State<CreateCusSup>
         padding: EdgeInsets.only(
           right: Sizes.width * .08,
           left: Sizes.width * .08,
-          top: Sizes.height * .05,
+          top: Sizes.height * .02,
           bottom: Sizes.height * .02,
         ),
         child: Column(
@@ -424,7 +424,7 @@ class _CreateCusSupState extends State<CreateCusSup>
                 ),
               ),
 
-            SizedBox(height: Sizes.height * .05),
+            SizedBox(height: Sizes.height * .02),
             Align(
               alignment: Alignment.centerLeft,
               child: SizedBox(
@@ -441,8 +441,8 @@ class _CreateCusSupState extends State<CreateCusSup>
                   ),
                   indicatorColor: AppColor.blue,
                   tabs: const [
-                    Tab(text: "Tax Details"),
                     Tab(text: "Address"),
+                    Tab(text: "Tax Details"),
                     Tab(text: "Documents"),
                   ],
                 ),
@@ -450,54 +450,11 @@ class _CreateCusSupState extends State<CreateCusSup>
             ),
             Divider(height: 10, color: Color(0xFFDEE1E6), thickness: 1.5),
             SizedBox(
-              height: 180,
+              height: 170,
               width: Sizes.width,
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  /// GST DETAILS TAB
-                  Column(
-                    children: [
-                      SizedBox(height: Sizes.height * .02),
-                      nameField(
-                        text: "PAN",
-                        child: CommonTextField(
-                          hintText: "PAN",
-                          controller: panController,
-                        ),
-                      ),
-                      SizedBox(height: Sizes.height * .02),
-                      nameField(
-                        text: "GST Type",
-                        child: CommonDropdownField<String>(
-                          hintText: "--Select GST Type--",
-                          value: gstTypeList.contains(selectedGstType)
-                              ? selectedGstType
-                              : null,
-                          items: gstTypeList.map((gstType) {
-                            return DropdownMenuItem(
-                              value: gstType,
-                              child: Text(gstType),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            setState(() => selectedGstType = val!);
-                          },
-                        ),
-                      ),
-                      SizedBox(height: Sizes.height * .02),
-                      selectedGstType == "Unregistered Dealer"
-                          ? Container()
-                          : nameField(
-                              text: "GST No.",
-                              child: CommonTextField(
-                                controller: gstNumberController,
-                                hintText: "Enter GST Number",
-                              ),
-                            ),
-                    ],
-                  ),
-
                   /// ADDRESS TAB
                   Column(
                     children: [
@@ -581,6 +538,49 @@ class _CreateCusSupState extends State<CreateCusSup>
                     ],
                   ),
 
+                  /// GST DETAILS TAB
+                  Column(
+                    children: [
+                      SizedBox(height: Sizes.height * .02),
+                      nameField(
+                        text: "PAN",
+                        child: CommonTextField(
+                          hintText: "PAN",
+                          controller: panController,
+                        ),
+                      ),
+                      SizedBox(height: Sizes.height * .02),
+                      nameField(
+                        text: "GST Type",
+                        child: CommonDropdownField<String>(
+                          hintText: "--Select GST Type--",
+                          value: gstTypeList.contains(selectedGstType)
+                              ? selectedGstType
+                              : null,
+                          items: gstTypeList.map((gstType) {
+                            return DropdownMenuItem(
+                              value: gstType,
+                              child: Text(gstType),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setState(() => selectedGstType = val!);
+                          },
+                        ),
+                      ),
+                      SizedBox(height: Sizes.height * .02),
+                      selectedGstType == "Unregistered Dealer"
+                          ? Container()
+                          : nameField(
+                              text: "GST No.",
+                              child: CommonTextField(
+                                controller: gstNumberController,
+                                hintText: "Enter GST Number",
+                              ),
+                            ),
+                    ],
+                  ),
+
                   /// UPLOAD DOCUMENT TAB
                   Column(
                     children: [
@@ -588,7 +588,7 @@ class _CreateCusSupState extends State<CreateCusSup>
 
                       /// UPLOAD DOCUMENT TAB
                       SizedBox(
-                        height: 180 - Sizes.height * 0.02, // adjust if needed
+                        height: 170 - Sizes.height * 0.02, // adjust if needed
                         child: GridView.builder(
                           scrollDirection: Axis.horizontal,
                           gridDelegate:

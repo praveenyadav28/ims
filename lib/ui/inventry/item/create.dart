@@ -130,7 +130,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
 
     // Price
     salePriceController.text = item.salesPrice;
-    purchasePriceController.text = item.purchasePrice;
+    purchasePriceController.text = item.purchasePriceSe;
 
     // GST
     gstRateController.text = item.gstRate;
@@ -2044,7 +2044,14 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
 
   Future<void> _saveSimpleProduct() async {
     _computeDerivedPrices(); // ensure values present
+    final gst = double.tryParse(gstRateController.text) ?? 0;
+    final enteredPrice = double.tryParse(purchasePriceController.text) ?? 0;
 
+    final priceData = calculatePurchasePrice(
+      enteredPrice: enteredPrice,
+      gst: gst,
+      isWithTax: purchaseTaxMode == "With Tax",
+    );
     final payload = {
       'licence_no': Preference.getint(PrefKeys.licenseNo),
       'branch_id': Preference.getString(PrefKeys.locationId),
@@ -2055,7 +2062,8 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
       'group': selectedCategory,
       'sales_price': salePriceController.text,
       'title': selectedTitle,
-      'purchase_price': purchasePriceController.text,
+      "purchase_price": priceData["purchase_price"],
+      "purchase_price_se": priceData["purchase_price_se"],
       'hsn_code': selectedHsn,
       "baseunit": baseUnit ?? "",
       "secondryunit": secondaryUnit ?? "",
@@ -2273,5 +2281,23 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
     if (picked != null) {
       controller.text = DateFormat("yyyy-MM-dd").format(picked);
     }
+  }
+
+  Map<String, String> calculatePurchasePrice({
+    required double enteredPrice,
+    required double gst,
+    required bool isWithTax,
+  }) {
+    double basePrice = enteredPrice;
+    double withTaxPrice = enteredPrice;
+
+    if (isWithTax && gst > 0) {
+      basePrice = enteredPrice / (1 + gst / 100);
+    }
+
+    return {
+      "purchase_price": basePrice.toStringAsFixed(2),
+      "purchase_price_se": withTaxPrice.toStringAsFixed(2),
+    };
   }
 }

@@ -107,7 +107,7 @@ class SaleReturnData {
     customerName: j["customer_name"],
     address0: j["address_0"],
     address1: j["address_1"],
-    mobile: j["mobile"].toString(),
+    mobile: (j["mobile"] ?? "").toString(),
 
     prefix: j["prefix"],
     no: j["no"],
@@ -119,8 +119,8 @@ class SaleReturnData {
     notes: List<String>.from(j["add_note"] ?? []),
     terms: List<String>.from(j["te_co"] ?? []),
 
-    transId: j["invoice_id"]??"",
-    transNo: j["invoice_no"]??0,
+    transId: j["invoice_id"] ?? "",
+    transNo: j["invoice_no"] ?? 0,
     subTotal: (j["sub_totle"] ?? 0).toDouble(),
     subGst: (j["sub_gst"] ?? 0).toDouble(),
     autoRound: j["auto_ro"] ?? false,

@@ -373,17 +373,17 @@ class GLobalRepository {
     return parsed.data;
   }
 
-    Future<List<SaleInvoiceData>> getSaleInvoice() async {
-      final res = await ApiService.fetchData(
-        "get/invoice",
-        licenceNo: Preference.getint(PrefKeys.licenseNo),
-      );
+  Future<List<SaleInvoiceData>> getSaleInvoice() async {
+    final res = await ApiService.fetchData(
+      "get/invoice",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
 
-      if (res == null) return [];
+    if (res == null) return [];
 
-      final parsed = SaleInvoiceListResponse.fromJson(res);
-      return parsed.data;
-    }
+    final parsed = SaleInvoiceListResponse.fromJson(res);
+    return parsed.data;
+  }
 
   Future<List<SaleReturnData>> getSaleReturn() async {
     final res = await ApiService.fetchData(
@@ -525,7 +525,7 @@ class GLobalRepository {
 
   Future<bool> deletePerforma(String id) async {
     final res = await ApiService.deleteData(
-      "performa/$id",
+      "proforma/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 

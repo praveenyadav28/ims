@@ -126,8 +126,8 @@ class ItemServiceModel {
       baseSalePrice: (m['sales_price'] != null)
           ? double.tryParse(m['sales_price'].toString()) ?? 0
           : 0,
-      basePurchasePrice: (m['purchase_price'] != null)
-          ? double.tryParse(m['purchase_price'].toString()) ?? 0
+      basePurchasePrice: (m['purchase_price_se'] != null)
+          ? double.tryParse(m['purchase_price_se'].toString()) ?? 0
           : 0,
       gstRate: (m['gst_tax_rate'] != null)
           ? double.tryParse(m['gst_tax_rate'].toString()) ?? 0

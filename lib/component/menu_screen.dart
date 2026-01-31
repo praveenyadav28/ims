@@ -25,6 +25,7 @@ enum MenuScreen {
   supplierList,
   inventoryScreen,
   ledgerReport,
+  profitLoss,
   supplierReport,
   purchaseInvReport,
   saleInvReport,

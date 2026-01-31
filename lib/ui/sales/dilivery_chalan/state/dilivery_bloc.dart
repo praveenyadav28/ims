@@ -671,7 +671,7 @@ class DiliveryChallanBloc
       final bool isCash = state.cashSaleDefault;
 
       // ---------------- CUSTOMER ----------------
-      final customerId = isCash ? null : state.selectedCustomer?.id;
+      final customerId = state.selectedCustomer?.id;
 
       final customerName = isCash
           ? e.customerName
@@ -762,7 +762,7 @@ class DiliveryChallanBloc
         "branch_id": Preference.getString(PrefKeys.locationId),
         "customer_id": customerId,
         "customer_name": customerName,
-        "mobile": mobile,
+        if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
         "prefix": state.prefix,

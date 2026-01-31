@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:ims/model/ledger_model.dart';
 import 'package:intl/intl.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/ui/sales/models/sale_invoice_data.dart';
-import 'package:ims/model/cussup_model.dart';
 
 class GstSaleReportScreen extends StatefulWidget {
   const GstSaleReportScreen({super.key});
@@ -15,7 +15,7 @@ class GstSaleReportScreen extends StatefulWidget {
 class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
   List<SaleInvoiceData> invoiceList = [];
   List<SaleInvoiceData> filteredList = [];
-  List<Customer> customerList = [];
+  List<LedgerListModel> ledgerList = [];
 
   DateTime? fromDate;
   DateTime? toDate;
@@ -42,8 +42,9 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
 
     setState(() {
       invoiceList = SaleInvoiceListResponse.fromJson(invoiceRes).data;
-      customerList = (customerRes['data'] as List)
-          .map((e) => Customer.fromJson(e))
+      ledgerList = (customerRes['data'] as List)
+          .map((e) => LedgerListModel.fromJson(e))
+          .where((e) => e.ledgerGroup == "Sundry Debtor")
           .toList();
       filteredList = invoiceList;
     });
@@ -60,12 +61,12 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
           (toDate == null ||
               date.isBefore(toDate!.add(const Duration(days: 1))));
 
-      final customer = getCustomer(inv.customerId);
+      final customer = ledgerList.firstWhere((e) => e.id == inv.customerId);
 
       final searchMatch =
           search.isEmpty ||
           inv.transNo.toString().contains(search) ||
-          customer.companyName.toLowerCase().contains(search.toLowerCase());
+          customer.ledgerName!.toLowerCase().contains(search.toLowerCase());
 
       return dateMatch && searchMatch;
     }).toList();
@@ -175,7 +176,7 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
             DataColumn(label: Text("SGST Amt")),
             DataColumn(label: Text("Total")),
           ],
-          rows: _buildRows(filteredList, customerList),
+          rows: _buildRows(filteredList, ledgerList),
         ),
       ),
     );
@@ -183,31 +184,52 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
 
   List<DataRow> _buildRows(
     List<SaleInvoiceData> invoices,
-    List<Customer> customers,
+    List<LedgerListModel> customers,
   ) {
     final List<DataRow> rows = [];
 
     for (final inv in invoices) {
-      final customer = getCustomer(inv.customerId);
+      final customer = customers.firstWhere(
+        (e) => e.id == inv.customerId,
+        orElse: () => LedgerListModel(),
+      );
 
       for (final item in inv.itemDetails) {
-        final gstRate = item.gstRate;
-        final isInclusive = item.inclusive;
+        final customerState = customer.state ?? "";
+
+        bool isSameState =
+            customerState.isEmpty ||
+            Preference.getString(PrefKeys.state).isEmpty ||
+            customerState.toLowerCase() ==
+                Preference.getString(PrefKeys.state).toLowerCase();
 
         double taxable;
         double gstAmount;
+        double total;
 
-        if (isInclusive) {
-          taxable = item.amount / (1 + (gstRate / 100));
+        if (item.inclusive == true) {
+          // ✅ GST INCLUDED IN AMOUNT
+          taxable = item.amount / (1 + (item.gstRate / 100));
           gstAmount = item.amount - taxable;
+          total = item.amount;
         } else {
+          // ✅ GST EXTRA
           taxable = item.amount;
-          gstAmount = taxable * gstRate / 100;
+          gstAmount = taxable * item.gstRate / 100;
+          total = taxable + gstAmount;
         }
 
-        final cgst = gstAmount / 2;
-        final sgst = gstAmount / 2;
-        final igst = 0.0; // change if inter-state
+        // ✅ TAX SPLIT
+        double cgst = 0;
+        double sgst = 0;
+        double igst = 0;
+
+        if (isSameState) {
+          cgst = gstAmount / 2;
+          sgst = gstAmount / 2;
+        } else {
+          igst = gstAmount;
+        }
 
         rows.add(
           DataRow(
@@ -216,9 +238,9 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
               DataCell(
                 Text(DateFormat('dd-MM-yyyy').format(inv.saleInvoiceDate)),
               ),
-              DataCell(Text(customer.companyName)),
-              DataCell(Text(customer.state)),
-              DataCell(Text(customer.gstNo)),
+              DataCell(Text(customer.ledgerName ?? "")),
+              DataCell(Text(customer.state ?? "")),
+              DataCell(Text(customer.gstNo ?? "")),
 
               DataCell(Text(item.hsn)),
               DataCell(Text(item.itemNo)),
@@ -229,18 +251,22 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
 
               DataCell(Text(taxable.toStringAsFixed(2))),
 
-              DataCell(Text(gstRate.toStringAsFixed(2))),
+              // IGST
+              DataCell(Text(isSameState ? "0" : item.gstRate.toString())),
               DataCell(Text(igst.toStringAsFixed(2))),
 
-              DataCell(Text((gstRate / 2).toStringAsFixed(2))),
+              // CGST
+              DataCell(Text(isSameState ? (item.gstRate / 2).toString() : "0")),
               DataCell(Text(cgst.toStringAsFixed(2))),
 
-              DataCell(Text((gstRate / 2).toStringAsFixed(2))),
+              // SGST
+              DataCell(Text(isSameState ? (item.gstRate / 2).toString() : "0")),
               DataCell(Text(sgst.toStringAsFixed(2))),
 
+              // TOTAL
               DataCell(
                 Text(
-                  (taxable + gstAmount).toStringAsFixed(2),
+                  total.toStringAsFixed(2),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -251,43 +277,5 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
     }
 
     return rows;
-  }
-
-  // ================= CUSTOMER SAFE =================
-
-  Customer getCustomer(String? id) {
-    return customerList.firstWhere(
-      (e) => e.id == id,
-      orElse: () => Customer(
-        id: "",
-        licenceNo: 0,
-        branchId: "",
-        customerType: "",
-        title: "",
-        firstName: "",
-        lastName: "",
-        related: "",
-        parents: "",
-        parentsLast: "",
-        companyName: "Unknown",
-        email: "",
-        phone: "",
-        mobile: "",
-        pan: "",
-        gstType: "",
-        gstNo: "",
-        address: "",
-        city: "",
-        state: "",
-        openingBalance: 0,
-        closingBalance: 0,
-        address0: "",
-        address1: "",
-        documents: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        v: 0,
-      ),
-    );
   }
 }

@@ -30,7 +30,7 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
   List<ItemServiceModel> items = [];
   ItemServiceModel? selectedItem;
 
-  DateTime fromDate = DateTime.now().subtract(const Duration(days: 30));
+  DateTime fromDate = DateTime.now();
   DateTime toDate = DateTime.now();
 
   List<ItemLedgerRow> ledger = [];
@@ -42,9 +42,26 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
   @override
   void initState() {
     super.initState();
+    setFinancialYear();
     loadItems();
     fromCtrl.text = df.format(fromDate);
     toCtrl.text = df.format(toDate);
+  }
+
+  // ================= FINANCIAL YEAR =================
+  void setFinancialYear() {
+    final now = DateTime.now();
+
+    if (now.month >= 4) {
+      fromDate = DateTime(now.year, 4, 1);
+      toDate = DateTime(now.year + 1, 3, 31);
+    } else {
+      fromDate = DateTime(now.year - 1, 4, 1);
+      toDate = DateTime(now.year, 3, 31);
+    }
+
+    fromCtrl.text = DateFormat("dd/MM/yyyy").format(fromDate);
+    toCtrl.text = DateFormat("dd/MM/yyyy").format(toDate);
   }
 
   Future<void> loadItems() async {

@@ -6,6 +6,7 @@ class ItemModel {
   final String group;
   final String salesPrice;
   final String purchasePrice;
+  final String purchasePriceSe;
   final String hsnCode;
   final String baseUnit;
   final String secondaryUnit;
@@ -35,6 +36,7 @@ class ItemModel {
     required this.group,
     required this.salesPrice,
     required this.purchasePrice,
+    required this.purchasePriceSe,
     required this.hsnCode,
     required this.baseUnit,
     required this.secondaryUnit,
@@ -66,6 +68,7 @@ class ItemModel {
       group: (json['group'] ?? json['Group'])?.toString() ?? '',
       salesPrice: json['sales_price']?.toString() ?? '0',
       purchasePrice: json['purchase_price']?.toString() ?? '0',
+      purchasePriceSe: json['purchase_price_se']?.toString() ?? '0',
       hsnCode: json['hsn_code']?.toString() ?? '',
       baseUnit: json['baseunit']?.toString() ?? '',
       secondaryUnit: json['secondryunit']?.toString() ?? '',

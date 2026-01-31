@@ -6,6 +6,7 @@ import 'package:ims/ui/master/ledger/ledger_list.dart';
 import 'package:ims/ui/master/user/employee_list.dart';
 import 'package:ims/ui/report/inventry/inventry_report.dart';
 import 'package:ims/ui/report/ledger_report/particular_ledger.dart';
+import 'package:ims/ui/report/profit_loss.dart';
 import 'package:ims/ui/report/purchase/purchase_inv_report.dart';
 import 'package:ims/ui/report/sale/sale_inv_report.dart';
 import 'package:ims/ui/report/supplier/supplier_repost.dart';
@@ -106,6 +107,8 @@ class _FullScreenState extends State<FullScreen> {
         return CreditNoteListScreen();
       case MenuScreen.purchaseReturn:
         return PurchaseReturnListScreen();
+      case MenuScreen.profitLoss:
+        return ProfitLossScreen();
     }
   }
 

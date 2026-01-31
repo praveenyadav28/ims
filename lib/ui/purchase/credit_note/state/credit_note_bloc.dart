@@ -666,7 +666,7 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
         "branch_id": Preference.getString(PrefKeys.locationId),
         "supplier_id": ledgerId,
         "supplier_name": ledgerName,
-        "mobile": mobile,
+        if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
         "prefix": state.prefix,

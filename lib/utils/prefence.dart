@@ -48,7 +48,7 @@ class PrefKeys {
   static const coludIdHostel = "coludId";
   static const sessionId = "sessionId";
   static const sessionDate = "sessionDate";
-  static const unitPrice = "unitPrice";
+  static const state = "state";
   static const hostlerLimit = "hostlerLimit";
 }
 
@@ -73,6 +73,6 @@ logoutPrefData() async {
   await prefs.remove(PrefKeys.isMain);
   await prefs.remove(PrefKeys.isPG);
   await prefs.remove(PrefKeys.branchAddress);
-  await prefs.remove(PrefKeys.unitPrice);
+  await prefs.remove(PrefKeys.state);
   await prefs.remove(PrefKeys.hostlerLimit);
 }
