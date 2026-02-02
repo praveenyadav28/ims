@@ -26,6 +26,8 @@ import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
+import 'package:ims/utils/state_cities.dart';
+import 'package:searchfield/searchfield.dart';
 
 class CreateCreditNoteFullScreen extends StatelessWidget {
   final GLobalRepository repo;
@@ -65,6 +67,9 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
   DateTime pickedCreditNoteDate = DateTime.now();
+  final stateController = TextEditingController();
+  SearchFieldListItem<String>? selectedState;
+  late List<String> statesSuggestions;
   String signatureImageUrl = '';
 
   File? signatureImage;
@@ -77,6 +82,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
   void initState() {
     super.initState();
 
+    statesSuggestions = stateCities.keys.toList();
     if (widget.creditNoteData != null) {
       final e = widget.creditNoteData!;
 
@@ -86,6 +92,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
 
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
+      stateController.text = e.placeOfSupply;
 
       pickedCreditNoteDate = e.creditNoteDate;
 
@@ -112,6 +119,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                 mobile: e.mobile,
                 billingAddress: e.address0,
                 shippingAddress: e.address1,
+                state: e.placeOfSupply,
               ),
             );
             context.read<CreditNoteBloc>().add(CreditNoteSelectLedger(found));
@@ -295,6 +303,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                       mobileController: cashMobileController,
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
+                      stateController: stateController,
 
                       onToggleCashSale: () {
                         bloc.add(
@@ -314,6 +323,9 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                         cashMobileController.text = customer.mobile;
                         cashBillingController.text = customer.billingAddress;
                         cashShippingController.text = customer.shippingAddress;
+                        stateController.text =
+                            customer.state ??
+                            Preference.getString(PrefKeys.state);
                       },
 
                       onCreateCustomer: () => _showCreateCustomerDialog(
@@ -327,6 +339,11 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
                       onEditAddresses: () => _editAddresses(state, bloc),
+                      stateController: stateController,
+                      statesSuggestions: statesSuggestions,
+                      onStateSelected: (state) {
+                        selectedState = SearchFieldListItem(state);
+                      },
                     ),
 
                     details: CreditNoteDetailsCard(

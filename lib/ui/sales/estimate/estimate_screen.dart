@@ -27,6 +27,8 @@ import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
+import 'package:ims/utils/state_cities.dart';
+import 'package:searchfield/searchfield.dart';
 
 class CreateEstimateFullScreen extends StatelessWidget {
   final GLobalRepository repo;
@@ -67,6 +69,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   final cashShippingController = TextEditingController();
   final validForController = TextEditingController();
   DateTime pickedEstimateDate = DateTime.now();
+  final stateController = TextEditingController();
+  SearchFieldListItem<String>? selectedState;
+  late List<String> statesSuggestions;
   DateTime? pickedValidityDate;
   String signatureImageUrl = '';
 
@@ -80,6 +85,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   void initState() {
     super.initState();
 
+    statesSuggestions = stateCities.keys.toList();
     // NEW: If editing an existing estimate, prefill fields from the estimate payload.
     if (widget.estimateData != null) {
       final e = widget.estimateData!;
@@ -93,6 +99,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
+      stateController.text = e.placeOfSupply;
 
       // set estimate dates & validity
       pickedEstimateDate = e.estimateDate;
@@ -314,6 +321,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                         terms: selectedTermsList,
                         signatureImage: signatureImage,
                         updateId: widget.estimateData?.id,
+                        stateName: stateController.text,
                       ),
                     );
                   },
@@ -344,6 +352,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       mobileController: cashMobileController,
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
+                      stateController: stateController,
 
                       onToggleCashSale: () {
                         bloc.add(EstToggleCashSale(!state.cashSaleDefault));
@@ -361,6 +370,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                         cashMobileController.text = customer.mobile;
                         cashBillingController.text = customer.billingAddress;
                         cashShippingController.text = customer.shippingAddress;
+                        stateController.text =
+                            customer.state ??
+                            Preference.getString(PrefKeys.state);
                       },
 
                       onCreateCustomer: () =>
@@ -371,6 +383,11 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
                       onEditAddresses: () => _editAddresses(state, bloc),
+                      stateController: stateController,
+                      statesSuggestions: statesSuggestions,
+                      onStateSelected: (state) {
+                        selectedState = SearchFieldListItem(state);
+                      },
                     ),
 
                     details: EstimateDetailsCard(

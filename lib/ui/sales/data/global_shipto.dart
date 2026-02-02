@@ -10,17 +10,17 @@ class GlobalShipToCard extends StatelessWidget {
     super.key,
     required this.billingController,
     required this.shippingController,
-    this.stateController,
+    required this.stateController,
     required this.onEditAddresses,
-    this.onStateSelected,
-    this.statesSuggestions,
+    required this.onStateSelected,
+    required this.statesSuggestions,
   });
 
   final TextEditingController billingController;
   final TextEditingController shippingController;
-  final TextEditingController? stateController;
-  final List<String>? statesSuggestions;
-  final Function(String)? onStateSelected;
+  final TextEditingController stateController;
+  final List<String> statesSuggestions;
+  final Function(String) onStateSelected;
   final VoidCallback onEditAddresses;
 
   @override
@@ -110,14 +110,14 @@ class GlobalShipToCard extends StatelessWidget {
         const SizedBox(height: 6),
 
         CommonSearchableDropdownField<String>(
-          controller: stateController!,
+          controller: stateController,
           hintText: "Select State",
-          suggestions: statesSuggestions!
+          suggestions: statesSuggestions
               .map((e) => SearchFieldListItem(e, item: e))
               .toList(),
           onSuggestionTap: (item) {
-            stateController!.text = item.searchKey;
-            onStateSelected!(item.searchKey);
+            stateController.text = item.searchKey;
+            onStateSelected(item.searchKey);
           },
         ),
       ],

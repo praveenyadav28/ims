@@ -70,6 +70,7 @@ class _PerformaInvoiceListScreenState extends State<PerformaInvoiceListScreen> {
       mobile: (e) => e.mobile,
       gstGetter: (e) => e.subGst,
       basicGetter: (e) => e.subTotal,
+      placeOfSupply: (e) => e.placeOfSupply,
     );
   }
 }

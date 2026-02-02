@@ -56,6 +56,7 @@ class _PurchaseOrderListScreenState extends State<PurchaseOrderListScreen> {
       gstGetter: (e) => e.subGst,
       basicGetter: (e) => e.subTotal,
       mobile: (e) => e.mobile,
+      placeOfSupply: (e) => e.placeOfSupply,
     );
   }
 }

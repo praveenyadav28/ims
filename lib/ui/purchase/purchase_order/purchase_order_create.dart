@@ -26,6 +26,8 @@ import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
+import 'package:ims/utils/state_cities.dart';
+import 'package:searchfield/searchfield.dart';
 
 class CreatePurchaseOrderFullScreen extends StatelessWidget {
   final GLobalRepository repo;
@@ -69,6 +71,9 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
   final cashShippingController = TextEditingController();
   final validForController = TextEditingController();
   DateTime pickedPurchaseOrderDate = DateTime.now();
+  final stateController = TextEditingController();
+  SearchFieldListItem<String>? selectedState;
+  late List<String> statesSuggestions;
   DateTime? pickedValidityDate;
   String signatureImageUrl = '';
 
@@ -82,6 +87,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
   void initState() {
     super.initState();
 
+    statesSuggestions = stateCities.keys.toList();
     if (widget.purchaseOrderData != null) {
       final e = widget.purchaseOrderData!;
 
@@ -94,6 +100,9 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
 
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
+      stateController.text = e.placeOfSupply.isNotEmpty
+          ? e.placeOfSupply
+          : Preference.getString(PrefKeys.state);
 
       pickedPurchaseOrderDate = e.purchaseOrderDate;
       pickedValidityDate = e.purchaseOrderDate.add(
@@ -377,7 +386,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                       mobileController: cashMobileController,
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
-
+                      stateController: stateController,
                       ispurchase: true,
                       onToggleCashSale: () {
                         bloc.add(
@@ -397,6 +406,9 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                         cashMobileController.text = customer.mobile;
                         cashBillingController.text = customer.billingAddress;
                         cashShippingController.text = customer.shippingAddress;
+                        stateController.text =
+                            customer.state ??
+                            Preference.getString(PrefKeys.state);
                       },
 
                       onCreateCustomer: () => _showCreateCustomerDialog(
@@ -408,6 +420,11 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
                       onEditAddresses: () => _editAddresses(state, bloc),
+                      stateController: stateController,
+                      statesSuggestions: statesSuggestions,
+                      onStateSelected: (state) {
+                        selectedState = SearchFieldListItem(state);
+                      },
                     ),
 
                     details: PurchaseOrderDetailsCard(

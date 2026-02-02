@@ -7,6 +7,7 @@ class LedgerModelDrop {
   final String? closingBalance;
   final String billingAddress;
   final String shippingAddress;
+  final String? state;
   final String gstin;
   LedgerModelDrop({
     required this.id,
@@ -15,6 +16,7 @@ class LedgerModelDrop {
     this.closingBalance,
     required this.billingAddress,
     required this.shippingAddress,
+    this.state,
     this.gstin = '',
   });
 
@@ -28,6 +30,7 @@ class LedgerModelDrop {
     shippingAddress:
         "${(m['address'] ?? '')}, ${(m['city'] ?? "")}, ${(m['state'] ?? "")}",
     gstin: (m['gst_no'] ?? '').toString(),
+    state: (m['state'] ?? '').toString(),
   );
 }
 

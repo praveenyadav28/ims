@@ -64,6 +64,7 @@ class _DebitNoteInvoiceListScreenState
       mobile: (e) => e.mobile,
       gstGetter: (e) => e.subGst,
       basicGetter: (e) => e.baseAmount,
+      placeOfSupply: (e) => e.placeOfSupply,
     );
   }
 }

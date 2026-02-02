@@ -64,6 +64,7 @@ class _SaleInvoiceInvoiceListScreenState
       basicGetter: (e) => e.subTotal,
       amountGetter: (e) => e.totalAmount,
       mobile: (e) => e.mobile,
+      placeOfSupply: (e) => e.placeOfSupply,
     );
   }
 }

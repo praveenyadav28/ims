@@ -111,6 +111,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
       cashMobileController.text = e.mobile;
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
+      stateController.text = e.placeOfSupply;
       pickedInvoiceDate = e.saleInvoiceDate;
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
@@ -237,7 +238,13 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                 state.selectedCustomer!.shippingAddress;
           }
         }
-
+        if (state.transPlaceOfSupply != null &&
+            state.transPlaceOfSupply!.isNotEmpty) {
+          setState(() {
+            stateController.text = state.transPlaceOfSupply!;
+          });
+          return; // 🚨 customer logic skip
+        }
         invoiceNoController.text = state.saleInvoiceNo.toString();
       },
       child: Scaffold(
@@ -291,6 +298,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                         terms: selectedTermsList,
                         signatureImage: signatureImage,
                         updateId: widget.saleInvoiceData?.id,
+                        stateName: stateController.text,
                       ),
                     );
 
@@ -336,6 +344,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                       mobileController: cashMobileController,
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
+                      stateController: stateController,
 
                       // --------- LOGIC CALLBACKS ---------
                       onToggleCashSale: () {
@@ -358,6 +367,9 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                         cashMobileController.text = customer.mobile;
                         cashBillingController.text = customer.billingAddress;
                         cashShippingController.text = customer.shippingAddress;
+                        stateController.text =
+                            customer.state ??
+                            Preference.getString(PrefKeys.state);
                       },
 
                       onCreateCustomer: () => _showCreateCustomerDialog(

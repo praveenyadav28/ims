@@ -27,7 +27,9 @@ import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
+import 'package:ims/utils/state_cities.dart';
 import 'package:ims/utils/textfield.dart';
+import 'package:searchfield/searchfield.dart';
 
 class CreatePurchaseInvoiceFullScreen extends StatelessWidget {
   final GLobalRepository repo;
@@ -74,6 +76,9 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
   final payingAmtController = TextEditingController();
   final voucherNoController = TextEditingController();
   DateTime pickedPurchaseInvoiceDate = DateTime.now();
+  final stateController = TextEditingController();
+  SearchFieldListItem<String>? selectedState;
+  late List<String> statesSuggestions;
   String signatureImageUrl = '';
   List<LedgerListModel> ledgerList = [];
   LedgerListModel? selectedLedger;
@@ -100,6 +105,8 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
     super.initState();
     getAutoVoucherApi();
     ledgerApi();
+
+    statesSuggestions = stateCities.keys.toList();
     if (widget.purchaseInvoiceData != null) {
       final e = widget.purchaseInvoiceData!;
 
@@ -109,6 +116,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
 
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
+      stateController.text = e.placeOfSupply;
 
       pickedPurchaseInvoiceDate = e.purchaseInvoiceDate;
 
@@ -337,7 +345,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                       isCashSale: state.cashSaleDefault,
                       customers: state.customers,
                       selectedCustomer: state.selectedCustomer,
-
+                      stateController: stateController,
                       cusNameController: cusNameController,
                       mobileController: cashMobileController,
                       billingController: cashBillingController,
@@ -361,6 +369,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                         cashMobileController.text = customer.mobile;
                         cashBillingController.text = customer.billingAddress;
                         cashShippingController.text = customer.shippingAddress;
+                        stateController.text = customer.state??"";
                       },
 
                       onCreateCustomer: () => _showCreateCustomerDialog(
@@ -373,6 +382,11 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
                       onEditAddresses: () => _editAddresses(state, bloc),
+                      stateController: stateController,
+                      statesSuggestions: statesSuggestions,
+                      onStateSelected: (state) {
+                        selectedState = SearchFieldListItem(state);
+                      },
                     ),
 
                     details: PurchaseInvoiceDetailsCard(

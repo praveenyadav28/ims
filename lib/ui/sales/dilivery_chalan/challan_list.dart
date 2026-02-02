@@ -64,6 +64,7 @@ class _DiliveryChallanInvoiceListScreenState
       mobile: (e) => e.mobile,
       gstGetter: (e) => e.subGst,
       basicGetter: (e) => e.baseAmount,
+      placeOfSupply: (e) => e.placeOfSupply,
     );
   }
 }

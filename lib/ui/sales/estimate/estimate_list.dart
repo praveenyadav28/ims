@@ -59,6 +59,7 @@ class _EstimateListScreenState extends State<EstimateListScreen> {
       mobile: (e) => e.mobile,
       gstGetter: (e) => e.subGst,
       basicGetter: (e) => e.subTotal,
+      placeOfSupply: (e) => e.placeOfSupply,
     );
   }
 }

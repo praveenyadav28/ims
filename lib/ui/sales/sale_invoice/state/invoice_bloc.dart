@@ -153,6 +153,7 @@ class SaleInvoiceState {
   final List<LedgerModelDrop> customers;
   final LedgerModelDrop? selectedCustomer;
   final bool cashSaleDefault;
+  final String? transPlaceOfSupply;
   final List<HsnModel> hsnMaster;
   final String prefix;
   final String saleInvoiceNo;
@@ -189,6 +190,7 @@ class SaleInvoiceState {
     this.saleInvoiceNo = '',
     this.hsnMaster = const [],
     this.saleInvoiceDate,
+    this.transPlaceOfSupply,
     this.catalogue = const [],
     this.rows = const [],
     this.charges = const [],
@@ -215,6 +217,7 @@ class SaleInvoiceState {
     String? prefix,
     String? saleInvoiceNo,
     DateTime? saleInvoiceDate,
+    String? transPlaceOfSupply,
     List<HsnModel>? hsnMaster,
     List<ItemServiceModel>? catalogue,
     List<GlobalItemRow>? rows,
@@ -241,6 +244,7 @@ class SaleInvoiceState {
       prefix: prefix ?? this.prefix,
       saleInvoiceNo: saleInvoiceNo ?? this.saleInvoiceNo,
       saleInvoiceDate: saleInvoiceDate ?? this.saleInvoiceDate,
+      transPlaceOfSupply: transPlaceOfSupply ?? this.transPlaceOfSupply,
       hsnMaster: hsnMaster ?? this.hsnMaster,
       catalogue: catalogue ?? this.catalogue,
       rows: rows ?? this.rows,
@@ -270,6 +274,7 @@ class SaleInvoiceSaveWithUIData extends SaleInvoiceEvent {
   final String mobile;
   final String billingAddress;
   final String shippingAddress;
+  final String stateName; // ✅ ADD
   final List<String> notes;
   final List<String> terms;
   final File? signatureImage; // NEW
@@ -279,6 +284,7 @@ class SaleInvoiceSaveWithUIData extends SaleInvoiceEvent {
     required this.mobile,
     required this.billingAddress,
     required this.shippingAddress,
+    required this.stateName, // ✅,
     required this.notes,
     required this.terms,
     this.updateId,
@@ -722,6 +728,7 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
         transId: estimate.id,
         transNo: state.transNo,
         transType: state.transType,
+        transPlaceOfSupply: estimate.placeOFSupply,
       );
 
       emit(newState);
@@ -900,6 +907,7 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
+        "place_of_supply": e.stateName,
         "prefix": state.prefix,
         "no": int.tryParse(state.saleInvoiceNo),
         "invoice_date": DateFormat(
@@ -1006,6 +1014,7 @@ SaleInvoiceState _prefillSaleInvoiceFromTrans(
       mobile: data.mobile,
       billingAddress: data.address0,
       shippingAddress: data.address1,
+      state: data.placeOFSupply,
     ),
   );
 
@@ -1158,6 +1167,7 @@ SaleInvoiceState _prefillSaleInvoiceFromTrans(
     charges: mappedCharges,
     discounts: mappedDiscounts,
     miscCharges: mappedMisc,
+    transPlaceOfSupply: data.placeOFSupply,
     subtotal: (data.subTotal).toDouble(),
     totalGst: (data.subGst).toDouble(),
     totalAmount: (data.totalAmount).toDouble(),
@@ -1178,6 +1188,7 @@ SaleInvoiceState _prefillSaleInvoice(SaleInvoiceData data, SaleInvoiceState s) {
       mobile: data.mobile,
       billingAddress: data.address0,
       shippingAddress: data.address1,
+      state: data.placeOfSupply,
     ),
   );
 

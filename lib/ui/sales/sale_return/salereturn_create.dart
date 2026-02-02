@@ -25,6 +25,8 @@ import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
+import 'package:ims/utils/state_cities.dart';
+import 'package:searchfield/searchfield.dart';
 
 class CreateSaleReturnFullScreen extends StatelessWidget {
   final GLobalRepository repo;
@@ -65,6 +67,9 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
   DateTime pickedInvoiceDate = DateTime.now();
+  final stateController = TextEditingController();
+  SearchFieldListItem<String>? selectedState;
+  late List<String> statesSuggestions;
   String signatureImageUrl = '';
 
   File? signatureImage;
@@ -77,12 +82,14 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
   void initState() {
     super.initState();
 
+    statesSuggestions = stateCities.keys.toList();
     if (widget.saleReturnData != null) {
       final e = widget.saleReturnData!;
       cusNameController.text = e.customerName;
       cashMobileController.text = e.mobile;
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
+      stateController.text = e.placeOfSupply;
       pickedInvoiceDate = e.saleReturnDate;
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
@@ -207,7 +214,13 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                 state.selectedCustomer!.shippingAddress;
           }
         }
-
+        if (state.transPlaceOfSupply != null &&
+            state.transPlaceOfSupply!.isNotEmpty) {
+          setState(() {
+            stateController.text = state.transPlaceOfSupply!;
+          });
+          return; // 🚨 customer logic skip
+        }
         invoiceNoController.text = state.saleReturnNo.toString();
       },
       child: Scaffold(
@@ -257,6 +270,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                         mobile: cashMobileController.text,
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
+                        stateName: stateController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
                         signatureImage: signatureImage,
@@ -292,6 +306,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                       mobileController: cashMobileController,
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
+                      stateController: stateController,
 
                       // --------- LOGIC CALLBACKS ---------
                       onToggleCashSale: () {
@@ -314,6 +329,9 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                         cashMobileController.text = customer.mobile;
                         cashBillingController.text = customer.billingAddress;
                         cashShippingController.text = customer.shippingAddress;
+                        stateController.text =
+                            customer.state ??
+                            Preference.getString(PrefKeys.state);
                       },
 
                       onCreateCustomer: () => _showCreateCustomerDialog(
@@ -325,6 +343,11 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
                       onEditAddresses: () => _editAddresses(state, bloc),
+                      stateController: stateController,
+                      statesSuggestions: statesSuggestions,
+                      onStateSelected: (state) {
+                        selectedState = SearchFieldListItem(state);
+                      },
                     ),
                     details: SaleReturnDetailsCard(
                       prefixController: prefixController,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/utils/colors.dart';
+import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:searchfield/searchfield.dart';
@@ -18,7 +19,7 @@ class GlobalBillToCard extends StatefulWidget {
     required this.mobileController,
     required this.billingController,
     required this.shippingController,
-
+    required this.stateController,
     required this.onToggleCashSale,
     required this.onCustomerSelected,
     required this.onCreateCustomer,
@@ -36,6 +37,7 @@ class GlobalBillToCard extends StatefulWidget {
   final TextEditingController mobileController;
   final TextEditingController billingController;
   final TextEditingController shippingController;
+  final TextEditingController stateController;
 
   /// CALLBACKS
   final VoidCallback onToggleCashSale;
@@ -131,12 +133,23 @@ class _GlobalBillToCardState extends State<GlobalBillToCard> {
             customers: widget.customers,
             selectedCustomer: widget.selectedCustomer,
             onCreateCustomer: widget.onCreateCustomer,
-            onSelectCustomer: (c) {
-              widget.mobileController.text = c.mobile;
-              widget.billingController.text = c.billingAddress;
-              widget.shippingController.text = c.shippingAddress;
-              widget.onCustomerSelected(c);
+            onSelectCustomer: (customer) {
+              widget.mobileController.text = customer.mobile;
+              widget.billingController.text = customer.billingAddress;
+              widget.shippingController.text = customer.shippingAddress;
+
+              // ✅ STATE AUTO FILL LOGIC
+              if (customer.state != null && (customer.state ?? "").isNotEmpty) {
+                widget.stateController.text = customer.state ?? "";
+              } else {
+                widget.stateController.text = Preference.getString(
+                  PrefKeys.state,
+                );
+              }
+
+              widget.onCustomerSelected(customer);
             },
+
             isReturn: widget.isReturn ?? true,
           ),
       ],

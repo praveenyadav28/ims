@@ -767,6 +767,7 @@ CreditNoteState _prefillCreditNoteFromTrans(
       mobile: data.mobile,
       billingAddress: data.address0,
       shippingAddress: data.address1,
+      state: data.placeOfSupply,
     ),
   );
 
@@ -788,6 +789,7 @@ CreditNoteState _prefillCreditNote(CreditNoteData data, CreditNoteState s) {
       mobile: data.mobile,
       billingAddress: data.address0,
       shippingAddress: data.address1,
+      state: data.placeOfSupply
     ),
   );
 

@@ -26,6 +26,8 @@ import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
+import 'package:ims/utils/state_cities.dart';
+import 'package:searchfield/searchfield.dart';
 
 class CreatePurchaseReturnFullScreen extends StatelessWidget {
   final GLobalRepository repo;
@@ -68,6 +70,9 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
   DateTime pickedPurchaseReturnDate = DateTime.now();
+  final stateController = TextEditingController();
+  SearchFieldListItem<String>? selectedState;
+  late List<String> statesSuggestions;
   String signatureImageUrl = '';
 
   File? signatureImage;
@@ -80,6 +85,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
   void initState() {
     super.initState();
 
+    statesSuggestions = stateCities.keys.toList();
     if (widget.purchaseReturnData != null) {
       final e = widget.purchaseReturnData!;
 
@@ -89,6 +95,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
 
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
+      stateController.text = e.placeOfSupply;
 
       pickedPurchaseReturnDate = e.purchaseReturnDate;
 
@@ -277,6 +284,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                         terms: selectedTermsList,
                         signatureImage: signatureImage,
                         updateId: widget.purchaseReturnData?.id,
+                        stateName: stateController.text,
                       ),
                     );
                   },
@@ -305,6 +313,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                       mobileController: cashMobileController,
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
+                      stateController: stateController,
 
                       onToggleCashSale: () {
                         bloc.add(
@@ -324,6 +333,9 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                         cashMobileController.text = customer.mobile;
                         cashBillingController.text = customer.billingAddress;
                         cashShippingController.text = customer.shippingAddress;
+                        stateController.text =
+                            customer.state ??
+                            Preference.getString(PrefKeys.state);
                       },
 
                       onCreateCustomer: () => _showCreateCustomerDialog(
@@ -337,6 +349,11 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                       billingController: cashBillingController,
                       shippingController: cashShippingController,
                       onEditAddresses: () => _editAddresses(state, bloc),
+                      stateController: stateController,
+                      statesSuggestions: statesSuggestions,
+                      onStateSelected: (state) {
+                        selectedState = SearchFieldListItem(state);
+                      },
                     ),
 
                     details: PurchaseReturnDetailsCard(

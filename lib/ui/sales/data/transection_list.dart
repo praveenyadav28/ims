@@ -29,6 +29,7 @@ class TransactionListScreen<T> extends StatefulWidget {
   final double Function(T) gstGetter;
   final double Function(T) amountGetter;
   final String Function(T) mobile;
+  final String Function(T) placeOfSupply;
 
   const TransactionListScreen({
     super.key,
@@ -45,6 +46,7 @@ class TransactionListScreen<T> extends StatefulWidget {
     required this.gstGetter,
     required this.amountGetter,
     required this.mobile,
+    required this.placeOfSupply,
     this.onCreate,
   });
 
@@ -255,6 +257,7 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
           Expanded(flex: 2, child: Text("Number", style: headerStyle)),
           Expanded(flex: 2, child: Text("Party", style: headerStyle)),
           Expanded(flex: 2, child: Text("Mobile", style: headerStyle)),
+          Expanded(flex: 2, child: Text("State", style: headerStyle)),
           Expanded(flex: 2, child: Text("Basic Value", style: headerStyle)),
           Expanded(flex: 2, child: Text("GST Value", style: headerStyle)),
           Expanded(flex: 2, child: Text("Final Value", style: headerStyle)),
@@ -284,6 +287,7 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
     final double basicAmount = widget.basicGetter(item);
     final double finalAmount = widget.amountGetter(item);
     final String mobile = widget.mobile(item);
+    final String placeOfSupply = widget.placeOfSupply(item);
     final String baseId = widget.idGetter(item);
 
     bool selected = activeRow == item;
@@ -324,6 +328,7 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
                 Expanded(flex: 2, child: Text(baseNumber, style: rowStyle)),
                 Expanded(flex: 2, child: Text(baseCustomer, style: rowStyle)),
                 Expanded(flex: 2, child: Text(mobile, style: rowStyle)),
+                Expanded(flex: 2, child: Text(placeOfSupply, style: rowStyle)),
                 Expanded(
                   flex: 2,
                   child: Text(

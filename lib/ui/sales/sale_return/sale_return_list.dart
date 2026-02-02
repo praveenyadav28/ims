@@ -65,6 +65,7 @@ class _SaleReturnInvoiceListScreenState
       mobile: (e) => e.mobile,
       gstGetter: (e) => e.subGst,
       basicGetter: (e) => e.subTotal,
+      placeOfSupply: (e) => e.placeOfSupply,
     );
   }
 }
