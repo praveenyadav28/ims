@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:ims/model/expanse_model.dart';
+import 'package:ims/model/payment_model.dart';
 import 'package:ims/ui/inventry/item_model.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
 import 'package:ims/ui/sales/models/purchase_return_data.dart';
 import 'package:ims/ui/sales/models/sale_invoice_data.dart';
 import 'package:ims/ui/sales/models/sale_return_data.dart';
+import 'package:ims/utils/button.dart';
+import 'package:ims/utils/colors.dart';
+import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 import '../../utils/api.dart';
 import '../../utils/prefence.dart';
@@ -26,6 +31,11 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
   double openingStock = 0;
   double closingStock = 0;
+  List<ExpanseModel> expenseList = [];
+  List<PaymentModel> incomeList = [];
+  double totalIncome = 0;
+  double totalExpense = 0;
+  double netProfit = 0;
 
   double totalSale = 0;
   double totalSaleReturn = 0;
@@ -59,12 +69,35 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     toDateCtrl.text = DateFormat("dd/MM/yyyy").format(toDate!);
   }
 
-  // ================= MAIN FETCH =================
+  Future<void> fetchIncome() async {
+    final res = await ApiService.fetchData(
+      "get/reciept",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    final all = (res['data'] as List)
+        .map((e) => PaymentModel.fromJson(e))
+        .toList();
+
+    incomeList = all.where((e) {
+      return e.other1 == "Income" &&
+          !e.date.isBefore(fromDate!) &&
+          !e.date.isAfter(toDate!.add(const Duration(days: 1)));
+    }).toList();
+
+    totalIncome = 0;
+    for (final i in incomeList) {
+      totalIncome += i.amount;
+    }
+  }
+
   Future<void> fetchProfitLoss() async {
     setState(() => loading = true);
 
     await fetchStock();
     await fetchTransactions();
+    await fetchExpenses();
+    await fetchIncome(); // ✅ ADD THIS
 
     calculateProfitLoss();
 
@@ -88,6 +121,28 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     for (var e in list) {
       openingStock += double.parse(e.openingStock);
       closingStock += double.parse(e.closingStock);
+    }
+  }
+
+  Future<void> fetchExpenses() async {
+    final res = await ApiService.fetchData(
+      "get/expense",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    final all = (res['data'] as List)
+        .map((e) => ExpanseModel.fromJson(e))
+        .toList();
+
+    // ✅ filter by date range
+    expenseList = all.where((e) {
+      return !e.date.isBefore(fromDate!) &&
+          !e.date.isAfter(toDate!.add(const Duration(days: 1)));
+    }).toList();
+
+    totalExpense = 0;
+    for (var e in expenseList) {
+      totalExpense += e.amount;
     }
   }
 
@@ -120,12 +175,12 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     }
   }
 
-  // ================= FINAL CALC =================
   void calculateProfitLoss() {
     netSales = totalSale - totalSaleReturn;
     netPurchase = totalPurchase - totalPurchaseReturn;
 
     grossProfit = netSales + closingStock - openingStock - netPurchase;
+    netProfit = grossProfit + totalIncome - totalExpense;
   }
 
   // ================= API METHODS =================
@@ -168,14 +223,19 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Profit & Loss")),
-      body: Column(
-        children: [
-          _dateFilter(),
-          loading
-              ? const Center(child: CircularProgressIndicator())
-              : _profitView(),
-        ],
+      appBar: AppBar(
+        title: const Text("Profit & Loss"),
+        backgroundColor: AppColor.primary,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _dateFilter(),
+            loading
+                ? const Center(child: CircularProgressIndicator())
+                : _profitView(),
+          ],
+        ),
       ),
     );
   }
@@ -189,9 +249,12 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
           const SizedBox(width: 10),
           _dateBox("To", toDateCtrl),
           const SizedBox(width: 10),
-          ElevatedButton(
-            onPressed: fetchProfitLoss,
-            child: const Text("Search"),
+          defaultButton(
+            onTap: fetchProfitLoss,
+            text: "Search",
+            height: 40,
+            width: 150,
+            buttonColor: AppColor.blue,
           ),
         ],
       ),
@@ -200,20 +263,27 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
   Widget _dateBox(String label, TextEditingController ctrl) {
     return Expanded(
-      child: TextField(
-        controller: ctrl,
-        readOnly: true,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-      ),
+      child: CommonTextField(controller: ctrl, readOnly: true, hintText: label),
     );
   }
 
   Widget _profitView() {
-    final totalLeft = openingStock + netPurchase + grossProfit;
-    final totalRight = netSales + closingStock;
+    final totalLeft =
+        openingStock +
+        netPurchase +
+        totalExpense +
+        (netProfit > 0 ? netProfit : 0);
+
+    final totalRight =
+        netSales + closingStock + (netProfit < 0 ? netProfit.abs() : 0);
+    final groupedIncome = _groupIncomeBySupplier();
+    final groupedExpenses = _groupExpensesBySupplier();
+    final expenseEntries = groupedExpenses.entries.toList();
+    final incomeEntries = groupedIncome.entries.toList();
+
+    final maxLen = expenseEntries.length > incomeEntries.length
+        ? expenseEntries.length
+        : incomeEntries.length;
 
     return Container(
       margin: const EdgeInsets.all(12),
@@ -318,6 +388,39 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
             boldRight: true,
           ),
           const Divider(thickness: 1, height: 0),
+          for (int i = 0; i < maxLen; i++)
+            _plRow(
+              left: i < expenseEntries.length ? expenseEntries[i].key : "",
+              leftAmt: i < expenseEntries.length ? expenseEntries[i].value : 0,
+              right: i < incomeEntries.length ? incomeEntries[i].key : "",
+              rightAmt: i < incomeEntries.length ? incomeEntries[i].value : 0,
+            ),
+          _plRow(
+            left: "Total Expenses",
+            leftAmt: totalExpense,
+            right: "Total Income",
+            rightAmt: totalIncome,
+            boldLeft: true,
+            boldRight: true,
+          ),
+          const Divider(thickness: 1, height: 0),
+
+          if (netProfit > 0)
+            _plRow(
+              left: "Net Profit",
+              leftAmt: netProfit,
+              right: "",
+              rightAmt: 0,
+              boldLeft: true,
+            )
+          else
+            _plRow(
+              left: "",
+              leftAmt: 0,
+              right: "Net Loss",
+              rightAmt: netProfit.abs(),
+              boldRight: true,
+            ),
         ],
       ),
     );
@@ -354,7 +457,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
           ),
         ),
         SizedBox(width: 20),
-        Container(width: 1, height: 80, color: Colors.black26),
+        Container(width: 1, height: 55, color: Colors.black26),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(left: 20),
@@ -378,5 +481,27 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
         SizedBox(width: 20),
       ],
     );
+  }
+
+  Map<String, double> _groupExpensesBySupplier() {
+    final Map<String, double> map = {};
+
+    for (final e in expenseList) {
+      final key = e.supplierName.trim();
+      map[key] = (map[key] ?? 0) + e.amount;
+    }
+
+    return map;
+  }
+
+  Map<String, double> _groupIncomeBySupplier() {
+    final Map<String, double> map = {};
+
+    for (final e in incomeList) {
+      final key = e.supplierName.trim();
+      map[key] = (map[key] ?? 0) + e.amount;
+    }
+
+    return map;
   }
 }

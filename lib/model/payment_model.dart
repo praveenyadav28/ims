@@ -9,6 +9,7 @@ class PaymentModel {
   final int voucherNo;
   final String note;
   final String type;
+  final String other1;
 
   PaymentModel({
     required this.id,
@@ -21,6 +22,7 @@ class PaymentModel {
     required this.voucherNo,
     required this.note,
     required this.type,
+    required this.other1,
   });
 
   factory PaymentModel.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class PaymentModel {
       voucherNo: json['vouncher_no'],
       note: json['note'] ?? '',
       type: json['type'] ?? '',
+      other1: json['other1'] ?? '',
     );
   }
 }

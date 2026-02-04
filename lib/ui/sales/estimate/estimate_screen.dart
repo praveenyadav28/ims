@@ -61,7 +61,7 @@ class CreateEstimateView extends StatefulWidget {
 }
 
 class _CreateEstimateViewState extends State<CreateEstimateView> {
-  final prefixController = TextEditingController(text: 'EST');
+  final prefixController = TextEditingController(text: "");
   final estimateNoController = TextEditingController();
   final cusNameController = TextEditingController();
   final cashMobileController = TextEditingController();

@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/prefence.dart';
-import 'package:ims/ui/sales/models/sale_invoice_data.dart';
 
-class GstSaleReportScreen extends StatefulWidget {
-  const GstSaleReportScreen({super.key});
+class GstPurchaseReportScreen extends StatefulWidget {
+  const GstPurchaseReportScreen({super.key});
 
   @override
-  State<GstSaleReportScreen> createState() => _GstSaleReportScreenState();
+  State<GstPurchaseReportScreen> createState() =>
+      _GstPurchaseReportScreenState();
 }
 
-class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
-  List<SaleInvoiceData> invoiceList = [];
-  List<SaleInvoiceData> filteredList = [];
+class _GstPurchaseReportScreenState extends State<GstPurchaseReportScreen> {
+  List<PurchaseInvoiceData> invoiceList = [];
+  List<PurchaseInvoiceData> filteredList = [];
 
   DateTime? fromDate;
   DateTime? toDate;
@@ -54,11 +55,11 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
 
   Future<void> loadData() async {
     final res = await ApiService.fetchData(
-      "get/invoice",
+      "get/purchaseinvoice",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    final data = SaleInvoiceListResponse.fromJson(res).data;
+    final data = PurchaseInvoiceListResponse.fromJson(res).data;
 
     // Prepare filter masters
     for (final inv in data) {
@@ -79,7 +80,7 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
 
   void applyFilter() {
     filteredList = invoiceList.where((inv) {
-      final date = inv.saleInvoiceDate;
+      final date = inv.purchaseInvoiceDate;
 
       final dateMatch =
           (fromDate == null || !date.isBefore(fromDate!)) &&
@@ -89,7 +90,7 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
       final searchMatch =
           search.isEmpty ||
           inv.no.toString().contains(search) ||
-          inv.customerName.toLowerCase().contains(search.toLowerCase());
+          inv.supplierName.toLowerCase().contains(search.toLowerCase());
 
       // 🔥 Item-level filter
       final rowMatch = inv.itemDetails.any((item) {
@@ -113,7 +114,7 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("GST Sale Report"),
+        title: const Text("GST Purchase Report"),
         backgroundColor: AppColor.primary,
       ),
       body: Column(
@@ -289,7 +290,7 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
 
   // ================= ROW BUILDER =================
 
-  List<DataRow> _buildRows(List<SaleInvoiceData> invoices) {
+  List<DataRow> _buildRows(List<PurchaseInvoiceData> invoices) {
     final List<DataRow> rows = [];
 
     final companyState = Preference.getString(
@@ -328,9 +329,9 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
             cells: [
               DataCell(Text(inv.no.toString())),
               DataCell(
-                Text(DateFormat('dd-MM-yyyy').format(inv.saleInvoiceDate)),
+                Text(DateFormat('dd-MM-yyyy').format(inv.purchaseInvoiceDate)),
               ),
-              DataCell(Text(inv.customerName)),
+              DataCell(Text(inv.supplierName)),
               DataCell(Text(inv.placeOfSupply)),
               DataCell(Text(item.hsn)),
               DataCell(Text(item.name)),

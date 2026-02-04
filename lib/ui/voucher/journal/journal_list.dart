@@ -23,10 +23,10 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
   @override
   void initState() {
     super.initState();
-    fetchPayments();
+    fetchJournal();
   }
 
-  Future<void> fetchPayments() async {
+  Future<void> fetchJournal() async {
     setState(() => loading = true);
 
     final res = await ApiService.fetchData(
@@ -44,7 +44,7 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
       'journal/$id',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    fetchPayments();
+    fetchJournal();
   }
 
   @override
@@ -91,7 +91,7 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
                   onTap: () async {
                     var data = await pushTo(JournalEntry());
                     if (data != null) {
-                      fetchPayments();
+                      fetchJournal();
                     }
                   },
                   buttonColor: AppColor.blue,
@@ -153,8 +153,8 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
         children: const [
           Expanded(flex: 2, child: Text("Date")),
           Expanded(flex: 3, child: Text("Journal Number")),
-          Expanded(flex: 3, child: Text("Account Name")),
-          Expanded(flex: 3, child: Text("Payment Mode")),
+          Expanded(flex: 3, child: Text("Credit Ledger")),
+          Expanded(flex: 3, child: Text("Debit Ledger")),
           Expanded(flex: 2, child: Text("Amount")),
           Expanded(flex: 3, child: Text("Narration")),
           SizedBox(width: 70),
@@ -174,8 +174,8 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
             child: Text(DateFormat('yyyy-MM-dd').format(p.date)),
           ),
           Expanded(flex: 3, child: Text("${p.prefix} ${p.voucherNo}")),
-          Expanded(flex: 3, child: Text(p.supplierName)),
-          Expanded(flex: 3, child: Text(p.ledgerName)),
+          Expanded(flex: 3, child: Text(p.toAccount)),
+          Expanded(flex: 3, child: Text(p.fromAccount)),
           Expanded(
             flex: 2,
             child: Text(
@@ -191,8 +191,11 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () {
-                  // TODO: OPEN EDIT
+                onPressed: () async {
+                  var data = await pushTo(JournalEntry(contraModel: p));
+                  if (data != null) {
+                    fetchJournal();
+                  }
                 },
               ),
               IconButton(

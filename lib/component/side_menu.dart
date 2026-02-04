@@ -230,18 +230,18 @@ class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
               ],
             ),
 
-            // expandableMenu(
-            //   menuKey: "vouchers",
-            //   icon: "assets/icons/vouchers.svg",
-            //   title: "Vouchers",
-            //   children: [
-            //     {"Payment": MenuScreen.payment},
-            //     {"Reciept": MenuScreen.reciept},
-            //     {"Expense": MenuScreen.expanse},
-            //     {"Contra": MenuScreen.contra},
-            //     {"Journal": MenuScreen.journal},
-            //   ],
-            // ),
+            expandableMenu(
+              menuKey: "vouchers",
+              icon: "assets/icons/vouchers.svg",
+              title: "Vouchers",
+              children: [
+                {"Payment": MenuScreen.payment},
+                {"Reciept": MenuScreen.reciept},
+                {"Expense": MenuScreen.expanse},
+                {"Contra": MenuScreen.contra},
+                {"Journal": MenuScreen.journal},
+              ],
+            ),
             expandableMenu(
               menuKey: "employee",
               icon: "assets/icons/employee.png",

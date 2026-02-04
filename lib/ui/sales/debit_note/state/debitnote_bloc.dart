@@ -132,6 +132,7 @@ class DebitNoteState {
   final List<HsnModel> hsnMaster;
   final String prefix;
   final String debitNoteNo;
+  final String? transPlaceOfSupply; // ✅ NEW
   final String transNo; // user input number as string
   final String? transId; // loaded transaction id (from backend) if any
   final DateTime? debitNoteDate;
@@ -161,6 +162,7 @@ class DebitNoteState {
     this.cashSaleDefault = false,
     this.prefix = '',
     this.debitNoteNo = '',
+    this.transPlaceOfSupply,
     this.hsnMaster = const [],
     this.debitNoteDate,
     this.validityDate,
@@ -188,6 +190,7 @@ class DebitNoteState {
     bool? cashSaleDefault,
     String? prefix,
     String? debitNoteNo,
+    String? transPlaceOfSupply, // ✅ NEW
     DateTime? debitNoteDate,
     List<HsnModel>? hsnMaster,
     DateTime? validityDate,
@@ -214,6 +217,7 @@ class DebitNoteState {
       cashSaleDefault: cashSaleDefault ?? this.cashSaleDefault,
       prefix: prefix ?? this.prefix,
       debitNoteNo: debitNoteNo ?? this.debitNoteNo,
+      transPlaceOfSupply: transPlaceOfSupply ?? this.transPlaceOfSupply,
       debitNoteDate: debitNoteDate ?? this.debitNoteDate,
       hsnMaster: hsnMaster ?? this.hsnMaster,
       validityDate: validityDate ?? this.validityDate,
@@ -588,10 +592,11 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
       );
 
       // map estimate -> DebitNote state (without touching prefix, DebitNoteNo, DebitNoteDate)
-      final newState = _prefillDebitNoteFromTrans(
-        estimate,
-        state,
-      ).copyWith(transId: estimate.id, transNo: state.transNo);
+      final newState = _prefillDebitNoteFromTrans(estimate, state).copyWith(
+        transId: estimate.id,
+        transNo: state.transNo,
+        transPlaceOfSupply: estimate.placeOFSupply,
+      );
 
       emit(newState);
       showCustomSnackbarSuccess(

@@ -60,7 +60,7 @@ class CreateCreditNoteView extends StatefulWidget {
 }
 
 class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
-  final prefixController = TextEditingController(text: 'PO');
+  final prefixController = TextEditingController(text: "");
   final creditNoteNoController = TextEditingController();
   final cusNameController = TextEditingController();
   final cashMobileController = TextEditingController();
@@ -221,7 +221,11 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
             cashShippingController.text = state.selectedLedger!.shippingAddress;
           }
         }
-
+        if (state.transPlaceOfSupply != null &&
+            state.transPlaceOfSupply!.isNotEmpty) {
+          stateController.text = state.transPlaceOfSupply!;
+          return; // 🚨 customer logic SKIP
+        }
         creditNoteNoController.text = state.creditNoteNo.toString();
       },
       child: Scaffold(

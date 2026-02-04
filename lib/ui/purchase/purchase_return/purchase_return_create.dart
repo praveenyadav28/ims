@@ -63,7 +63,7 @@ class CreatePurchaseReturnView extends StatefulWidget {
 }
 
 class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
-  final prefixController = TextEditingController(text: 'PO');
+  final prefixController = TextEditingController(text: "");
   final purchaseReturnNoController = TextEditingController();
   final cusNameController = TextEditingController();
   final cashMobileController = TextEditingController();
@@ -230,7 +230,11 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                 state.selectedCustomer!.shippingAddress;
           }
         }
-
+        if (state.transPlaceOfSupply != null &&
+            state.transPlaceOfSupply!.isNotEmpty) {
+          stateController.text = state.transPlaceOfSupply!;
+          return; // 🚨 customer logic SKIP
+        }
         purchaseReturnNoController.text = state.purchaseReturnNo.toString();
       },
       child: Scaffold(

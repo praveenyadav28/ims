@@ -7,6 +7,7 @@ class ExpanseModel {
   final String prefix;
   final int voucherNo;
   final String note;
+  final String docu;
 
   ExpanseModel({
     required this.id,
@@ -17,6 +18,7 @@ class ExpanseModel {
     required this.prefix,
     required this.voucherNo,
     required this.note,
+    required this.docu,
   });
 
   factory ExpanseModel.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class ExpanseModel {
       prefix: json['prefix'],
       voucherNo: json['vouncher_no'],
       note: json['note'] ?? '',
+      docu: json['docu'] ?? '',
     );
   }
 }

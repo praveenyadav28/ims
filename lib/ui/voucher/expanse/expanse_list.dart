@@ -23,10 +23,10 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
   @override
   void initState() {
     super.initState();
-    fetchPayments();
+    fetchExpanse();
   }
 
-  Future<void> fetchPayments() async {
+  Future<void> fetchExpanse() async {
     setState(() => loading = true);
 
     final res = await ApiService.fetchData(
@@ -44,7 +44,7 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
       'expense/$id',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    fetchPayments();
+    fetchExpanse();
   }
 
   @override
@@ -91,7 +91,7 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
                   onTap: () async {
                     var data = await pushTo(ExpenseEntry());
                     if (data != null) {
-                      fetchPayments();
+                      fetchExpanse();
                     }
                   },
                   buttonColor: AppColor.blue,
@@ -187,8 +187,11 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () {
-                  // TODO: OPEN EDIT
+                onPressed: () async {
+                  var data = await pushTo(ExpenseEntry(expenseModel: p));
+                  if (data != null) {
+                    fetchExpanse();
+                  }
                 },
               ),
               IconButton(

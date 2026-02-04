@@ -212,7 +212,11 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                 state.selectedCustomer!.shippingAddress;
           }
         }
-
+        if (state.transPlaceOfSupply != null &&
+            state.transPlaceOfSupply!.isNotEmpty) {
+          stateController.text = state.transPlaceOfSupply!;
+          return; // 🚨 customer logic SKIP
+        }
         debitNoteNoController.text = state.debitNoteNo.toString();
       },
       child: Scaffold(

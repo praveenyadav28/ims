@@ -32,6 +32,7 @@ class _CreateLedgerState extends State<CreateLedger> {
     'Sundry Debtor',
     'Sundry Creditor',
     'Expense',
+    'Income',
     'Fixed Asset',
     'Capital',
     'Loans (Liability)',

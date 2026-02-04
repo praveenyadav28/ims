@@ -153,7 +153,7 @@ class PurchaseOrderState {
     this.customers = const [],
     this.selectedCustomer,
     this.cashSaleDefault = false,
-    this.prefix = 'PO',
+    this.prefix = "",
     this.purchaseOrderNo = '',
     this.hsnMaster = const [],
     this.purchaseOrderDate,

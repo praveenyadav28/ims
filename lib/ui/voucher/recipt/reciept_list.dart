@@ -191,8 +191,11 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () {
-                  // TODO: OPEN EDIT
+                onPressed: () async {
+                  var data = await pushTo(RecieptEntry(recieptModel: p));
+                  if (data != null) {
+                    fetchReciepts();
+                  }
                 },
               ),
               IconButton(

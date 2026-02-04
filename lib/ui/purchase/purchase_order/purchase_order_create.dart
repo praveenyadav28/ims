@@ -63,7 +63,7 @@ class CreatePurchaseOrderView extends StatefulWidget {
 }
 
 class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
-  final prefixController = TextEditingController(text: 'PO');
+  final prefixController = TextEditingController(text: "");
   final purchaseOrderNoController = TextEditingController();
   final cusNameController = TextEditingController();
   final cashMobileController = TextEditingController();

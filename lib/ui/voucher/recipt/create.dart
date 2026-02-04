@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ims/model/ledger_model.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:ims/model/payment_model.dart';
+import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -10,21 +14,23 @@ import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:searchfield/searchfield.dart';
 
+// ignore: must_be_immutable
 class RecieptEntry extends StatefulWidget {
-  const RecieptEntry({super.key});
-
+  RecieptEntry({super.key, this.recieptModel});
+  PaymentModel? recieptModel;
   @override
   State<RecieptEntry> createState() => _RecieptEntryState();
 }
 
 class _RecieptEntryState extends State<RecieptEntry> {
-  List<LedgerListModel> ledgerList = [];
-  LedgerListModel? selectedLedger;
-  List<LedgerListModel> customerList = [];
-  LedgerListModel? selectedCustomer;
+  List<LedgerModelDrop> ledgerList = [];
+  LedgerModelDrop? selectedLedger;
+  List<LedgerModelDrop> customerList = [];
+  LedgerModelDrop? selectedCustomer;
   List<String> invoiceList = [];
 
   TextEditingController partyController = TextEditingController();
+  TextEditingController ledgerController = TextEditingController();
   TextEditingController invoiceNoController = TextEditingController();
   TextEditingController amountController = TextEditingController();
   TextEditingController dateController = TextEditingController(
@@ -36,14 +42,60 @@ class _RecieptEntryState extends State<RecieptEntry> {
   TextEditingController noteController = TextEditingController();
 
   DateTime? selectedDate;
+  File? recieptImage;
+  String? existingDocuUrl;
+  final ImagePicker _picker = ImagePicker();
+  Future<void> pickrecieptImage() async {
+    final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (picked == null) return;
+
+    setState(() {
+      recieptImage = File(picked.path);
+    });
+  }
 
   String selectedType = "Other";
 
   @override
   void initState() {
     super.initState();
-    getAutoVoucherApi();
-    fetchLedgerData();
+    fetchLedgerData().then((onValue) {
+      if (widget.recieptModel != null) {
+        fillDataForEdit();
+      } else {
+        getAutoVoucherApi();
+      }
+    });
+  }
+
+  void fillDataForEdit() {
+    final d = widget.recieptModel!;
+
+    partyController.text = d.supplierName;
+    selectedType = d.type.toString();
+    amountController.text = d.amount.toString();
+    invoiceNoController.text = d.invoiceNo.toString();
+    dateController.text =
+        "${d.date.year}-${d.date.month.toString().padLeft(2, '0')}-${d.date.day.toString().padLeft(2, '0')}";
+
+    prefixController.text = d.prefix;
+    voucherNoController.text = d.voucherNo.toString();
+    noteController.text = d.note;
+
+    // match selected ledger
+    selectedLedger = ledgerList.firstWhere(
+      (e) => e.name == d.ledgerName,
+      orElse: () => ledgerList.first,
+    );
+
+    // match supplier
+    selectedCustomer = customerList.firstWhere(
+      (e) => e.name == d.supplierName,
+      orElse: () => customerList.first,
+    );
+
+    setState(() {});
   }
 
   @override
@@ -128,54 +180,17 @@ class _RecieptEntryState extends State<RecieptEntry> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    "Party Name",
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColor.textColor,
-                                    ),
-                                  ),
+                                  _label("Party Name"),
                                   const SizedBox(height: 8),
-                                  CommonSearchableDropdownField<
-                                    LedgerListModel
-                                  >(
+                                  _ledgerDropdown(
                                     controller: partyController,
-                                    hintText: "Search party by name or number",
-                                    suggestions: customerList.map((c) {
-                                      return SearchFieldListItem<
-                                        LedgerListModel
-                                      >(
-                                        c.ledgerName ?? "",
-                                        item: c,
-                                        child: ListTile(
-                                          dense: true,
-                                          title: Text(
-                                            c.ledgerName ?? "",
-                                            style: GoogleFonts.inter(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          subtitle: Text(
-                                            c.ledgerGroup.toString(),
-                                            style: GoogleFonts.inter(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onSuggestionTap: (s) {
-                                      if (s.item == null) return;
-
-                                      FocusScope.of(context).unfocus();
-                                      selectedCustomer = s.item;
-                                      partyController.text =
-                                          s.item?.ledgerName ?? "";
-                                      loadInvoiceList(); // ✅ PERFECT
+                                    hint: "Select Party",
+                                    list: customerList,
+                                    onSelect: (v) {
+                                      selectedCustomer = v;
+                                      partyController.text = v.name;
                                     },
+                                    selectedLedger: selectedCustomer,
                                   ),
                                 ],
                               ),
@@ -186,14 +201,7 @@ class _RecieptEntryState extends State<RecieptEntry> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    "Type",
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColor.textColor,
-                                    ),
-                                  ),
+                                  _label("Type"),
                                   const SizedBox(height: 8),
                                   CommonDropdownField<String>(
                                     hintText: "Reciept For",
@@ -229,37 +237,18 @@ class _RecieptEntryState extends State<RecieptEntry> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Recieve Mode",
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppColor.textColor,
-                              ),
-                            ),
+                            _label("Recieve Mode"),
                             const SizedBox(height: 8),
-                            CommonDropdownField<LedgerListModel>(
-                              hintText: "Select Recieve Mode",
-                              value: selectedLedger,
-                              items: ledgerList.map((ledger) {
-                                return DropdownMenuItem<LedgerListModel>(
-                                  value: ledger,
-                                  child: Text(
-                                    ledger.ledgerName ?? "",
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColor.textColor,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
+                            _ledgerDropdown(
+                              controller: ledgerController,
 
-                              onChanged: (LedgerListModel? v) {
-                                setState(() {
-                                  selectedLedger = v;
-                                });
+                              hint: "Select Recieve Mode",
+                              list: ledgerList,
+                              onSelect: (v) {
+                                selectedLedger = v;
+                                ledgerController.text = v.name;
                               },
+                              selectedLedger: selectedLedger,
                             ),
                           ],
                         ),
@@ -366,11 +355,81 @@ class _RecieptEntryState extends State<RecieptEntry> {
                           ],
                         ),
                         SizedBox(height: Sizes.height * .037),
-                        TitleTextFeild(
-                          controller: noteController,
-                          titleText: "Notes",
-                          maxLines: 5,
-                          hintText: "Enter Notes",
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: TitleTextFeild(
+                                controller: noteController,
+                                titleText: "Notes",
+                                maxLines: 5,
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: pickrecieptImage,
+                              child: SizedBox(
+                                height: 105,
+                                width: 150,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: AppColor.borderColor,
+                                    ),
+                                  ),
+                                  child: recieptImage != null
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          child: Image.file(
+                                            recieptImage!,
+                                            height: 105,
+                                            width: 150,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                      : existingDocuUrl != null &&
+                                            existingDocuUrl!.isNotEmpty
+                                      ? Image.network(
+                                          existingDocuUrl!,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Center(
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.cloud_upload_outlined,
+                                                  size: 32,
+                                                  color: AppColor.primary,
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  "Upload Image",
+                                                  style: GoogleFonts.inter(
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  "PNG / JPG (max 5MB)",
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -390,13 +449,13 @@ class _RecieptEntryState extends State<RecieptEntry> {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    final List data = response['data'] ?? [];
-
-    final allLedgers = data.map((e) => LedgerListModel.fromJson(e)).toList();
+    final data = (response['data'] as List)
+        .map((e) => LedgerModelDrop.fromMap(e))
+        .toList();
 
     setState(() {
       /// Bank + Cash
-      ledgerList = allLedgers
+      ledgerList = data
           .where(
             (e) =>
                 e.ledgerGroup == 'Bank Account' ||
@@ -405,7 +464,7 @@ class _RecieptEntryState extends State<RecieptEntry> {
           .toList();
 
       /// Customers (Exclude Bank & Cash)
-      customerList = allLedgers
+      customerList = data
           .where(
             (e) =>
                 e.ledgerGroup != 'Bank Account' &&
@@ -438,9 +497,9 @@ class _RecieptEntryState extends State<RecieptEntry> {
       "licence_no": Preference.getint(PrefKeys.licenseNo),
       "branch_id": Preference.getString(PrefKeys.locationId),
       "ledger_id": selectedLedger?.id ?? "",
-      "ledger_name": selectedLedger?.ledgerName ?? "",
+      "ledger_name": selectedLedger?.name ?? "",
       "customer_id": selectedCustomer?.id ?? "",
-      "customer_name": selectedCustomer?.ledgerName ?? "",
+      "customer_name": selectedCustomer?.name ?? "",
       "amount": double.parse(amountController.text),
       if (invoiceNoController.text.isNotEmpty)
         "invoice_no": invoiceNoController.text,
@@ -449,13 +508,19 @@ class _RecieptEntryState extends State<RecieptEntry> {
       "vouncher_no": voucherNoController.text,
       "note": noteController.text,
       "type": selectedType,
+      'other1': selectedCustomer?.ledgerGroup ?? "",
     };
+    final isEdit = widget.recieptModel != null;
 
-    var response = await ApiService.postData(
-      "reciept",
-      body,
+    final response = await ApiService.uploadMultipart(
+      endpoint: isEdit ? "reciept/${widget.recieptModel!.id}" : "reciept",
+      fields: body,
+      updateStatus: isEdit, // 🔥 PUT if edit, POST if new
+      file: recieptImage != null ? XFile(recieptImage!.path) : null,
+      fileKey: "docu",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
+
     if (response['status'] == true) {
       Navigator.pop(context, "data");
       showCustomSnackbarSuccess(context, response['message']);
@@ -520,5 +585,94 @@ class _RecieptEntryState extends State<RecieptEntry> {
     }
 
     setState(() {});
+  }
+
+  /// ================= SEARCHABLE DROPDOWN =================
+  Widget _ledgerDropdown({
+    required TextEditingController controller,
+    required String hint,
+    required List<LedgerModelDrop> list,
+    required LedgerModelDrop? selectedLedger,
+    required Function(LedgerModelDrop) onSelect,
+  }) {
+    return CommonSearchableDropdownField<LedgerModelDrop>(
+      controller: controller,
+      hintText: hint,
+
+      // 🔥 BALANCE IN SUFFIX
+      suffixIcon: SizedBox(
+        width: 150,
+        child: Center(child: balanceSuffix(selectedLedger)),
+      ),
+
+      suggestions: list.map((e) {
+        return SearchFieldListItem<LedgerModelDrop>(
+          e.name,
+          item: e,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: ledgerTile(e),
+          ),
+        );
+      }).toList(),
+
+      onSuggestionTap: (item) {
+        setState(() {
+          onSelect(item.item!);
+        });
+      },
+    );
+  }
+
+  Widget balanceSuffix(LedgerModelDrop? ledger) {
+    if (ledger == null) return const SizedBox.shrink();
+
+    final bal = double.tryParse(ledger.closingBalance ?? "0") ?? 0;
+    final isCr = bal < 0;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Text(
+        "₹ ${bal.abs()} ${isCr ? "Cr" : "Dr"}",
+        style: GoogleFonts.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: isCr ? Colors.red : Colors.green,
+        ),
+      ),
+    );
+  }
+
+  /// ================= LEDGER TILE =================
+  Widget ledgerTile(LedgerModelDrop c) {
+    final bal = double.tryParse(c.closingBalance ?? "0") ?? 0;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          c.name,
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+        Text(
+          "₹ ${bal.abs()} ${bal < 0 ? "Cr" : "Dr"}",
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: bal < 0 ? Colors.red : Colors.green,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _label(String text) {
+    return Text(
+      text,
+      style: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: AppColor.textColor,
+      ),
+    );
   }
 }

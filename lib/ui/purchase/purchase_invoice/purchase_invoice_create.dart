@@ -67,7 +67,7 @@ class CreatePurchaseInvoiceView extends StatefulWidget {
 }
 
 class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
-  final prefixController = TextEditingController(text: 'PO');
+  final prefixController = TextEditingController(text: "");
   final purchaseInvoiceNoController = TextEditingController();
   final cusNameController = TextEditingController();
   final cashMobileController = TextEditingController();
@@ -251,7 +251,11 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                 state.selectedCustomer!.shippingAddress;
           }
         }
-
+        if (state.transPlaceOfSupply != null &&
+            state.transPlaceOfSupply!.isNotEmpty) {
+          stateController.text = state.transPlaceOfSupply!;
+          return; // 🚨 customer logic SKIP
+        }
         purchaseInvoiceNoController.text = state.purchaseInvoiceNo.toString();
       },
       child: Scaffold(
@@ -369,7 +373,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                         cashMobileController.text = customer.mobile;
                         cashBillingController.text = customer.billingAddress;
                         cashShippingController.text = customer.shippingAddress;
-                        stateController.text = customer.state??"";
+                        stateController.text = customer.state ?? "";
                       },
 
                       onCreateCustomer: () => _showCreateCustomerDialog(

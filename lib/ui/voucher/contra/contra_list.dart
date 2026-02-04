@@ -153,8 +153,8 @@ class _ContraListTableScreenState extends State<ContraListTableScreen> {
         children: const [
           Expanded(flex: 2, child: Text("Date")),
           Expanded(flex: 3, child: Text("Contra Number")),
-          Expanded(flex: 3, child: Text("Account Name")),
-          Expanded(flex: 3, child: Text("Payment Mode")),
+          Expanded(flex: 3, child: Text("From Account")),
+          Expanded(flex: 3, child: Text("To Account")),
           Expanded(flex: 2, child: Text("Amount")),
           Expanded(flex: 3, child: Text("Narration")),
           SizedBox(width: 70),
@@ -174,8 +174,8 @@ class _ContraListTableScreenState extends State<ContraListTableScreen> {
             child: Text(DateFormat('yyyy-MM-dd').format(p.date)),
           ),
           Expanded(flex: 3, child: Text("${p.prefix} ${p.voucherNo}")),
-          Expanded(flex: 3, child: Text(p.supplierName)),
-          Expanded(flex: 3, child: Text(p.ledgerName)),
+          Expanded(flex: 3, child: Text(p.fromAccount)),
+          Expanded(flex: 3, child: Text(p.toAccount)),
           Expanded(
             flex: 2,
             child: Text(
@@ -191,8 +191,11 @@ class _ContraListTableScreenState extends State<ContraListTableScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () {
-                  // TODO: OPEN EDIT
+                onPressed: () async {
+                  var data = await pushTo(ContraEntry(contraModel: p));
+                  if (data != null) {
+                    fetchPayments();
+                  }
                 },
               ),
               IconButton(

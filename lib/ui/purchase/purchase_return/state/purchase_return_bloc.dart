@@ -133,6 +133,7 @@ class PurchaseReturnState {
   final List<HsnModel> hsnMaster;
   final String prefix;
   final String purchaseReturnNo;
+  final String? transPlaceOfSupply; // ✅ NEW
   final String transNo; // user input number as string
   final String? transId; // loaded transaction id (from backend) if any
   final DateTime? purchaseReturnDate;
@@ -159,8 +160,9 @@ class PurchaseReturnState {
     this.customers = const [],
     this.selectedCustomer,
     this.cashSaleDefault = false,
-    this.prefix = 'PO',
+    this.prefix = "",
     this.purchaseReturnNo = '',
+    this.transPlaceOfSupply,
     this.hsnMaster = const [],
     this.purchaseReturnDate,
     this.catalogue = const [],
@@ -187,6 +189,7 @@ class PurchaseReturnState {
     bool? cashSaleDefault,
     String? prefix,
     String? purchaseReturnNo,
+    String? transPlaceOfSupply,
     DateTime? purchaseReturnDate,
     List<HsnModel>? hsnMaster,
     List<ItemServiceModel>? catalogue,
@@ -212,6 +215,7 @@ class PurchaseReturnState {
       cashSaleDefault: cashSaleDefault ?? this.cashSaleDefault,
       prefix: prefix ?? this.prefix,
       purchaseReturnNo: purchaseReturnNo ?? this.purchaseReturnNo,
+      transPlaceOfSupply: transPlaceOfSupply ?? this.transPlaceOfSupply,
       purchaseReturnDate: purchaseReturnDate ?? this.purchaseReturnDate,
       hsnMaster: hsnMaster ?? this.hsnMaster,
       catalogue: catalogue ?? this.catalogue,
@@ -701,10 +705,12 @@ class PurchaseReturnBloc
           );
 
       // map estimate -> PurchaseReturn state (without touching prefix, PurchaseReturnNo, PurchaseReturnDate)
-      final newState = _prefillPurchaseReturnFromTrans(
-        estimate,
-        state,
-      ).copyWith(transId: estimate.id, transNo: state.transNo);
+      final newState = _prefillPurchaseReturnFromTrans(estimate, state)
+          .copyWith(
+            transId: estimate.id,
+            transNo: state.transNo,
+            transPlaceOfSupply: estimate.placeOfSupply,
+          );
 
       emit(newState);
       add(PurchaseReturnCalculate());

@@ -148,6 +148,7 @@ class PurchaseInvoiceState {
   final bool cashSaleDefault;
   final List<HsnModel> hsnMaster;
   final String prefix;
+  final String? transPlaceOfSupply; // ✅ NEW
   final String transNo; // user input number as string
   final String? transId; // loaded transaction id (from backend) if any
   final String purchaseInvoiceNo;
@@ -175,8 +176,9 @@ class PurchaseInvoiceState {
     this.customers = const [],
     this.selectedCustomer,
     this.cashSaleDefault = false,
-    this.prefix = 'PO',
+    this.prefix = "",
     this.purchaseInvoiceNo = '',
+    this.transPlaceOfSupply,
     this.hsnMaster = const [],
     this.purchaseInvoiceDate,
     this.catalogue = const [],
@@ -203,6 +205,7 @@ class PurchaseInvoiceState {
     bool? cashSaleDefault,
     String? prefix,
     String? purchaseInvoiceNo,
+    String? transPlaceOfSupply,
     DateTime? purchaseInvoiceDate,
     List<HsnModel>? hsnMaster,
     List<ItemServiceModel>? catalogue,
@@ -228,6 +231,7 @@ class PurchaseInvoiceState {
       cashSaleDefault: cashSaleDefault ?? this.cashSaleDefault,
       prefix: prefix ?? this.prefix,
       purchaseInvoiceNo: purchaseInvoiceNo ?? this.purchaseInvoiceNo,
+      transPlaceOfSupply: transPlaceOfSupply ?? this.transPlaceOfSupply,
       purchaseInvoiceDate: purchaseInvoiceDate ?? this.purchaseInvoiceDate,
       hsnMaster: hsnMaster ?? this.hsnMaster,
       catalogue: catalogue ?? this.catalogue,
@@ -717,10 +721,12 @@ class PurchaseInvoiceBloc
           );
 
       // map estimate -> PurchaseInvoice state (without touching prefix, PurchaseInvoiceNo, PurchaseInvoiceDate)
-      final newState = _prefillPurchaseInvoiceFromTrans(
-        estimate,
-        state,
-      ).copyWith(transId: estimate.id, transNo: state.transNo);
+      final newState = _prefillPurchaseInvoiceFromTrans(estimate, state)
+          .copyWith(
+            transId: estimate.id,
+            transNo: state.transNo,
+            transPlaceOfSupply: estimate.placeOfSupply,
+          );
 
       emit(newState);
       add(PurchaseInvoiceCalculate());

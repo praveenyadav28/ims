@@ -116,6 +116,8 @@ class CreditNoteState {
   final List<HsnModel> hsnMaster;
   final String prefix;
   final String creditNoteNo;
+  final String? transPlaceOfSupply; // ✅ NEW
+
   final DateTime? creditNoteDate;
   final String transNo; // user input number as string
   final String? transId; // loaded transaction id (from backend) if any
@@ -141,8 +143,9 @@ class CreditNoteState {
     this.ledgers = const [],
     this.selectedLedger,
     this.cashSaleDefault = false,
-    this.prefix = 'PO',
+    this.prefix = "",
     this.creditNoteNo = '',
+    this.transPlaceOfSupply,
     this.hsnMaster = const [],
     this.creditNoteDate,
     this.rows = const [],
@@ -168,6 +171,7 @@ class CreditNoteState {
     bool? cashSaleDefault,
     String? prefix,
     String? creditNoteNo,
+    String? transPlaceOfSupply,
     DateTime? creditNoteDate,
     List<HsnModel>? hsnMaster,
     List<NoteModelItem>? rows,
@@ -192,6 +196,7 @@ class CreditNoteState {
       cashSaleDefault: cashSaleDefault ?? this.cashSaleDefault,
       prefix: prefix ?? this.prefix,
       creditNoteNo: creditNoteNo ?? this.creditNoteNo,
+      transPlaceOfSupply: transPlaceOfSupply ?? this.transPlaceOfSupply,
       creditNoteDate: creditNoteDate ?? this.creditNoteDate,
       hsnMaster: hsnMaster ?? this.hsnMaster,
       rows: rows ?? this.rows,
@@ -570,10 +575,11 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
           );
 
       // map estimate -> CreditNote state (without touching prefix, CreditNoteNo, CreditNoteDate)
-      final newState = _prefillCreditNoteFromTrans(
-        estimate,
-        state,
-      ).copyWith(transId: estimate.id, transNo: state.transNo);
+      final newState = _prefillCreditNoteFromTrans(estimate, state).copyWith(
+        transId: estimate.id,
+        transNo: state.transNo,
+        transPlaceOfSupply: estimate.placeOfSupply,
+      );
 
       emit(newState);
       add(CreditNoteCalculate());
@@ -789,7 +795,7 @@ CreditNoteState _prefillCreditNote(CreditNoteData data, CreditNoteState s) {
       mobile: data.mobile,
       billingAddress: data.address0,
       shippingAddress: data.address1,
-      state: data.placeOfSupply
+      state: data.placeOfSupply,
     ),
   );
 
