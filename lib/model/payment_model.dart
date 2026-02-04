@@ -8,6 +8,7 @@ class PaymentModel {
   final String prefix;
   final int voucherNo;
   final String note;
+  final String docu;
   final String type;
   final String other1;
 
@@ -21,6 +22,7 @@ class PaymentModel {
     required this.prefix,
     required this.voucherNo,
     required this.note,
+    required this.docu,
     required this.type,
     required this.other1,
   });
@@ -37,6 +39,7 @@ class PaymentModel {
       voucherNo: json['vouncher_no'],
       note: json['note'] ?? '',
       type: json['type'] ?? '',
+      docu: json['docu'] ?? "",
       other1: json['other1'] ?? '',
     );
   }

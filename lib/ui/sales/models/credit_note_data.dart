@@ -42,6 +42,8 @@ class CreditNoteData {
 
   final String prefix;
   final int no;
+  final String transId;
+  final int transNo;
   final DateTime creditNoteDate;
 
   final bool caseSale;
@@ -76,6 +78,8 @@ class CreditNoteData {
     required this.mobile,
     required this.prefix,
     required this.no,
+    required this.transId,
+    required this.transNo,
     required this.creditNoteDate,
     required this.caseSale,
     required this.notes,
@@ -106,6 +110,8 @@ class CreditNoteData {
 
     prefix: j["prefix"],
     no: j["no"],
+    transId: j["purchaseinvoice_id"],
+    transNo: j["purchaseinvoice_no"],
     creditNoteDate: DateTime.parse(j["purchasenote_date"]),
 
     caseSale: j["case_sale"] ?? false,

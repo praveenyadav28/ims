@@ -7,6 +7,7 @@ import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';
+import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 
 class ExpanseListTableScreen extends StatefulWidget {
@@ -19,11 +20,86 @@ class ExpanseListTableScreen extends StatefulWidget {
 class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
   bool loading = false;
   List<ExpanseModel> list = [];
+  List<ExpanseModel> allList = [];
+
+  final TextEditingController fromDateCtrl = TextEditingController();
+  final TextEditingController toDateCtrl = TextEditingController();
+  final TextEditingController ledgerCtrl = TextEditingController();
+  final TextEditingController voucherCtrl = TextEditingController();
+
+  DateTime? fromDate;
+  DateTime? toDate;
+  Future<void> _pickDate(TextEditingController ctrl, bool isFrom) async {
+    final d = await showDatePicker(
+      context: context,
+      firstDate: DateTime(1990),
+      lastDate: DateTime(2100),
+      initialDate: DateTime.now(),
+    );
+
+    if (d != null) {
+      ctrl.text = DateFormat('yyyy-MM-dd').format(d);
+      if (isFrom) {
+        fromDate = d;
+      } else {
+        toDate = d;
+      }
+      applyFilter();
+    }
+  }
+
+  void applyFilter() {
+    List<ExpanseModel> temp = allList;
+
+    if (fromDate != null) {
+      temp = temp.where((e) => !e.date.isBefore(fromDate!)).toList();
+    }
+
+    if (toDate != null) {
+      temp = temp.where((e) => !e.date.isAfter(toDate!)).toList();
+    }
+
+    if (ledgerCtrl.text.isNotEmpty) {
+      final q = ledgerCtrl.text.toLowerCase();
+      temp = temp.where((e) {
+        return e.supplierName.toLowerCase().contains(q) ||
+            e.ledgerName.toLowerCase().contains(q);
+      }).toList();
+    }
+
+    if (voucherCtrl.text.isNotEmpty) {
+      final q = voucherCtrl.text.toLowerCase();
+      temp = temp.where((e) {
+        return e.voucherNo.toString().contains(q) ||
+            e.prefix.toLowerCase().contains(q);
+      }).toList();
+    }
+
+    setState(() {
+      list = temp;
+    });
+  }
 
   @override
   void initState() {
     super.initState();
+    setFinancialYear();
     fetchExpanse();
+  }
+
+  void setFinancialYear() {
+    final now = DateTime.now();
+
+    if (now.month >= 4) {
+      fromDate = DateTime(now.year, 4, 1);
+      toDate = DateTime(now.year + 1, 3, 31);
+    } else {
+      fromDate = DateTime(now.year - 1, 4, 1);
+      toDate = DateTime(now.year, 3, 31);
+    }
+
+    fromDateCtrl.text = DateFormat("yyyy-MM-dd").format(fromDate!);
+    toDateCtrl.text = DateFormat("yyyy-MM-dd").format(toDate!);
   }
 
   Future<void> fetchExpanse() async {
@@ -34,7 +110,11 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    list = (res['data'] as List).map((e) => ExpanseModel.fromJson(e)).toList();
+    allList = (res['data'] as List)
+        .map((e) => ExpanseModel.fromJson(e))
+        .toList();
+
+    list = allList;
 
     setState(() => loading = false);
   }
@@ -63,43 +143,103 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
             color: AppColor.blackText,
           ),
         ),
+        actions: [
+          Center(
+            child: defaultButton(
+              onTap: () async {
+                var data = await pushTo(ExpenseEntry());
+                if (data != null) {
+                  fetchExpanse();
+                }
+              },
+              buttonColor: AppColor.blue,
+              text: "Create Expense",
+              height: 40,
+              width: 150,
+            ),
+          ),
+          SizedBox(width: 10),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             // ---------- TOP BAR ----------
-            Row(
-              children: [
-                const Icon(Icons.currency_rupee, color: Colors.deepPurple),
-                const SizedBox(width: 6),
-                Text(
-                  "Expense",
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.deepPurple,
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColor.white,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.currency_rupee, color: Colors.deepPurple),
+                  const SizedBox(width: 6),
+                  Text(
+                    "Expense",
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.deepPurple,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                // OutlinedButton.icon(
-                //   onPressed: () {},
-                //   icon: const Icon(Icons.filter_alt_outlined),
-                //   label: const Text("Apply Filter"),
-                // ),
-                const SizedBox(width: 12),
-                defaultButton(
-                  onTap: () async {
-                    var data = await pushTo(ExpenseEntry());
-                    if (data != null) {
-                      fetchExpanse();
-                    }
-                  },
-                  buttonColor: AppColor.blue,
-                  text: "Create Expense",
-                  height: 40,
-                  width: 150,
-                ),
-              ],
+                  SizedBox(width: 20),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: CommonTextField(
+                            controller: fromDateCtrl,
+                            readOnly: true,
+                            onTap: () => _pickDate(fromDateCtrl, true),
+                            hintText: "From Date",
+                            suffixIcon: Icon(Icons.calendar_today, size: 18),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: CommonTextField(
+                            controller: toDateCtrl,
+                            readOnly: true,
+                            onTap: () => _pickDate(toDateCtrl, false),
+                            hintText: "To Date",
+                            suffixIcon: Icon(Icons.calendar_today, size: 18),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: CommonTextField(
+                            controller: ledgerCtrl,
+                            onChanged: (_) => applyFilter(),
+                            hintText: "Ledger / Account",
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: CommonTextField(
+                            controller: voucherCtrl,
+                            onChanged: (_) => applyFilter(),
+                            hintText: "Voucher No",
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.red),
+                          onPressed: () {
+                            fromDateCtrl.clear();
+                            toDateCtrl.clear();
+                            ledgerCtrl.clear();
+                            voucherCtrl.clear();
+                            fromDate = null;
+                            toDate = null;
+                            setState(() => list = allList);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -148,7 +288,7 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
       child: Row(
         children: const [
           Expanded(flex: 2, child: Text("Date")),
-          Expanded(flex: 3, child: Text("Contra Number")),
+          Expanded(flex: 3, child: Text("Expense Number")),
           Expanded(flex: 3, child: Text("Exapnse")),
           Expanded(flex: 3, child: Text("Payment Mode")),
           Expanded(flex: 2, child: Text("Amount")),
@@ -210,8 +350,8 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Delete Contra"),
-        content: const Text("Are you sure you want to delete this contra?"),
+        title: const Text("Delete expense"),
+        content: const Text("Are you sure you want to delete this expense?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

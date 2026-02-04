@@ -179,7 +179,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
     final date = await showDatePicker(
       context: ctx,
       initialDate: pickedPurchaseInvoiceDate,
-      firstDate: DateTime(2020),
+      firstDate: DateTime(1990),
       lastDate: DateTime(2100),
     );
     if (date != null) {
@@ -305,6 +305,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                         mobile: cashMobileController.text,
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
+                        stateName: stateController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
                         signatureImage: signatureImage,

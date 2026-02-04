@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/ui/report/purchase/gst_purchase_report.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
 import 'package:ims/utils/api.dart';
+import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
+import 'package:ims/utils/navigation.dart';
+import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 
@@ -23,6 +27,8 @@ class _PurchaseInvoiceAdvancedReportScreenState
   List<PurchaseInvoiceData> allItems = [];
   List<PurchaseInvoiceData> filtered = [];
 
+  final fromDateCtrl = TextEditingController();
+  final toDateCtrl = TextEditingController();
   bool loading = true;
 
   // ---------------- FILTER STATE ----------------
@@ -44,7 +50,24 @@ class _PurchaseInvoiceAdvancedReportScreenState
   @override
   void initState() {
     super.initState();
+    setFinancialYear();
     loadData();
+  }
+
+  // ================= FINANCIAL YEAR =================
+  void setFinancialYear() {
+    final now = DateTime.now();
+
+    if (now.month >= 4) {
+      fromDate = DateTime(now.year, 4, 1);
+      toDate = DateTime(now.year + 1, 3, 31);
+    } else {
+      fromDate = DateTime(now.year - 1, 4, 1);
+      toDate = DateTime(now.year, 3, 31);
+    }
+
+    fromDateCtrl.text = DateFormat("dd/MM/yyyy").format(fromDate!);
+    toDateCtrl.text = DateFormat("dd/MM/yyyy").format(toDate!);
   }
 
   // ---------------- LOAD ----------------
@@ -145,6 +168,8 @@ class _PurchaseInvoiceAdvancedReportScreenState
     fromDate = null;
     toDate = null;
     searchCtrl.clear();
+    fromDateCtrl.clear();
+    toDateCtrl.clear();
     applyFilters();
   }
 
@@ -165,6 +190,20 @@ class _PurchaseInvoiceAdvancedReportScreenState
           ),
         ),
         backgroundColor: AppColor.black,
+        actions: [
+          Center(
+            child: defaultButton(
+              text: "GST Purchase Report",
+              height: 40,
+              width: 180,
+              buttonColor: AppColor.blue,
+              onTap: () {
+                pushTo(GstPurchaseReportScreen());
+              },
+            ),
+          ),
+          SizedBox(width: 10),
+        ],
       ),
       body: loading
           ? Center(child: GlowLoader())
@@ -191,59 +230,125 @@ class _PurchaseInvoiceAdvancedReportScreenState
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
+      child: Column(
         children: [
-          _textField("Search...", "Search supplier / invoice", searchCtrl, () {
-            applyFilters();
-          }),
+          Row(
+            spacing: 12,
+            children: [
+              _textField(
+                "Search...",
+                "Search customer / invoice",
+                searchCtrl,
+                () {
+                  applyFilters();
+                },
+              ),
 
-          _dropdown("Supplier", supplierFilter, _suppliers(), (v) {
-            supplierFilter = v!;
-            applyFilters();
-          }),
+              _dropdown("Customer", supplierFilter, _suppliers(), (v) {
+                supplierFilter = v!;
+                applyFilters();
+              }),
 
-          _dropdown("Item", itemFilter, _items(), (v) {
-            itemFilter = v!;
-            applyFilters();
-          }),
+              _dropdown("Item", itemFilter, _items(), (v) {
+                itemFilter = v!;
+                applyFilters();
+              }),
 
-          _dropdown("Payment", paymentFilter, const ["All", "Cash", "Credit"], (
-            v,
-          ) {
-            paymentFilter = v!;
-            applyFilters();
-          }),
+              _dropdown(
+                "Payment",
+                paymentFilter,
+                const ["All", "Cash", "Credit"],
+                (v) {
+                  paymentFilter = v!;
+                  applyFilters();
+                },
+              ),
+            ],
+          ),
+          SizedBox(height: Sizes.height * .02),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            spacing: 12,
+            children: [
+              _amountField("0", "Min ₹", (v) {
+                minAmount = double.tryParse(v);
+                applyFilters();
+              }),
+              _amountField("0", "Max ₹", (v) {
+                maxAmount = double.tryParse(v);
+                applyFilters();
+              }),
+              SizedBox(
+                width: 160,
+                child: TitleTextFeild(
+                  titleText: "From Date",
+                  hintText: "Select date",
+                  controller: fromDateCtrl,
+                  suffixIcon: const Icon(Icons.calendar_today, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(1990),
+                      lastDate: DateTime(2100),
+                      initialDate: fromDate ?? DateTime.now(),
+                    );
+                    if (picked != null) {
+                      fromDate = picked;
+                      fromDateCtrl.text = DateFormat(
+                        "dd MMM yyyy",
+                      ).format(picked);
+                      applyFilters();
+                    }
+                  },
+                ),
+              ),
 
-          _amountField("0", "Min ₹", (v) {
-            minAmount = double.tryParse(v);
-            applyFilters();
-          }),
-          _amountField("0", "Max ₹", (v) {
-            maxAmount = double.tryParse(v);
-            applyFilters();
-          }),
+              SizedBox(
+                width: 160,
+                child: TitleTextFeild(
+                  titleText: "To Date",
+                  hintText: "Select date",
+                  controller: toDateCtrl,
+                  suffixIcon: const Icon(Icons.calendar_today, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(1990),
+                      lastDate: DateTime(2100),
+                      initialDate: toDate ?? DateTime.now(),
+                    );
+                    if (picked != null) {
+                      toDate = picked;
+                      toDateCtrl.text = DateFormat(
+                        "dd MMM yyyy",
+                      ).format(picked);
+                      applyFilters();
+                    }
+                  },
+                ),
+              ),
 
-          _dateBtn("From", fromDate, (d) {
-            fromDate = d;
-            applyFilters();
-          }),
-          _dateBtn("To", toDate, (d) {
-            toDate = d;
-            applyFilters();
-          }),
-
-          _check("GST Only", gstOnly, (v) {
-            gstOnly = v;
-            applyFilters();
-          }),
-          _check("With Discount", discountOnly, (v) {
-            discountOnly = v;
-            applyFilters();
-          }),
-
-          TextButton(onPressed: clearFilters, child: const Text("Clear")),
+              // _check("GST Only", gstOnly, (v) {
+              //   gstOnly = v;
+              //   applyFilters();
+              // }),
+              // _check("With Discount", discountOnly, (v) {
+              //   discountOnly = v;
+              //   applyFilters();
+              // }),
+              SizedBox(
+                height: 40,
+                width: 100,
+                child: OutlinedButton(
+                  onPressed: clearFilters,
+                  child: const Text(
+                    "Clear",
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -414,8 +519,7 @@ class _PurchaseInvoiceAdvancedReportScreenState
     List<String> items,
     Function(String?) onChanged,
   ) {
-    return SizedBox(
-      width: 200,
+    return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -466,33 +570,6 @@ class _PurchaseInvoiceAdvancedReportScreenState
         hintText: hint,
         titleText: title,
         onChanged: (_) => onChange(),
-      ),
-    );
-  }
-
-  Widget _check(String label, bool value, Function(bool) onChanged) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Checkbox(value: value, onChanged: (v) => onChanged(v ?? false)),
-        Text(label),
-      ],
-    );
-  }
-
-  Widget _dateBtn(String label, DateTime? date, Function(DateTime) onPick) {
-    return OutlinedButton(
-      onPressed: () async {
-        final picked = await showDatePicker(
-          context: context,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
-          initialDate: date ?? DateTime.now(),
-        );
-        if (picked != null) onPick(picked);
-      },
-      child: Text(
-        date == null ? label : DateFormat("dd MMM yyyy").format(date),
       ),
     );
   }

@@ -261,6 +261,7 @@ class PurchaseInvoiceSaveWithUIData extends PurchaseInvoiceEvent {
   final String mobile;
   final String billingAddress;
   final String shippingAddress;
+  final String stateName; // ✅ ADD
   final List<String> notes;
   final List<String> terms;
   final File? signatureImage; // NEW
@@ -270,6 +271,7 @@ class PurchaseInvoiceSaveWithUIData extends PurchaseInvoiceEvent {
     required this.mobile,
     required this.billingAddress,
     required this.shippingAddress,
+    required this.stateName,
     required this.notes,
     required this.terms,
     this.updateId,
@@ -889,6 +891,7 @@ class PurchaseInvoiceBloc
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
+        "place_of_supply": e.stateName,
         "prefix": state.prefix,
         "no": int.tryParse(state.purchaseInvoiceNo),
         "purchaseinvoice_date": DateFormat(

@@ -39,6 +39,8 @@ class DebitNoteData {
   final String address1;
   final String placeOfSupply;
   final String mobile;
+  final int invoiceNo;
+  final String invoiceId;
 
   final String prefix;
   final int no;
@@ -75,6 +77,8 @@ class DebitNoteData {
     required this.prefix,
     required this.no,
     required this.debitNoteDate,
+    required this.invoiceNo,
+    required this.invoiceId,
     required this.caseSale,
     required this.notes,
     required this.terms,
@@ -102,6 +106,8 @@ class DebitNoteData {
 
     prefix: j["prefix"],
     no: j["no"],
+    invoiceId: j["invoice_id"],
+    invoiceNo: j["invoice_no"],
     debitNoteDate: DateTime.parse(j["debitnote_date"]),
 
     caseSale: j["case_sale"] ?? false,

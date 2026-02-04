@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ims/ui/report/sale/gst_sale_report.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
-import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 
@@ -158,14 +156,6 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
             color: AppColor.white,
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              pushTo(GstSaleReportScreen());
-            },
-            child: Text("ABcasbdjk"),
-          ),
-        ],
       ),
       body: loading ? Center(child: GlowLoader()) : _layout(),
     );
@@ -485,8 +475,8 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
         onTap: () async {
           final picked = await showDatePicker(
             context: context,
-            firstDate: DateTime(2020),
-            lastDate: DateTime.now(),
+            firstDate: DateTime(1990),
+            lastDate: DateTime(2100),
             initialDate: DateTime.now(),
           );
           if (picked != null) {

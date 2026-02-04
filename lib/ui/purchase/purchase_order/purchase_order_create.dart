@@ -169,7 +169,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
     final date = await showDatePicker(
       context: ctx,
       initialDate: pickedPurchaseOrderDate,
-      firstDate: DateTime(2020),
+      firstDate: DateTime(1990),
       lastDate: DateTime(2100),
     );
     if (date != null) {

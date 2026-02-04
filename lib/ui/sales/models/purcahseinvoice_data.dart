@@ -42,6 +42,8 @@ class PurchaseInvoiceData {
 
   final String prefix;
   final int no;
+  final int purchaseorderId;
+  final String purchaseorderName;
   final DateTime purchaseInvoiceDate;
 
   final bool caseSale;
@@ -61,8 +63,8 @@ class PurchaseInvoiceData {
   final List<ItemDetail> itemDetails;
 
   final String signature;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   PurchaseInvoiceData({
     required this.id,
@@ -76,6 +78,8 @@ class PurchaseInvoiceData {
     required this.mobile,
     required this.prefix,
     required this.no,
+    required this.purchaseorderId,
+    required this.purchaseorderName,
     required this.purchaseInvoiceDate,
     required this.caseSale,
     required this.notes,
@@ -89,8 +93,8 @@ class PurchaseInvoiceData {
     required this.miscCharges,
     required this.itemDetails,
     required this.signature,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory PurchaseInvoiceData.fromJson(Map<String, dynamic> j) =>
@@ -107,6 +111,8 @@ class PurchaseInvoiceData {
 
         prefix: j["prefix"],
         no: j["no"],
+        purchaseorderId: j["purchaseorder_id"] ?? 0,
+        purchaseorderName: j["purchaseorder_name"] ?? "",
         purchaseInvoiceDate: DateTime.parse(j["purchaseinvoice_date"]),
 
         caseSale: j["case_sale"] ?? false,

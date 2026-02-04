@@ -155,7 +155,7 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
     final date = await showDatePicker(
       context: ctx,
       initialDate: pickedInvoiceDate,
-      firstDate: DateTime(2020),
+      firstDate: DateTime(1990),
       lastDate: DateTime(2100),
     );
     if (date != null) {

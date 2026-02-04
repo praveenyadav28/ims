@@ -824,8 +824,6 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
 
         "place_of_supply": e.stateName,
         "prefix": state.prefix,
-        // "invoice_no": 1,
-        // "invoice_id": "6937ccd3e69951d95725956a",
         "no": int.tryParse(state.saleReturnNo),
         "returnsale_date": DateFormat(
           'yyyy-MM-dd',

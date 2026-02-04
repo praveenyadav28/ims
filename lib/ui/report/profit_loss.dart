@@ -231,9 +231,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
         child: Column(
           children: [
             _dateFilter(),
-            loading
-                ? const Center(child: CircularProgressIndicator())
-                : _profitView(),
+            loading ? const Center(child: GlowLoader()) : _profitView(),
           ],
         ),
       ),

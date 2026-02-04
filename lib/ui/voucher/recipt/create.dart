@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/model/payment_model.dart';
+import 'package:ims/ui/sales/models/debitnote_model.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
+import 'package:ims/ui/sales/models/sale_invoice_data.dart';
+import 'package:ims/ui/sales/models/sale_return_data.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -28,6 +31,14 @@ class _RecieptEntryState extends State<RecieptEntry> {
   List<LedgerModelDrop> customerList = [];
   LedgerModelDrop? selectedCustomer;
   List<String> invoiceList = [];
+  double pendingAmount = 0;
+  double advanceAmount = 0;
+  bool loadingPending = false;
+  List<PaymentModel> relatedReceipts = [];
+  List<SaleReturnData> relatedSaleReturns = [];
+  List<DebitNoteData> relatedDebitNotes = [];
+  List<PaymentModel> relatedPaymentsOnReturn = [];
+  bool showTransactions = false;
 
   TextEditingController partyController = TextEditingController();
   TextEditingController ledgerController = TextEditingController();
@@ -113,7 +124,7 @@ class _RecieptEntryState extends State<RecieptEntry> {
         elevation: 0,
         // shadowColor: AppColor.grey,
         title: Text(
-          "Create Reciept Voucher",
+          "${widget.recieptModel != null ? "Update" : "Create"} Reciept Voucher",
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             height: 1,
@@ -138,7 +149,7 @@ class _RecieptEntryState extends State<RecieptEntry> {
               defaultButton(
                 onTap: saveRecieptVoucher,
                 buttonColor: const Color(0xff8947E5),
-                text: "Save",
+                text: (widget.recieptModel != null) ? "Update" : "Save",
                 height: 40,
                 width: 113,
               ),
@@ -286,7 +297,55 @@ class _RecieptEntryState extends State<RecieptEntry> {
                                           invoiceNoController.text =
                                               item.item ?? "";
                                         });
+                                        fetchInvoicePending(
+                                          item.item!,
+                                        ); // 🔥 ADD THIS
                                       },
+                                      suffixIcon:
+                                          selectedType != "Other" &&
+                                              invoiceNoController
+                                                  .text
+                                                  .isNotEmpty
+                                          ? Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              children: [
+                                                loadingPending
+                                                    ? const SizedBox(
+                                                        height: 10,
+                                                        width: 10,
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                              strokeWidth: 2,
+                                                            ),
+                                                      )
+                                                    : Text(
+                                                        "₹ ${pendingAmount.toStringAsFixed(2)}",
+                                                        style: GoogleFonts.inter(
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color:
+                                                              pendingAmount > 0
+                                                              ? Colors.red
+                                                              : Colors.green,
+                                                        ),
+                                                      ),
+
+                                                if (advanceAmount > 0)
+                                                  Text(
+                                                    "Adv: ₹ ${advanceAmount.toStringAsFixed(2)}",
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.blue,
+                                                    ),
+                                                  ),
+                                              ],
+                                            )
+                                          : const SizedBox.shrink(),
                                     ),
                                   ],
                                 ),
@@ -437,6 +496,91 @@ class _RecieptEntryState extends State<RecieptEntry> {
                 ),
               ],
             ),
+            if (showTransactions) ...[
+              SizedBox(height: 20),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColor.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColor.borderColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xff171a1f14),
+                      offset: Offset(0, .5),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (relatedReceipts.isNotEmpty)
+                      _txSection(
+                        "Receipts (On Invoice)",
+                        relatedReceipts
+                            .map(
+                              (e) =>
+                                  "₹ ${e.amount}  |  ${e.prefix}${e.invoiceNo}  |  ${e.date.toString().split(' ').first}",
+                            )
+                            .toList(),
+                        Colors.green,
+                      ),
+
+                    if (relatedSaleReturns.isNotEmpty)
+                      _txSection(
+                        "Sale Returns",
+                        relatedSaleReturns
+                            .map(
+                              (e) =>
+                                  "₹ ${e.totalAmount}  |  ${e.prefix}${e.no}  |  ${e.saleReturnDate.toString().split(' ').first}",
+                            )
+                            .toList(),
+                        Colors.orange,
+                      ),
+
+                    if (relatedPaymentsOnReturn.isNotEmpty)
+                      _txSection(
+                        "Payments on Sale Return",
+                        relatedPaymentsOnReturn
+                            .map(
+                              (e) =>
+                                  "₹ ${e.amount}  |  ${e.prefix}${e.invoiceNo}  |  ${e.date.toString().split(' ').first}",
+                            )
+                            .toList(),
+                        Colors.blue,
+                      ),
+
+                    if (relatedDebitNotes.isNotEmpty)
+                      _txSection(
+                        "Credit Notes",
+                        relatedDebitNotes
+                            .map(
+                              (e) =>
+                                  "₹ ${e.totalAmount}  |  ${e.prefix}${e.no}  |  ${e.debitNoteDate.toString().split(' ').first}",
+                            )
+                            .toList(),
+                        Colors.red,
+                      ),
+
+                    if (relatedReceipts.isEmpty &&
+                        relatedSaleReturns.isEmpty &&
+                        relatedPaymentsOnReturn.isEmpty &&
+                        relatedDebitNotes.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          "No related transactions found.",
+                          style: GoogleFonts.inter(color: Colors.grey),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -478,7 +622,7 @@ class _RecieptEntryState extends State<RecieptEntry> {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
+      firstDate: DateTime(1990),
       lastDate: DateTime(2100),
     );
 
@@ -544,6 +688,12 @@ class _RecieptEntryState extends State<RecieptEntry> {
     if (selectedCustomer == null || selectedType == "Other") {
       invoiceList.clear();
       invoiceNoController.clear();
+      relatedReceipts.clear();
+      relatedSaleReturns.clear();
+      relatedDebitNotes.clear();
+      relatedPaymentsOnReturn.clear();
+      showTransactions = false;
+      pendingAmount = 0;
       setState(() {});
       return;
     }
@@ -672,6 +822,194 @@ class _RecieptEntryState extends State<RecieptEntry> {
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: AppColor.textColor,
+      ),
+    );
+  }
+
+  Future<void> fetchInvoicePending(String invoiceKey) async {
+    try {
+      setState(() => loadingPending = true);
+
+      double saleInvoiceAmt = 0;
+      double totalReceipt = 0;
+      double totalSaleReturn = 0;
+      double totalDebitNote = 0;
+      double paymentAgainstReturn = 0;
+
+      /// ================= SALE INVOICE =================
+      final invRes = await ApiService.fetchData(
+        "get/invoice",
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      final saleInvoices = SaleInvoiceListResponse.fromJson(invRes).data;
+
+      final invoice = saleInvoices.firstWhere(
+        (e) => "${e.prefix}${e.no}" == invoiceKey,
+        orElse: () => SaleInvoiceData(
+          id: "",
+          licenceNo: 0,
+          branchId: "",
+          customerId: "",
+          customerName: "",
+          address0: "",
+          address1: "",
+          placeOfSupply: "",
+          mobile: "",
+          prefix: "",
+          transId: "",
+          transNo: 0,
+          transType: "",
+          no: 0,
+          saleInvoiceDate: DateTime.now(),
+          paymentTerms: 0,
+          caseSale: false,
+          notes: [],
+          terms: [],
+          subTotal: 0,
+          subGst: 0,
+          autoRound: false,
+          totalAmount: 0,
+          additionalCharges: [],
+          discountLines: [],
+          miscCharges: [],
+          itemDetails: [],
+          serviceDetails: [],
+          signature: "",
+        ),
+      );
+
+      saleInvoiceAmt = invoice.totalAmount;
+
+      /// ================= RECEIPTS =================
+      final recRes = await ApiService.fetchData(
+        "get/reciept", // ✅ spelling fixed
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      final receipts = (recRes['data'] as List? ?? [])
+          .map((e) => PaymentModel.fromJson(e))
+          .where((e) => "${e.prefix}${e.invoiceNo}" == invoiceKey)
+          .toList();
+
+      totalReceipt = receipts.fold(0.0, (p, e) => p + e.amount);
+
+      /// ================= SALE RETURNS =================
+      final srRes = await ApiService.fetchData(
+        "get/returnsale",
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      final saleReturns = SaleReturnListResponse.fromJson(
+        srRes,
+      ).data.where((e) => "${e.transNo}" == invoiceKey).toList();
+
+      totalSaleReturn = saleReturns.fold(0.0, (p, e) => p + e.totalAmount);
+
+      /// ================= DEBIT NOTES =================
+      final dnRes = await ApiService.fetchData(
+        "get/debitnote",
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+      final debitNotes = DebitNoteListResponse.fromJson(dnRes).data.where((e) {
+        return "${e.invoiceNo}" == invoiceKey;
+      }).toList();
+
+      totalDebitNote = debitNotes.fold(0.0, (p, e) => p + e.totalAmount);
+
+      /// ================= PAYMENTS AGAINST RETURN =================
+      final payRes = await ApiService.fetchData(
+        "get/payment",
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      final payments = (payRes['data'] as List? ?? [])
+          .map((e) => PaymentModel.fromJson(e))
+          .toList();
+
+      final relatedReturnNos = saleReturns.map((e) => e.no).toSet();
+
+      final paymentsOnReturns = payments.where(
+        (p) => relatedReturnNos.contains(p.invoiceNo),
+      );
+
+      paymentAgainstReturn = paymentsOnReturns.fold(
+        0.0,
+        (p, e) => p + e.amount,
+      );
+
+      /// ================= FINAL PENDING =================
+      /// ================= FINAL PENDING =================
+      final rawPending =
+          saleInvoiceAmt -
+          totalReceipt -
+          totalSaleReturn -
+          totalDebitNote +
+          paymentAgainstReturn;
+
+      double pending = rawPending;
+      double advance = 0;
+
+      if (rawPending < 0) {
+        advance = rawPending.abs(); // customer ne extra de diya
+        pending = 0;
+      }
+
+      setState(() {
+        pendingAmount = pending;
+        advanceAmount = advance;
+
+        relatedReceipts = receipts;
+        relatedSaleReturns = saleReturns;
+        relatedDebitNotes = debitNotes;
+        relatedPaymentsOnReturn = paymentsOnReturns.toList();
+        showTransactions = true;
+
+        loadingPending = false;
+      });
+    } catch (e, s) {
+      debugPrint("❌ fetchInvoicePending error: $e");
+      debugPrint("$s");
+
+      setState(() {
+        pendingAmount = 0;
+        loadingPending = false;
+      });
+    }
+  }
+
+  Widget _txSection(String title, List<String> rows, Color color) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 6),
+            ...rows.map(
+              (e) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Icon(Icons.circle, size: 6, color: color),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(e, style: GoogleFonts.inter(fontSize: 13)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

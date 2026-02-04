@@ -308,8 +308,8 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
       onTap: () async {
         final d = await showDatePicker(
           context: context,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
+            firstDate: DateTime(1990),
+            lastDate: DateTime(2100),
           initialDate: isFrom ? fromDate : toDate,
         );
         if (d != null) {

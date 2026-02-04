@@ -42,6 +42,8 @@ class PurchaseReturnData {
 
   final String prefix;
   final int no;
+  final String transId;
+  final int transNo;
   final DateTime purchaseReturnDate;
 
   final bool caseSale;
@@ -74,6 +76,8 @@ class PurchaseReturnData {
     required this.mobile,
     required this.prefix,
     required this.no,
+    required this.transId,
+    required this.transNo,
     required this.purchaseReturnDate,
     required this.caseSale,
     required this.notes,
@@ -103,6 +107,8 @@ class PurchaseReturnData {
 
         prefix: j["prefix"],
         no: j["no"],
+        transId: j["purchaseinvoice_id"],
+        transNo: j["purchaseinvoice_no"],
         purchaseReturnDate: DateTime.parse(j["purchasereturn_date"]),
 
         caseSale: j["case_sale"] ?? false,

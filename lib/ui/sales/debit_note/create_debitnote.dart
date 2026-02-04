@@ -142,7 +142,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
     final date = await showDatePicker(
       context: ctx,
       initialDate: pickedInvoiceDate,
-      firstDate: DateTime(2020),
+      firstDate: DateTime(1990),
       lastDate: DateTime(2100),
     );
     if (date != null) {
@@ -270,6 +270,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                         terms: selectedTermsList,
                         signatureImage: signatureImage,
                         updateId: widget.debitNoteData?.id,
+                        stateName: stateController.text,
                       ),
                     );
                   },

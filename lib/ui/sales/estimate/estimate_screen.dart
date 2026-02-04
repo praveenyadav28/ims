@@ -159,7 +159,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
     final date = await showDatePicker(
       context: ctx,
       initialDate: pickedEstimateDate,
-      firstDate: DateTime(2020),
+      firstDate: DateTime(1990),
       lastDate: DateTime(2100),
     );
     if (date != null) {

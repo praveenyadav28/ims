@@ -1,9 +1,15 @@
 // ignore_for_file: must_be_immutable
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:ims/model/ledger_model.dart';
 import 'package:ims/model/payment_model.dart';
+import 'package:ims/ui/sales/models/credit_note_data.dart';
+import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
+import 'package:ims/ui/sales/models/purchase_return_data.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -26,6 +32,15 @@ class _PaymentEntryState extends State<PaymentEntry> {
   List<LedgerListModel> supplierList = [];
   LedgerListModel? selectedSupplier;
   List<String> invoiceList = [];
+  double pendingAmount = 0;
+  double advanceAmount = 0;
+
+  bool loadingPending = false;
+  List<PaymentModel> relatedPayments = [];
+  List<PurchaseReturnData> relatedPurchaseReturns = [];
+  List<CreditNoteData> relatedCreditNotes = [];
+  List<PaymentModel> relatedRecieptOnReturn = [];
+  bool showTransactions = false;
 
   TextEditingController partyController = TextEditingController();
   TextEditingController invoiceNoController = TextEditingController();
@@ -39,6 +54,18 @@ class _PaymentEntryState extends State<PaymentEntry> {
   TextEditingController noteController = TextEditingController();
 
   DateTime? selectedDate;
+  File? paymentImage;
+  String? existingDocuUrl;
+  final ImagePicker _picker = ImagePicker();
+  Future<void> pickpaymentImage() async {
+    final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (picked == null) return;
+
+    setState(() {
+      paymentImage = File(picked.path);
+    });
+  }
 
   String selectedType = "Other";
   @override
@@ -67,6 +94,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
     prefixController.text = d.prefix;
     voucherNoController.text = d.voucherNo.toString();
     noteController.text = d.note;
+    existingDocuUrl = d.docu;
 
     // match selected ledger
     selectedLedger = ledgerList.firstWhere(
@@ -98,7 +126,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
         elevation: 0,
         // shadowColor: AppColor.grey,
         title: Text(
-          "Create Payment Voucher",
+          "${widget.data != null ? "Update" : "Create"} Payment Voucher",
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             height: 1,
@@ -335,7 +363,55 @@ class _PaymentEntryState extends State<PaymentEntry> {
                                           invoiceNoController.text =
                                               item.item ?? "";
                                         });
+                                        fetchInvoicePending(
+                                          item.item!,
+                                        ); // 🔥 ADD THIS
                                       },
+                                      suffixIcon:
+                                          selectedType != "Other" &&
+                                              invoiceNoController
+                                                  .text
+                                                  .isNotEmpty
+                                          ? Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              children: [
+                                                loadingPending
+                                                    ? const SizedBox(
+                                                        height: 10,
+                                                        width: 10,
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                              strokeWidth: 2,
+                                                            ),
+                                                      )
+                                                    : Text(
+                                                        "₹ ${pendingAmount.toStringAsFixed(2)}",
+                                                        style: GoogleFonts.inter(
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color:
+                                                              pendingAmount > 0
+                                                              ? Colors.red
+                                                              : Colors.green,
+                                                        ),
+                                                      ),
+
+                                                if (advanceAmount > 0)
+                                                  Text(
+                                                    "Adv: ₹ ${advanceAmount.toStringAsFixed(2)}",
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.blue,
+                                                    ),
+                                                  ),
+                                              ],
+                                            )
+                                          : const SizedBox.shrink(),
                                     ),
                                   ],
                                 ),
@@ -405,11 +481,81 @@ class _PaymentEntryState extends State<PaymentEntry> {
                           ],
                         ),
                         SizedBox(height: Sizes.height * .037),
-                        TitleTextFeild(
-                          controller: noteController,
-                          titleText: "Notes",
-                          maxLines: 5,
-                          hintText: "Enter Notes",
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: TitleTextFeild(
+                                controller: noteController,
+                                titleText: "Notes",
+                                maxLines: 5,
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: pickpaymentImage,
+                              child: SizedBox(
+                                height: 105,
+                                width: 150,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: AppColor.borderColor,
+                                    ),
+                                  ),
+                                  child: paymentImage != null
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          child: Image.file(
+                                            paymentImage!,
+                                            height: 105,
+                                            width: 150,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                      : existingDocuUrl != null &&
+                                            existingDocuUrl!.isNotEmpty
+                                      ? Image.network(
+                                          existingDocuUrl!,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Center(
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.cloud_upload_outlined,
+                                                  size: 32,
+                                                  color: AppColor.primary,
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  "Upload Image",
+                                                  style: GoogleFonts.inter(
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  "PNG / JPG (max 5MB)",
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -417,6 +563,91 @@ class _PaymentEntryState extends State<PaymentEntry> {
                 ),
               ],
             ),
+            if (showTransactions) ...[
+              SizedBox(height: 20),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColor.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColor.borderColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xff171a1f14),
+                      offset: Offset(0, .5),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (relatedPayments.isNotEmpty)
+                      _txSection(
+                        "Payments (On Invoice)",
+                        relatedPayments
+                            .map(
+                              (e) =>
+                                  "₹ ${e.amount}  |  ${e.prefix}${e.invoiceNo}  |  ${e.date.toString().split(' ').first}",
+                            )
+                            .toList(),
+                        Colors.green,
+                      ),
+
+                    if (relatedPurchaseReturns.isNotEmpty)
+                      _txSection(
+                        "Purchase Returns",
+                        relatedPurchaseReturns
+                            .map(
+                              (e) =>
+                                  "₹ ${e.totalAmount}  |  ${e.prefix}${e.no}  |  ${e.purchaseReturnDate.toString().split(' ').first}",
+                            )
+                            .toList(),
+                        Colors.orange,
+                      ),
+
+                    if (relatedRecieptOnReturn.isNotEmpty)
+                      _txSection(
+                        "Reciepts on Purchase Return",
+                        relatedRecieptOnReturn
+                            .map(
+                              (e) =>
+                                  "₹ ${e.amount}  |  ${e.prefix}${e.invoiceNo}  |  ${e.date.toString().split(' ').first}",
+                            )
+                            .toList(),
+                        Colors.blue,
+                      ),
+
+                    if (relatedCreditNotes.isNotEmpty)
+                      _txSection(
+                        "Debit Notes",
+                        relatedCreditNotes
+                            .map(
+                              (e) =>
+                                  "₹ ${e.totalAmount}  |  ${e.prefix}${e.no}  |  ${e.creditNoteDate.toString().split(' ').first}",
+                            )
+                            .toList(),
+                        Colors.red,
+                      ),
+
+                    if (relatedPayments.isEmpty &&
+                        relatedPurchaseReturns.isEmpty &&
+                        relatedRecieptOnReturn.isEmpty &&
+                        relatedCreditNotes.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          "No related transactions found.",
+                          style: GoogleFonts.inter(color: Colors.grey),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -458,7 +689,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
+      firstDate: DateTime(1990),
       lastDate: DateTime(2100),
     );
 
@@ -522,6 +753,12 @@ class _PaymentEntryState extends State<PaymentEntry> {
     if (selectedSupplier == null || selectedType == "Other") {
       invoiceList.clear();
       invoiceNoController.clear();
+      relatedPayments.clear();
+      relatedPurchaseReturns.clear();
+      relatedCreditNotes.clear();
+      relatedRecieptOnReturn.clear();
+      showTransactions = false;
+      pendingAmount = 0;
       setState(() {});
       return;
     }
@@ -563,5 +800,186 @@ class _PaymentEntryState extends State<PaymentEntry> {
     }
 
     setState(() {});
+  }
+
+  Future<void> fetchInvoicePending(String invoiceKey) async {
+    try {
+      setState(() => loadingPending = true);
+
+      double saleInvoiceAmt = 0;
+      double totalReceipt = 0;
+      double totalSaleReturn = 0;
+      double totalDebitNote = 0;
+      double paymentAgainstReturn = 0;
+
+      /// ================= SALE INVOICE =================
+      final invRes = await ApiService.fetchData(
+        "get/purchaseinvoice",
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      final saleInvoices = PurchaseInvoiceListResponse.fromJson(invRes).data;
+
+      final invoice = saleInvoices.firstWhere(
+        (e) => "${e.prefix}${e.no}" == invoiceKey,
+        orElse: () => PurchaseInvoiceData(
+          id: "",
+          licenceNo: 0,
+          branchId: "",
+          supplierId: "",
+          supplierName: "",
+          address0: "",
+          address1: "",
+          placeOfSupply: "",
+          mobile: "",
+          prefix: "",
+          purchaseorderName: "",
+          purchaseorderId: 0,
+          no: 0,
+          purchaseInvoiceDate: DateTime.now(),
+          caseSale: false,
+          notes: [],
+          terms: [],
+          subTotal: 0,
+          subGst: 0,
+          autoRound: false,
+          totalAmount: 0,
+          additionalCharges: [],
+          discountLines: [],
+          miscCharges: [],
+          itemDetails: [],
+          signature: "",
+        ),
+      );
+
+      saleInvoiceAmt = invoice.totalAmount;
+
+      /// ================= RECEIPTS =================
+      final recRes = await ApiService.fetchData(
+        "get/payment", // ✅ spelling fixed
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      final receipts = (recRes['data'] as List? ?? [])
+          .map((e) => PaymentModel.fromJson(e))
+          .where((e) => "${e.prefix}${e.invoiceNo}" == invoiceKey)
+          .toList();
+
+      totalReceipt = receipts.fold(0.0, (p, e) => p + e.amount);
+
+      /// ================= SALE RETURNS =================
+      final srRes = await ApiService.fetchData(
+        "get/purchasereturn",
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      final saleReturns = PurchaseReturnListResponse.fromJson(
+        srRes,
+      ).data.where((e) => "${e.transNo}" == invoiceKey).toList();
+
+      totalSaleReturn = saleReturns.fold(0.0, (p, e) => p + e.totalAmount);
+
+      /// ================= DEBIT NOTES =================
+      final dnRes = await ApiService.fetchData(
+        "get/purchasenote",
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+      final debitNotes = CreditNoteListResponse.fromJson(dnRes).data.where((e) {
+        return "${e.transNo}" == invoiceKey;
+      }).toList();
+
+      totalDebitNote = debitNotes.fold(0.0, (p, e) => p + e.totalAmount);
+
+      /// ================= PAYMENTS AGAINST RETURN =================
+      final payRes = await ApiService.fetchData(
+        "get/reciept",
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      final payments = (payRes['data'] as List? ?? [])
+          .map((e) => PaymentModel.fromJson(e))
+          .toList();
+
+      final relatedReturnNos = saleReturns.map((e) => e.no).toSet();
+
+      final paymentsOnReturns = payments.where(
+        (p) => relatedReturnNos.contains(p.invoiceNo),
+      );
+
+      paymentAgainstReturn = paymentsOnReturns.fold(
+        0.0,
+        (p, e) => p + e.amount,
+      );
+
+      /// ================= FINAL PENDING =================
+      final rawPending =
+          saleInvoiceAmt -
+          totalReceipt -
+          totalSaleReturn -
+          totalDebitNote +
+          paymentAgainstReturn;
+      double pending = rawPending;
+      double advance = 0;
+
+      if (rawPending < 0) {
+        advance = rawPending.abs(); // customer ne extra de diya
+        pending = 0;
+      }
+
+      setState(() {
+        relatedPayments = receipts;
+        relatedPurchaseReturns = saleReturns;
+        relatedCreditNotes = debitNotes;
+        relatedRecieptOnReturn = paymentsOnReturns.toList();
+        showTransactions = true;
+        pendingAmount = pending;
+        advanceAmount = advance;
+        loadingPending = false;
+      });
+    } catch (e, s) {
+      debugPrint("❌ fetchInvoicePending error: $e");
+      debugPrint("$s");
+
+      setState(() {
+        pendingAmount = 0;
+        loadingPending = false;
+      });
+    }
+  }
+
+  Widget _txSection(String title, List<String> rows, Color color) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 6),
+            ...rows.map(
+              (e) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Icon(Icons.circle, size: 6, color: color),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(e, style: GoogleFonts.inter(fontSize: 13)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

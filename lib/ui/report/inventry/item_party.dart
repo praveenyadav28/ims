@@ -322,8 +322,8 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
         onTap: () async {
           final picked = await showDatePicker(
             context: context,
-            firstDate: DateTime(2020),
-            lastDate: DateTime.now(),
+            firstDate: DateTime(1990),
+            lastDate: DateTime(2100),
             initialDate: isFrom ? fromDate : toDate,
           );
           if (picked != null) {

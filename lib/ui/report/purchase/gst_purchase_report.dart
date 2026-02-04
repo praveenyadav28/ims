@@ -243,8 +243,8 @@ class _GstPurchaseReportScreenState extends State<GstPurchaseReportScreen> {
           final picked = await showDatePicker(
             context: context,
             initialDate: value ?? DateTime.now(),
-            firstDate: DateTime(2022),
-            lastDate: DateTime.now(),
+            firstDate: DateTime(1990),
+            lastDate: DateTime(2100),
           );
 
           if (picked != null) {

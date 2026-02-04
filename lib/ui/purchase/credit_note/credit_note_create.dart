@@ -150,7 +150,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
     final date = await showDatePicker(
       context: ctx,
       initialDate: pickedCreditNoteDate,
-      firstDate: DateTime(2020),
+      firstDate: DateTime(1990),
       lastDate: DateTime(2100),
     );
     if (date != null) {

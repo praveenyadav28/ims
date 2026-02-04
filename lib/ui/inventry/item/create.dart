@@ -2274,7 +2274,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
     DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
+      firstDate: DateTime(1990),
       lastDate: DateTime(2100),
     );
 
