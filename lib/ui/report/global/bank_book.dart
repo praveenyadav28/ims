@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/ledger_model.dart';
+import 'package:ims/utils/button.dart';
+import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 import 'package:searchfield/searchfield.dart';
@@ -7,14 +10,14 @@ import 'package:searchfield/searchfield.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/prefence.dart';
 
-class LedgerReportScreen extends StatefulWidget {
-  const LedgerReportScreen({super.key});
+class BankBookReportScreen extends StatefulWidget {
+  const BankBookReportScreen({super.key});
 
   @override
-  State<LedgerReportScreen> createState() => _LedgerReportScreenState();
+  State<BankBookReportScreen> createState() => _BankBookReportScreenState();
 }
 
-class _LedgerReportScreenState extends State<LedgerReportScreen> {
+class _BankBookReportScreenState extends State<BankBookReportScreen> {
   final df = DateFormat("dd-MM-yyyy");
 
   // ---------------- CONTROLLERS ----------------
@@ -53,11 +56,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
     setState(() {
       ledgerList = (res['data'] as List)
           .map((e) => LedgerListModel.fromJson(e))
-          .where(
-            (e) =>
-                e.ledgerGroup != 'Bank Account' &&
-                e.ledgerGroup != 'Cash In Hand',
-          )
+          .where((e) => e.ledgerGroup == 'Bank Account')
           .toList();
     });
   }
@@ -114,85 +113,14 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
       creditTotal += credit;
     }
 
-    // ================= SALE =================
-    for (var e in res['Saleinvoice'] ?? []) {
-      addRow(
-        date: DateTime.parse(e['invoice_date']),
-        type: "Sale",
-        party: e['customer_name'],
-        debit: e['totle_amo'].toDouble(),
-        credit: 0,
-        no: e['no'].toString(),
-      );
-    }
-
-    // ================= SALE RETURN =================
-    for (var e in res['Salereturn'] ?? []) {
-      addRow(
-        date: DateTime.parse(e['returnsale_date']),
-        type: "Sale Return",
-        party: e['customer_name'],
-        debit: 0,
-        credit: e['totle_amo'].toDouble(),
-        no: e['no'].toString(),
-      );
-    }
-
-    // ================= DEBIT NOTE =================
-    for (var e in res['Debitnote'] ?? []) {
-      addRow(
-        date: DateTime.parse(e['debitnote_date']),
-        type: "Credit Note",
-        party: e['customer_name'],
-        debit: e['totle_amo'].toDouble(),
-        credit: 0,
-        no: e['no'].toString(),
-      );
-    }
-
-    // ================= PURCHASE =================
-    for (var e in res['Purchaseinvoice'] ?? []) {
-      addRow(
-        date: DateTime.parse(e['purchaseinvoice_date']),
-        type: "Purchase",
-        party: e['supplier_name'],
-        debit: 0,
-        credit: e['totle_amo'].toDouble(),
-        no: e['no'].toString(),
-      );
-    }
-
-    // ================= PURCHASE RETURN =================
-    for (var e in res['Purchasereturn'] ?? []) {
-      addRow(
-        date: DateTime.parse(e['purchasereturn_date']),
-        type: "Purchase Return",
-        party: e['supplier_name'],
-        debit: e['totle_amo'].toDouble(),
-        credit: 0,
-        no: e['no'].toString(),
-      );
-    }
-
-    for (var e in res['PurchaseNote'] ?? []) {
-      addRow(
-        date: DateTime.parse(e['purchasenote_date']),
-        type: "Debit Note",
-        party: e['supplier_name'],
-        debit: e['totle_amo'].toDouble(),
-        credit: 0,
-        no: e['no'].toString(),
-      );
-    }
-
     // ================= RECEIPT =================
     for (var e in res['Recipt'] ?? []) {
       addRow(
         date: DateTime.parse(e['date']),
         type: "Receipt",
         party: e['customer_name'],
-        debit: 0,
-        credit: e['amount'].toDouble(),
+        debit: e['amount'].toDouble(),
+        credit: 0,
         no: e['vouncher_no'].toString(),
       );
     }
@@ -202,8 +130,8 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         date: DateTime.parse(e['date']),
         type: "Payment",
         party: e['supplier_name'],
-        debit: e['amount'].toDouble(),
-        credit: 0,
+        debit: 0,
+        credit: e['amount'].toDouble(),
         no: e['vouncher_no'].toString(),
       );
     }
@@ -213,9 +141,15 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
       addRow(
         date: DateTime.parse(e['date']),
         type: "Contra",
-        party: e['ledger_name'],
-        debit: e['amount']?.toDouble() ?? 0,
-        credit: 0,
+        party: e['account_name'] == selectedLedger!.ledgerName
+            ? e['ledger_name']
+            : e['account_name'],
+        debit: e['account_name'] == selectedLedger!.ledgerName
+            ? e['amount'].toDouble()
+            : 0,
+        credit: e['account_name'] == selectedLedger!.ledgerName
+            ? 0
+            : e['amount'].toDouble(),
         no: e['vouncher_no'].toString(),
       );
     }
@@ -226,8 +160,8 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         date: DateTime.parse(e['date']),
         type: "Expense",
         party: e['account_name'],
-        debit: e['amount'].toDouble(),
-        credit: 0,
+        debit: 0,
+        credit: e['amount'].toDouble(),
         no: e['vouncher_no'].toString(),
       );
     }
@@ -237,13 +171,15 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
       addRow(
         date: DateTime.parse(e['date']),
         type: "Journal",
-        party: selectedLedger?.ledgerName ?? "",
+        party: e['account_name'] == selectedLedger!.ledgerName
+            ? e['ledger_name']
+            : e['account_name'],
         debit: e['account_name'] == selectedLedger!.ledgerName
-            ? 0
-            : e['amount'].toDouble(),
-        credit: e['account_name'] == selectedLedger!.ledgerName
             ? e['amount'].toDouble()
             : 0,
+        credit: e['account_name'] == selectedLedger!.ledgerName
+            ? 0
+            : e['amount'].toDouble(),
         no: e['vouncher_no'].toString(),
       );
     }
@@ -258,8 +194,8 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
     return Scaffold(
       backgroundColor: const Color(0xffF3F4F6),
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: const Text("Ledger Report"),
+        backgroundColor: AppColor.primary,
+        title: const Text("Bank Book Report"),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -283,7 +219,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         Expanded(
           child: CommonSearchableDropdownField<LedgerListModel>(
             controller: ledgerCtrl,
-            hintText: "Select Ledger",
+            hintText: "Select Bank",
             suggestions: ledgerList
                 .map((e) => SearchFieldListItem(e.ledgerName ?? "", item: e))
                 .toList(),
@@ -298,7 +234,13 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         const SizedBox(width: 8),
         _dateBox(toCtrl, false),
         const SizedBox(width: 10),
-        ElevatedButton(onPressed: fetchLedgerReport, child: const Text("View")),
+        defaultButton(
+          onTap: fetchLedgerReport,
+          text: "View",
+          height: 40,
+          width: 150,
+          buttonColor: AppColor.blue,
+        ),
       ],
     );
   }
@@ -308,8 +250,8 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
       onTap: () async {
         final d = await showDatePicker(
           context: context,
-            firstDate: DateTime(1990),
-            lastDate: DateTime(2100),
+          firstDate: DateTime(1990),
+          lastDate: DateTime(2100),
           initialDate: isFrom ? fromDate : toDate,
         );
         if (d != null) {
@@ -325,9 +267,18 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         }
       },
       child: Container(
+        width: 140,
+        alignment: Alignment.center,
         padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(border: Border.all(), color: Colors.white),
-        child: Text(c.text),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColor.backgroundColor),
+          borderRadius: BorderRadius.circular(5),
+          color: Colors.white,
+        ),
+        child: Text(
+          c.text,
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
       ),
     );
   }
@@ -383,8 +334,8 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
     return Container(
       height: 45,
       padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: const BoxDecoration(
-        color: Color(0xff111827),
+      decoration: BoxDecoration(
+        color: AppColor.primary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
       ),
       child: const Row(

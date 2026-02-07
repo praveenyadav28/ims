@@ -275,6 +275,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                         mobile: cashMobileController.text,
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
+                        stateName: stateController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
                         signatureImage: signatureImage,

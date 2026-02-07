@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ims/ui/report/purchase/gst_purchase_report.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
 import 'package:ims/utils/api.dart';
-import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
-import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
@@ -189,21 +186,7 @@ class _PurchaseInvoiceAdvancedReportScreenState
             color: AppColor.white,
           ),
         ),
-        backgroundColor: AppColor.black,
-        actions: [
-          Center(
-            child: defaultButton(
-              text: "GST Purchase Report",
-              height: 40,
-              width: 180,
-              buttonColor: AppColor.blue,
-              onTap: () {
-                pushTo(GstPurchaseReportScreen());
-              },
-            ),
-          ),
-          SizedBox(width: 10),
-        ],
+        backgroundColor: AppColor.primary,
       ),
       body: loading
           ? Center(child: GlowLoader())
@@ -237,14 +220,14 @@ class _PurchaseInvoiceAdvancedReportScreenState
             children: [
               _textField(
                 "Search...",
-                "Search customer / invoice",
+                "Search Supplier / invoice",
                 searchCtrl,
                 () {
                   applyFilters();
                 },
               ),
 
-              _dropdown("Customer", supplierFilter, _suppliers(), (v) {
+              _dropdown("Supplier", supplierFilter, _suppliers(), (v) {
                 supplierFilter = v!;
                 applyFilters();
               }),
@@ -428,8 +411,8 @@ class _PurchaseInvoiceAdvancedReportScreenState
   Widget _tableHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xff111827),
+      decoration: BoxDecoration(
+        color: AppColor.primary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
       ),
       child: Row(

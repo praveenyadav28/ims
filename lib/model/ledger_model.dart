@@ -5,6 +5,7 @@ class LedgerListModel {
   String? customerId;
   String? ledgerName;
   int? contactNo;
+  int? whatsAppNo;
   String? email;
   String? ledgerGroup;
   int? openingBalance;
@@ -12,6 +13,7 @@ class LedgerListModel {
   int? closingBalance;
   dynamic gstNo;
   String? address;
+  String? town;
   String? state;
   String? city;
   int? v;
@@ -23,6 +25,7 @@ class LedgerListModel {
     this.customerId,
     this.ledgerName,
     this.contactNo,
+    this.whatsAppNo,
     this.email,
     this.ledgerGroup,
     this.openingBalance,
@@ -30,6 +33,7 @@ class LedgerListModel {
     this.closingBalance,
     this.gstNo,
     this.address,
+    this.town,
     this.state,
     this.city,
     this.v,
@@ -43,6 +47,7 @@ class LedgerListModel {
         customerId: json["customer_id"],
         ledgerName: json["ledger_name"],
         contactNo: json["contact_no"],
+        whatsAppNo: json["whatapp_no"],
         email: json["email"],
         ledgerGroup: json["ledger_group"],
         openingBalance: json["opening_balance"],
@@ -50,6 +55,7 @@ class LedgerListModel {
         closingBalance: json["closing_balance"],
         gstNo: json["gst_no"],
         address: json["address"],
+        town: json["town"],
         state: json["state"],
         city: json["city"],
         v: json["__v"],
@@ -62,6 +68,7 @@ class LedgerListModel {
     "customer_id": customerId,
     "ledger_name": ledgerName,
     "contact_no": contactNo,
+    "whatapp_no": whatsAppNo,
     "email": email,
     "ledger_group": ledgerGroup,
     "opening_balance": openingBalance,
@@ -69,6 +76,7 @@ class LedgerListModel {
     "closing_balance": closingBalance,
     "gst_no": gstNo,
     "address": address,
+    "town": town,
     "state": state,
     "city": city,
     "__v": v,

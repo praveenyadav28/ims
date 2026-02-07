@@ -231,7 +231,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
       backgroundColor: const Color(0xffF3F4F6),
       appBar: AppBar(
         title: const Text("Item Report By Party"),
-        backgroundColor: Colors.black,
+        backgroundColor: AppColor.primary,
       ),
       body: Padding(
         padding: const EdgeInsets.all(14),
@@ -365,8 +365,8 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
     return Container(
       height: 46,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xff111827),
+      decoration: BoxDecoration(
+        color: AppColor.primary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
       ),
       child: const Row(

@@ -4,6 +4,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/cussup_model.dart';
 import 'package:ims/model/expanse_model.dart';
+import 'package:ims/ui/report/report_screen.dart';
 
 import 'package:ims/ui/sales/models/sale_invoice_data.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
@@ -194,7 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         // LEFT
                         Expanded(
-                          flex: 3,
+                          flex: 5,
                           child: Column(
                             children: [
                               Row(
@@ -237,29 +238,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(width: 16),
                         // RIGHT
-                        Expanded(
-                          flex: 1,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 206, 202, 202),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xff7C3AED),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                ),
-                                onPressed: () {},
-                                child: const Text(
-                                  "Add Screen of your choice +",
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                        Expanded(flex: 2, child: ReportsDashboardScreen()),
                       ],
                     ),
                   ),

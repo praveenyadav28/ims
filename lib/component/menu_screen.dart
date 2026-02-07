@@ -24,10 +24,5 @@ enum MenuScreen {
   customerList,
   supplierList,
   inventoryScreen,
-  ledgerReport,
-  profitLoss,
-  supplierReport,
-  purchaseInvReport,
-  saleInvReport,
-  inventoryReport,
+  reportsDashboardScreen
 }

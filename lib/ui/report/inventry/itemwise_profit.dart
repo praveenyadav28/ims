@@ -87,7 +87,7 @@ class _FifoReportScreenState extends State<FifoReportScreen> {
     return Scaffold(
       backgroundColor: const Color(0xffF8FAFC),
       appBar: AppBar(
-        backgroundColor: AppColor.black,
+        backgroundColor: AppColor.primary,
         title: const Text("Profit/Loss Report"),
       ),
       body: Column(
@@ -159,7 +159,7 @@ class _FifoReportScreenState extends State<FifoReportScreen> {
   Widget _header() {
     return Container(
       padding: const EdgeInsets.all(12),
-      color: AppColor.black,
+      color: AppColor.primary,
       child: Row(
         children: [
           _th("Item Name"),

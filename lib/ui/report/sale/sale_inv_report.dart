@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ims/ui/report/sale/gst_sale_report.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/models/sale_invoice_data.dart';
 import 'package:ims/utils/api.dart';
-import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
-import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
@@ -190,21 +187,7 @@ class _SaleInvoiceAdvancedReportScreenState
             color: AppColor.white,
           ),
         ),
-        backgroundColor: AppColor.black,
-        actions: [
-          Center(
-            child: defaultButton(
-              text: "GST Sale Report",
-              height: 40,
-              width: 180,
-              buttonColor: AppColor.blue,
-              onTap: () {
-                pushTo(GstSaleReportScreen());
-              },
-            ),
-          ),
-          SizedBox(width: 10),
-        ],
+        backgroundColor: AppColor.primary,
       ),
       body: loading
           ? Center(child: GlowLoader())
@@ -429,8 +412,8 @@ class _SaleInvoiceAdvancedReportScreenState
   Widget _tableHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xff111827),
+      decoration: BoxDecoration(
+        color: AppColor.primary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
       ),
       child: Row(

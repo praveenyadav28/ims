@@ -10,8 +10,8 @@ import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
-import '../../utils/api.dart';
-import '../../utils/prefence.dart';
+import '../../../utils/api.dart';
+import '../../../utils/prefence.dart';
 
 class ProfitLossScreen extends StatefulWidget {
   const ProfitLossScreen({super.key});

@@ -351,6 +351,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                               mobile: cashMobileController.text,
                               billingAddress: cashBillingController.text,
                               shippingAddress: cashShippingController.text,
+                              stateName: stateController.text,
                               notes: selectedNotesList,
                               terms: selectedTermsList,
                               signatureImage: signatureImage,

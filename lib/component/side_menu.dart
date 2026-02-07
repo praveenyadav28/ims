@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/ui/onboarding/splash_screen.dart';
 import 'package:ims/utils/colors.dart';
+import 'package:ims/utils/navigation.dart';
 import 'menu_screen.dart';
 
 class SideMenu extends StatefulWidget {
@@ -216,20 +218,11 @@ class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
               ],
             ),
 
-            expandableMenu(
-              menuKey: "reports",
-              icon: "assets/icons/reports.svg",
-              title: "Reports",
-              children: [
-                {"Ledger Report": MenuScreen.ledgerReport},
-                {"Profit/Loss": MenuScreen.profitLoss},
-                // {"Supplier Report": MenuScreen.supplierReport},
-                {"P Invoice Report": MenuScreen.purchaseInvReport},
-                {"S Invoice Report": MenuScreen.saleInvReport},
-                {"Inventory Report": MenuScreen.inventoryReport},
-              ],
-            ),
-
+            // menuItem(
+            //   "assets/icons/reports.svg",
+            //   "Reports",
+            //   MenuScreen.reportsDashboardScreen,
+            // ),
             expandableMenu(
               menuKey: "vouchers",
               icon: "assets/icons/vouchers.svg",
@@ -263,11 +256,12 @@ class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
                 {"Ledger": MenuScreen.ledgerMaster},
               ],
             ),
-
             const SizedBox(height: 20),
             IconButton(
               icon: const Icon(Icons.logout, color: Colors.white),
-              onPressed: () {},
+              onPressed: () {
+                pushNdRemove(SplashScreen());
+              },
             ),
             const SizedBox(height: 10),
           ],

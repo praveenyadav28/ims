@@ -120,7 +120,37 @@ class _CreateLedgerState extends State<CreateLedger> {
     citiesSuggestions = [];
     selectedState = null;
     selectedCity = null;
+
     super.initState();
+
+    if (widget.existing != null) {
+      final l = widget.existing!;
+
+      ledgerNameController.text = l.ledgerName ?? "";
+      contactNoNameController.text = l.contactNo?.toString() ?? "";
+      whatsapppNoController.text = l.whatsAppNo.toString() == "null"
+          ? ""
+          : l.whatsAppNo.toString();
+      emailIdController.text = l.email ?? "";
+      openingBalanceController.text = (l.openingBalance?.abs() ?? "0")
+          .toString();
+      _selectedLedgerGroup = l.ledgerGroup;
+      _selectedBalance = l.openingType ?? "Dr";
+      addressLine1Controller.text = l.address ?? "";
+      permanentareaController.text = l.town ?? "";
+
+      // ---------- STATE & CITY ----------
+      if (l.state != null && l.state!.isNotEmpty) {
+        selectedState = SearchFieldListItem<String>(l.state!, item: l.state!);
+        citiesSuggestions = stateCities[l.state!] ?? [];
+      }
+
+      if (l.city != null && l.city!.isNotEmpty) {
+        selectedCity = SearchFieldListItem<String>(l.city!, item: l.city!);
+      }
+
+      setState(() {});
+    }
   }
 
   @override
@@ -139,7 +169,7 @@ class _CreateLedgerState extends State<CreateLedger> {
         shadowColor: AppColor.grey,
         iconTheme: IconThemeData(color: Colors.black),
         title: Text(
-          "Create New Ledger",
+          widget.existing == null ? "Create New Ledger" : "Update Ledger",
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             height: 1,
@@ -330,7 +360,7 @@ class _CreateLedgerState extends State<CreateLedger> {
           children: [
             defaultButton(
               buttonColor: Color(0xff8947E5),
-              text: "Create Ledger",
+              text: "${widget.existing == null ? "Create" : "Update"} Ledger",
               height: 40,
               width: 149,
               onTap: () => postLedger(),
@@ -367,7 +397,7 @@ class _CreateLedgerState extends State<CreateLedger> {
       'address': addressLine1Controller.text.trim().toString(),
       'town': permanentareaController.text.trim().toString(),
       'opening_type': _selectedBalance,
-      'closing_balance': "0",
+      if (widget.existing == null) 'closing_balance': "0",
       'gst_no': "",
       'state': selectedState?.item ?? "",
       'city': selectedCity?.item ?? "",
@@ -385,11 +415,17 @@ class _CreateLedgerState extends State<CreateLedger> {
     }
 
     // 3. Post the data.
-    final response = await ApiService.postData(
-      'ledger',
-      payloadData, // Pass the single, complete map
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
+    final response = widget.existing == null
+        ? await ApiService.postData(
+            'ledger',
+            payloadData, // Pass the single, complete map
+            licenceNo: Preference.getint(PrefKeys.licenseNo),
+          )
+        : await ApiService.putData(
+            'ledger/${widget.existing?.id}',
+            payloadData, // Pass the single, complete map
+            licenceNo: Preference.getint(PrefKeys.licenseNo),
+          );
 
     // 4. Handle the response.
     if (response["status"] == true) {

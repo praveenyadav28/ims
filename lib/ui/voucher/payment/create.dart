@@ -712,25 +712,24 @@ class _PaymentEntryState extends State<PaymentEntry> {
       "supplier_id": selectedSupplier!.id,
       "supplier_name": selectedSupplier!.ledgerName,
       "amount": double.parse(amountController.text),
-      "invoice_no": invoiceNoController.text,
+      if (invoiceNoController.text.isNotEmpty)
+        "invoice_no": invoiceNoController.text,
       "date": dateController.text, // yyyy-MM-dd
       "prefix": prefixController.text,
       "vouncher_no": voucherNoController.text,
       "note": noteController.text,
       "type": selectedType,
     };
+    final isEdit = widget.data != null;
 
-    var response = (widget.data != null)
-        ? await ApiService.putData(
-            "payment/${widget.data?.id}",
-            body,
-            licenceNo: Preference.getint(PrefKeys.licenseNo),
-          )
-        : await ApiService.postData(
-            "payment",
-            body,
-            licenceNo: Preference.getint(PrefKeys.licenseNo),
-          );
+    var response = await ApiService.uploadMultipart(
+      endpoint: isEdit ? "payment/${widget.data!.id}" : "payment",
+      fields: body,
+      updateStatus: isEdit, // 🔥 PUT if edit, POST if new
+      file: paymentImage != null ? XFile(paymentImage!.path) : null,
+      fileKey: "docu",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
     if (response['status'] == true) {
       showCustomSnackbarSuccess(context, response['message']);
       Navigator.pop(context, true);

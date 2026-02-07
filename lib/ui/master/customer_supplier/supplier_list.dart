@@ -26,7 +26,7 @@ class _SupplierTableScreenState extends State<SupplierTableScreen> {
   @override
   void initState() {
     super.initState();
-    gstApi();
+    getSupplierApi();
     searchController.addListener(() {
       _filterSuppliers();
     });
@@ -45,7 +45,7 @@ class _SupplierTableScreenState extends State<SupplierTableScreen> {
     });
   }
 
-  Future gstApi() async {
+  Future getSupplierApi() async {
     var response = await ApiService.fetchData(
       "get/supplier",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
@@ -66,7 +66,7 @@ class _SupplierTableScreenState extends State<SupplierTableScreen> {
 
     if (response['status'] == true) {
       showCustomSnackbarSuccess(context, response['message']);
-      gstApi();
+      getSupplierApi();
     } else {
       showCustomSnackbarError(context, response['message']);
     }
@@ -95,7 +95,7 @@ class _SupplierTableScreenState extends State<SupplierTableScreen> {
               width: 150,
               onTap: () async {
                 var data = await pushTo(CreateCusSup(isCustomer: false));
-                if (data == "data") gstApi();
+                if (data == "data") getSupplierApi();
               },
               text: "Create Supplier",
               buttonColor: AppColor.blue,
@@ -253,7 +253,7 @@ class _SupplierTableScreenState extends State<SupplierTableScreen> {
               CreateCusSup(isCustomer: false, cusSupData: c),
             );
             if (data != null) {
-              gstApi();
+              getSupplierApi();
             }
           }),
           SizedBox(width: 10),

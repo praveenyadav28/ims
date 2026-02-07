@@ -195,7 +195,7 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
     return Scaffold(
       backgroundColor: const Color(0xffF3F4F6),
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColor.primary,
         title: const Text("Item Ledger"),
       ),
       body: Padding(
@@ -298,8 +298,8 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
     return Container(
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
-        color: Color(0xff111827),
+      decoration: BoxDecoration(
+        color: AppColor.primary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
       ),
       child: const Row(
