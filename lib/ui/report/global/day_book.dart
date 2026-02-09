@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/utils/api.dart';
+import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
@@ -37,7 +38,7 @@ class _DayBookReportScreenState extends State<DayBookReportScreen> {
     setState(() => loading = true);
 
     final res = await ApiService.fetchData(
-      "get/trangection?from_date=2026-01-01&to_date=2026-05-05",
+      "get/trangection?from_date=${fromCtrl.text}&to_date=${toCtrl.text}",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
@@ -104,6 +105,7 @@ class _DayBookReportScreenState extends State<DayBookReportScreen> {
 
   Widget _filters() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         _date("From", fromCtrl, (d) {
           fromDate = d;
@@ -113,15 +115,22 @@ class _DayBookReportScreenState extends State<DayBookReportScreen> {
           toDate = d;
         }),
         const SizedBox(width: 12),
-        ElevatedButton(
-          onPressed: loadData,
-          child: const Text("Apply"),
+        defaultButton(
+          onTap: loadData,
+          text: "Apply",
+          height: 40,
+          width: 120,
+          buttonColor: AppColor.primary,
         ),
       ],
     );
   }
 
-  Widget _date(String label, TextEditingController c, Function(DateTime) onPick) {
+  Widget _date(
+    String label,
+    TextEditingController c,
+    Function(DateTime) onPick,
+  ) {
     return SizedBox(
       width: 200,
       child: TitleTextFeild(
@@ -159,13 +168,13 @@ class _DayBookReportScreenState extends State<DayBookReportScreen> {
             child: loading
                 ? const Center(child: CircularProgressIndicator())
                 : rows.isEmpty
-                    ? const Center(child: Text("No Transactions Found"))
-                    : ListView.separated(
-                        itemCount: rows.length,
-                        separatorBuilder: (_, __) =>
-                            Divider(height: 1, color: Colors.grey.shade200),
-                        itemBuilder: (_, i) => _row(rows[i], i),
-                      ),
+                ? const Center(child: Text("No Transactions Found"))
+                : ListView.separated(
+                    itemCount: rows.length,
+                    separatorBuilder: (_, __) =>
+                        Divider(height: 1, color: Colors.grey.shade200),
+                    itemBuilder: (_, i) => _row(rows[i], i),
+                  ),
           ),
         ],
       ),
@@ -226,20 +235,39 @@ class _DayBookRow {
     required this.party,
     required this.amount,
   });
-
   factory _DayBookRow.fromJson(Map<String, dynamic> j, String type) {
+    String dateStr =
+        j['date'] ??
+        j['returnsale_date'] ??
+        j['purchaseinvoice_date'] ??
+        j['purchasereturn_date'] ??
+        j['invoice_date'] ??
+        j['estimate_date'] ??
+        j['proforma_date'] ??
+        "";
+
+    DateTime parsedDate;
+    try {
+      parsedDate = dateStr.isNotEmpty
+          ? DateTime.parse(dateStr)
+          : DateTime.now();
+    } catch (_) {
+      parsedDate = DateTime.now();
+    }
+
     return _DayBookRow(
-      date: DateTime.parse(j['date'] ?? j['returnsale_date'] ?? j['purchaseinvoice_date'] ?? j['purchasereturn_date']),
+      date: parsedDate,
       type: type,
-      prefix: j['prefix'] ?? "",
-      voucherNo: j['vouncher_no'] ?? j['no'] ?? 0,
-      party: j['customer_name'] ??
-          j['supplier_name'] ??
-          j['ledger_name'] ??
-          "-",
-      amount: (j['amount'] ??
-              j['totle_amo'] ??
-              0)
+      prefix: (j['prefix'] ?? "").toString(),
+      voucherNo: (j['vouncher_no'] ?? j['no'] ?? 0) as int,
+      party:
+          (j['customer_name'] ??
+                  j['supplier_name'] ??
+                  j['ledger_name'] ??
+                  j['account_name'] ??
+                  "-")
+              .toString(),
+      amount: (j['amount'] ?? j['totle_amo'] ?? j['totalAmount'] ?? 0)
           .toDouble(),
     );
   }
@@ -252,13 +280,17 @@ class _H extends StatelessWidget {
   const _H(this.t, this.f);
   @override
   Widget build(BuildContext context) => Expanded(
-        flex: f,
-        child: Center(
-          child: Text(t,
-              style: GoogleFonts.inter(
-                  color: Colors.white, fontWeight: FontWeight.w600)),
+    flex: f,
+    child: Center(
+      child: Text(
+        t,
+        style: GoogleFonts.inter(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _C extends StatelessWidget {
@@ -267,10 +299,12 @@ class _C extends StatelessWidget {
   const _C(this.t, this.f);
   @override
   Widget build(BuildContext context) => Expanded(
-        flex: f,
-        child: Center(
-          child: Text(t,
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500)),
-        ),
-      );
+    flex: f,
+    child: Center(
+      child: Text(
+        t,
+        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+      ),
+    ),
+  );
 }

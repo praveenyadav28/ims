@@ -109,7 +109,7 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
       'get/reciept',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-
+    print(res);
     allList = (res['data'] as List)
         .map((e) => PaymentModel.fromJson(e))
         .toList();

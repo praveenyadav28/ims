@@ -5,6 +5,7 @@ class PaymentModel {
   final double amount;
   final int invoiceNo;
   final DateTime date;
+  final DateTime? reminderDate;
   final String prefix;
   final int voucherNo;
   final String note;
@@ -19,6 +20,7 @@ class PaymentModel {
     required this.amount,
     required this.invoiceNo,
     required this.date,
+    required this.reminderDate,
     required this.prefix,
     required this.voucherNo,
     required this.note,
@@ -35,6 +37,9 @@ class PaymentModel {
       amount: (json['amount'] as num).toDouble(),
       invoiceNo: json['invoice_no'] ?? 0,
       date: DateTime.parse(json['date']),
+      reminderDate: json['reminder_date'] != null
+          ? DateTime.parse(json['reminder_date'])
+          : null,
       prefix: json['prefix'],
       voucherNo: json['vouncher_no'],
       note: json['note'] ?? '',

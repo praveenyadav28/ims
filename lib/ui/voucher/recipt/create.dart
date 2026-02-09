@@ -48,6 +48,7 @@ class _RecieptEntryState extends State<RecieptEntry> {
     text:
         "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}",
   );
+  TextEditingController reminderController = TextEditingController();
   TextEditingController prefixController = TextEditingController();
   TextEditingController voucherNoController = TextEditingController();
   TextEditingController noteController = TextEditingController();
@@ -89,6 +90,10 @@ class _RecieptEntryState extends State<RecieptEntry> {
     invoiceNoController.text = d.invoiceNo.toString();
     dateController.text =
         "${d.date.year}-${d.date.month.toString().padLeft(2, '0')}-${d.date.day.toString().padLeft(2, '0')}";
+    if (d.reminderDate != null) {
+      reminderController.text =
+          "${d.reminderDate?.year}-${d.reminderDate?.month.toString().padLeft(2, '0')}-${d.reminderDate?.day.toString().padLeft(2, '0')}";
+    }
 
     prefixController.text = d.prefix;
     voucherNoController.text = d.voucherNo.toString();
@@ -391,10 +396,12 @@ class _RecieptEntryState extends State<RecieptEntry> {
                                 titleText: "Reciept Date",
                                 hintText: "Reciept Date",
                                 readOnly: true,
-                                onTap: pickDate,
+                                onTap: () {
+                                  pickDate(dateController);
+                                },
                               ),
                             ),
-                            SizedBox(width: 30),
+                            SizedBox(width: 15),
                             Expanded(
                               child: TitleTextFeild(
                                 controller: prefixController,
@@ -402,15 +409,26 @@ class _RecieptEntryState extends State<RecieptEntry> {
                                 hintText: "Prifix",
                               ),
                             ),
-                            SizedBox(width: 30),
+                            SizedBox(width: 15),
                             Expanded(
                               child: TitleTextFeild(
                                 controller: voucherNoController,
-                                titleText: "Reciept Voucher No.",
+                                titleText: "Voucher No.",
                                 hintText: "Voucher No.",
                               ),
                             ),
-                            SizedBox(width: 30),
+                            SizedBox(width: 15),
+                            Expanded(
+                              child: TitleTextFeild(
+                                controller: reminderController,
+                                titleText: "Reminder Date",
+                                hintText: "Reminder Date",
+                                readOnly: true,
+                                onTap: () {
+                                  pickDate(reminderController);
+                                },
+                              ),
+                            ),
                           ],
                         ),
                         SizedBox(height: Sizes.height * .037),
@@ -618,7 +636,7 @@ class _RecieptEntryState extends State<RecieptEntry> {
     });
   }
 
-  Future<void> pickDate() async {
+  Future<void> pickDate(TextEditingController controller) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -628,7 +646,7 @@ class _RecieptEntryState extends State<RecieptEntry> {
 
     if (picked != null) {
       selectedDate = picked;
-      dateController.text =
+      controller.text =
           "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
       setState(() {});
     }
@@ -648,6 +666,8 @@ class _RecieptEntryState extends State<RecieptEntry> {
       if (invoiceNoController.text.isNotEmpty)
         "invoice_no": invoiceNoController.text,
       "date": dateController.text, // yyyy-MM-dd
+      if (reminderController.text.trim().isNotEmpty)
+        "reminder_date": reminderController.text, // yyyy-MM-dd
       "prefix": prefixController.text,
       "vouncher_no": voucherNoController.text,
       "note": noteController.text,

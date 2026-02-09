@@ -4,6 +4,9 @@ import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/cussup_model.dart';
 import 'package:ims/model/expanse_model.dart';
+import 'package:ims/model/ledger_model.dart';
+import 'package:ims/model/payment_model.dart';
+import 'package:ims/model/reminder_card_modeld.dart';
 import 'package:ims/ui/report/report_screen.dart';
 
 import 'package:ims/ui/sales/models/sale_invoice_data.dart';
@@ -42,6 +45,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<int, double> saleMonthly = {};
   Map<int, double> purchaseMonthly = {};
 
+  List<PaymentModel> allReceipts = [];
+  List<LedgerListModel> ledgerList = [];
+
+  List<ReminderCardModel> reminderList = [];
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +62,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       loadPurchaseTotal(),
       loadCustomers(),
       fetchExpenses(),
+      loadRemindersData(), // 🔥 ADD
     ]);
 
     buildOutstanding();
@@ -62,7 +71,83 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => loading = false);
   }
 
-  // ================= API CALLS =================
+  Future<void> loadRemindersData() async {
+    final recRes = await ApiService.fetchData(
+      'get/reciept',
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    debugPrint("RAW RECIEPT API => ${recRes['data']}"); // 🔥 ADD
+
+    allReceipts = (recRes['data'] as List)
+        .map((e) => PaymentModel.fromJson(e))
+        .toList();
+
+    for (final r in allReceipts) {
+      debugPrint(
+        "Parsed -> name: ${r.supplierName}, reminder: ${r.reminderDate}",
+      );
+    }
+
+    final ledRes = await ApiService.fetchData(
+      "get/ledger",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    ledgerList = (ledRes['data'] as List)
+        .map((e) => LedgerListModel.fromJson(e))
+        .toList();
+
+    buildOutstandingReminders();
+  }
+
+  void buildOutstandingReminders() {
+    final Map<String, PaymentModel> lastReminderByName = {};
+
+    for (final r in allReceipts) {
+      final name = (r.supplierName).trim();
+      if (name.isEmpty) continue;
+
+      if (r.reminderDate == null)
+        continue; // 🔥 only consider reminder receipts
+
+      if (!lastReminderByName.containsKey(name)) {
+        lastReminderByName[name] = r;
+      } else {
+        if (r.date.isAfter(lastReminderByName[name]!.date)) {
+          lastReminderByName[name] = r;
+        }
+      }
+    }
+
+    reminderList.clear();
+
+    lastReminderByName.forEach((name, receipt) {
+      LedgerListModel? ledger;
+      try {
+        ledger = ledgerList.firstWhere(
+          (l) =>
+              (l.ledgerName ?? "").trim().toLowerCase().replaceAll(" ", "") ==
+              name.toLowerCase().replaceAll(" ", ""),
+        );
+      } catch (_) {
+        ledger = null;
+      }
+
+      reminderList.add(
+        ReminderCardModel(
+          customerId: ledger?.id ?? "",
+          name: ledger?.ledgerName ?? name,
+          reminderDate: receipt.reminderDate!,
+          closingBalance: ledger?.closingBalance ?? 0,
+        ),
+      );
+    });
+
+    reminderList.sort((a, b) => a.reminderDate.compareTo(b.reminderDate));
+
+    debugPrint("Reminder cards: ${reminderList.length}");
+  }
 
   Future<void> loadSaleTotal() async {
     final res = await ApiService.fetchData(
@@ -394,68 +479,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return list[m - 1];
   }
 
-  // ================= OUTSTANDING =================
-
-  Widget _reminderList() {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xff111827),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Outstanding Reminders",
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            if (outstandingList.isEmpty)
-              const Text(
-                "No Outstanding",
-                style: TextStyle(color: Colors.white54),
-              ),
-
-            ...outstandingList
-                .take(5)
-                .map(
-                  (c) => _reminder(
-                    c.companyName.isNotEmpty ? c.companyName : c.firstName,
-                    "₹ ${c.closingBalance.abs()}",
-                    true,
-                  ),
-                ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _reminder(String name, String amount, bool danger) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            name,
-            style: GoogleFonts.inter(color: danger ? Colors.red : Colors.white),
-          ),
-          Text(
-            amount,
-            style: GoogleFonts.inter(color: danger ? Colors.red : Colors.white),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ================= EXPENSE LIST =================
 
   Widget _expenseList() {
@@ -603,6 +626,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _reminderList() {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xff111827),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Outstanding Reminders",
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            if (reminderList.isEmpty)
+              const Text(
+                "No Pending Reminders",
+                style: TextStyle(color: Colors.white54),
+              ),
+
+            ...reminderList
+                .take(5)
+                .map(
+                  (r) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              r.name,
+                              style: GoogleFonts.inter(color: Colors.red),
+                            ),
+                            Text(
+                              "Remind: ${r.reminderDate.toString().split(' ').first}",
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: Colors.white54,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          "₹ ${r.closingBalance.abs()}",
+                          style: GoogleFonts.inter(color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          ],
+        ),
       ),
     );
   }

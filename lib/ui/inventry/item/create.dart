@@ -2148,6 +2148,10 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
     final List<Map<String, dynamic>> tempList = List.from(generatedItems);
 
     for (final item in tempList) {
+      final purchaseEnteredRe =
+          double.tryParse(item["purchase_price"]?.toString() ?? "0") ?? 0.0;
+      final stockQty =
+          int.tryParse(item["opening_stock"]?.toString() ?? "0") ?? 0;
       final purchaseEntered =
           double.tryParse(item["purchase_price"]?.toString() ?? "0") ?? 0.0;
       final saleEntered =
@@ -2210,8 +2214,10 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
             : item["item_no"],
         "group": selectedCategory,
         "purchase_price": purchaseEntered.toStringAsFixed(2),
+        "purchase_price_se": purchaseEnteredRe.toStringAsFixed(2),
         "sales_price": saleEntered.toStringAsFixed(2),
-        "opening_stock": item["opening_stock"],
+        "opening_stock": stockQty,
+        "stock_qty": stockQty,
         "hsn_code": selectedHsn,
         "gst_tax_rate": gstRateController.text.trim(),
         "gst_include": saleTaxMode == "With Tax",
@@ -2242,7 +2248,6 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
           generatedItems.removeWhere((e) => e["item_no"] == item["item_no"]);
         });
         debugPrint("🟢 Saved & removed item: ${item["item_no"]}");
-        Navigator.of(context).pop(true);
       } else {
         showCustomSnackbarError(
           context,
