@@ -462,7 +462,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
 
                   SizedBox(height: Sizes.height * .03),
                   GlobalItemsTableSection(
-                    rows: state.rows,
+                    rows: state.rows,ledgerType: state.selectedCustomer?.ledgerType ?? 'Individual',
                     catalogue: state.catalogue,
                     hsnList: state.hsnMaster,
                     onAddRow: () => bloc.add(PurchaseOrderAddRow()),

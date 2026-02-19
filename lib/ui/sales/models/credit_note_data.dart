@@ -144,4 +144,6 @@ class CreditNoteData {
     createdAt: DateTime.parse(j["createdAt"]),
     updatedAt: DateTime.parse(j["updatedAt"]),
   );
+
+  toPrintModel() {}
 }

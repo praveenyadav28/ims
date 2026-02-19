@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:ims/ui/master/company/company_api.dart';
 import 'package:ims/ui/purchase/purchase_Invoice/purchase_Invoice_create.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart';
 import 'package:ims/ui/sales/data/transection_list.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
+import 'package:ims/utils/print_mapper.dart';
 import '../../../utils/navigation.dart';
 
 class PurchaseInvoiceListScreen extends StatefulWidget {
@@ -26,8 +29,13 @@ class _PurchaseInvoiceListScreenState extends State<PurchaseInvoiceListScreen> {
       key: listKey,
       title: "Purchase Invoice",
       fetchData: repo.getPurchaseInvoice,
-      onView: (e) {
-        print("VIEW Purchase Invoice PDF: ${e.no}");
+       onView: (e) async {
+        final doc = e.toPrintModel(); // ✅ no dynamic
+
+        final companyApi = await CompanyProfileAPi.getCompanyProfile();
+        final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+
+        await PdfEngine.printPremiumInvoice(doc: doc, company: company);
       },
       onEdit: (e) async {
         final result = await pushTo(

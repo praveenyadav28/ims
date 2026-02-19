@@ -413,6 +413,8 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
     SaleReturnSelectCatalogForRow e,
     Emitter<SaleReturnState> emit,
   ) {
+    final ledgerType = state.selectedCustomer?.ledgerType ?? "Individual";
+
     emit(
       state.copyWith(
         rows: state.rows.map((r) {
@@ -421,14 +423,17 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
             final variant = item.variants.isNotEmpty
                 ? item.variants.first
                 : null;
+            final isWholesale = ledgerType.toLowerCase() != "individual";
+            final price = isWholesale
+                ? (item.wholesalePrice ?? item.baseSalePrice ?? 0)
+                : (item.baseSalePrice ?? 0);
 
             return r
                 .copyWith(
                   product: item,
                   selectedVariant: variant,
                   qty: r.qty == 0 ? 1 : r.qty,
-                  pricePerSelectedUnit:
-                      variant?.salePrice ?? item.baseSalePrice,
+                  pricePerSelectedUnit: price,
                   discountPercent: 0,
                   hsnOverride: item.hsn,
                   taxPercent: item.gstRate,

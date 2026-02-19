@@ -439,8 +439,8 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
   Future<void> pickDate() async {
     final d = await showDatePicker(
       context: context,
-            firstDate: DateTime(1990),
-            lastDate: DateTime(2100),
+      firstDate: DateTime(1990),
+      lastDate: DateTime(2100),
       initialDate: DateTime.now(),
     );
     if (d != null) {

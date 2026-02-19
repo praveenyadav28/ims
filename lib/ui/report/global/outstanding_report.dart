@@ -173,7 +173,7 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
                     const Divider(height: 1),
                     Expanded(
                       child: loading
-                          ? const Center(child: CircularProgressIndicator())
+                          ? const Center(child: GlowLoader())
                           : ledgerList.isEmpty
                           ? const Center(child: Text("No Outstanding Found"))
                           : ListView.separated(

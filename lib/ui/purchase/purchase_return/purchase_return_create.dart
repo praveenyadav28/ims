@@ -373,6 +373,8 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
 
                   SizedBox(height: Sizes.height * .03),
                   GlobalItemsTableSection(
+                    ledgerType:
+                        state.selectedCustomer?.ledgerType ?? 'Individual',
                     rows: state.rows,
                     catalogue: state.catalogue,
                     hsnList: state.hsnMaster,

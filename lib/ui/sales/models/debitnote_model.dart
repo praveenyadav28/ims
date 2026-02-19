@@ -138,6 +138,8 @@ class DebitNoteData {
 
     signature: j["signature"] ?? "",
   );
+
+  toPrintModel() {}
 }
 
 class NoteItemDetail {

@@ -422,8 +422,8 @@ class _JournalEntryState extends State<JournalEntry> {
   Future<void> pickDate() async {
     final d = await showDatePicker(
       context: context,
-            firstDate: DateTime(1990),
-            lastDate: DateTime(2100),
+      firstDate: DateTime(1990),
+      lastDate: DateTime(2100),
       initialDate: DateTime.now(),
     );
     if (d != null) {
@@ -436,6 +436,13 @@ class _JournalEntryState extends State<JournalEntry> {
   /// ================= SAVE =================
   Future<void> saveJournal() async {
     if (selectedDebitLedger == null || selectedCreditLedger == null) return;
+    if (selectedDebitLedger!.id == selectedCreditLedger!.id) {
+      showCustomSnackbarError(
+        context,
+        "Debit and Credit ledger cannot be same",
+      );
+      return;
+    }
 
     final body = {
       "licence_no": Preference.getint(PrefKeys.licenseNo),

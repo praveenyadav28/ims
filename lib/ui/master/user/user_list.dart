@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ims/model/cussup_model.dart';
-import 'package:ims/ui/master/user/create_employee.dart';
+import 'package:ims/model/user_model.dart';
+import 'package:ims/ui/master/user/create_user.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -18,7 +18,7 @@ class UserEmpTableScreen extends StatefulWidget {
 }
 
 class _UserEmpTableScreenState extends State<UserEmpTableScreen> {
-  List<Customer> list = [];
+  List<UserModel> list = [];
 
   @override
   void initState() {
@@ -28,15 +28,15 @@ class _UserEmpTableScreenState extends State<UserEmpTableScreen> {
 
   // ---------------- API ----------------
   Future loadData() async {
-    // var response = await ApiService.fetchData(
-    //   "get/user",
-    //   licenceNo: Preference.getint(PrefKeys.licenseNo),
-    // );
+    var response = await ApiService.fetchData(
+      "get/user",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
 
-    // List responseData = response['data'] ?? [];
-    // setState(() {
-    //   list = responseData.map((e) => Customer.fromJson(e)).toList();
-    // });
+    List responseData = response['data'] ?? [];
+    setState(() {
+      list = responseData.map((e) => UserModel.fromJson(e)).toList();
+    });
   }
 
   Future deleteApi(String id) async {
@@ -75,7 +75,7 @@ class _UserEmpTableScreenState extends State<UserEmpTableScreen> {
               height: 40,
               width: 150,
               onTap: () async {
-                var data = await pushTo(UserEmpCreate());
+                var data = await pushTo(UserScreenCreate());
                 if (data == "data") loadData();
               },
               text: "Create",
@@ -141,11 +141,9 @@ class _UserEmpTableScreenState extends State<UserEmpTableScreen> {
       ),
       child: Row(
         children: [
-          Expanded(flex: 3, child: Text("Company", style: _headStyle)),
-          Expanded(flex: 2, child: Text("Type", style: _headStyle)),
-          Expanded(flex: 3, child: Text("Name", style: _headStyle)),
-          Expanded(flex: 2, child: Text("Mobile", style: _headStyle)),
-          Expanded(flex: 3, child: Text("Email", style: _headStyle)),
+          Expanded(flex: 3, child: Text("Username", style: _headStyle)),
+          Expanded(flex: 2, child: Text("Role", style: _headStyle)),
+          Expanded(flex: 3, child: Text("password", style: _headStyle)),
           SizedBox(width: 110, child: Text("Action", style: _headStyle)),
         ],
       ),
@@ -160,7 +158,7 @@ class _UserEmpTableScreenState extends State<UserEmpTableScreen> {
   );
 
   // ---------------- ROW ----------------
-  Widget _tableRow(Customer c, int index) {
+  Widget _tableRow(UserModel c, int index) {
     final bool even = index.isEven;
 
     return Container(
@@ -168,14 +166,9 @@ class _UserEmpTableScreenState extends State<UserEmpTableScreen> {
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
       child: Row(
         children: [
-          Expanded(flex: 3, child: _cell(c.companyName)),
-          Expanded(flex: 2, child: _typeChip(c.customerType)),
-          Expanded(
-            flex: 3,
-            child: _cell("${c.title} ${c.firstName} ${c.lastName}"),
-          ),
-          Expanded(flex: 2, child: _cell(c.mobile)),
-          Expanded(flex: 3, child: _cell(c.email)),
+          Expanded(flex: 3, child: _cell(c.userName)),
+          Expanded(flex: 2, child: _typeChip(c.role)),
+          Expanded(flex: 3, child: _cell(c.password)),
           _actionButtons(c),
         ],
       ),
@@ -218,12 +211,11 @@ class _UserEmpTableScreenState extends State<UserEmpTableScreen> {
   }
 
   // ---------------- ACTIONS ----------------
-  Widget _actionButtons(Customer c) {
+  Widget _actionButtons(UserModel c) {
     return SizedBox(
       width: 110,
       child: Row(
         children: [
-          _iconBtn(Icons.visibility, Colors.blue, () => _showDetails(c)),
           const SizedBox(width: 10),
           _iconBtn(Icons.delete, Colors.red, () => _confirmDelete(c.id)),
         ],
@@ -242,33 +234,6 @@ class _UserEmpTableScreenState extends State<UserEmpTableScreen> {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, size: 18, color: color),
-      ),
-    );
-  }
-
-  // ---------------- DETAILS ----------------
-  void _showDetails(Customer c) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text("${c.title} ${c.firstName} ${c.lastName}"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Mobile: ${c.mobile}"),
-            Text("Email: ${c.email}"),
-            Text("Type: ${c.customerType}"),
-            Text("Company: ${c.companyName}"),
-            Text("Address: ${c.address}"),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
-          ),
-        ],
       ),
     );
   }

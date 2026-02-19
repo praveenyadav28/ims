@@ -166,7 +166,7 @@ class _DayBookReportScreenState extends State<DayBookReportScreen> {
           const Divider(height: 1),
           Expanded(
             child: loading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: GlowLoader())
                 : rows.isEmpty
                 ? const Center(child: Text("No Transactions Found"))
                 : ListView.separated(

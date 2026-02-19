@@ -101,28 +101,79 @@ class _DashboardScreenState extends State<DashboardScreen> {
     buildOutstandingReminders();
   }
 
-  void buildOutstandingReminders() {
-    final Map<String, PaymentModel> lastReminderByName = {};
+  // void buildOutstandingReminders() {
+  //   final Map<String, PaymentModel> lastReminderByName = {};
 
+  //   for (final r in allReceipts) {
+  //     final name = (r.supplierName).trim();
+  //     if (name.isEmpty) continue;
+
+  //     if (r.reminderDate == null)
+  //       continue; // 🔥 only consider reminder receipts
+
+  //     if (!lastReminderByName.containsKey(name)) {
+  //       lastReminderByName[name] = r;
+  //     } else {
+  //       if (r.date.isAfter(lastReminderByName[name]!.date)) {
+  //         lastReminderByName[name] = r;
+  //       }
+  //     }
+  //   }
+
+  //   reminderList.clear();
+
+  //   lastReminderByName.forEach((name, receipt) {
+  //     LedgerListModel? ledger;
+  //     try {
+  //       ledger = ledgerList.firstWhere(
+  //         (l) =>
+  //             (l.ledgerName ?? "").trim().toLowerCase().replaceAll(" ", "") ==
+  //             name.toLowerCase().replaceAll(" ", ""),
+  //       );
+  //     } catch (_) {
+  //       ledger = null;
+  //     }
+
+  //     reminderList.add(
+  //       ReminderCardModel(
+  //         customerId: ledger?.id ?? "",
+  //         name: ledger?.ledgerName ?? name,
+  //         reminderDate: receipt.reminderDate!,
+  //         closingBalance: ledger?.closingBalance ?? 0,
+  //       ),
+  //     );
+  //   });
+
+  //   reminderList.sort((a, b) => a.reminderDate.compareTo(b.reminderDate));
+
+  //   debugPrint("Reminder cards: ${reminderList.length}");
+  // }
+  void buildOutstandingReminders() {
+    final Map<String, PaymentModel> latestReceiptByName = {};
+
+    // Step 1: Get latest receipt for each ledger
     for (final r in allReceipts) {
       final name = (r.supplierName).trim();
       if (name.isEmpty) continue;
 
-      if (r.reminderDate == null)
-        continue; // 🔥 only consider reminder receipts
-
-      if (!lastReminderByName.containsKey(name)) {
-        lastReminderByName[name] = r;
+      if (!latestReceiptByName.containsKey(name)) {
+        latestReceiptByName[name] = r;
       } else {
-        if (r.date.isAfter(lastReminderByName[name]!.date)) {
-          lastReminderByName[name] = r;
+        if (r.date.isAfter(latestReceiptByName[name]!.date)) {
+          latestReceiptByName[name] = r;
         }
       }
     }
 
     reminderList.clear();
 
-    lastReminderByName.forEach((name, receipt) {
+    // Step 2: Check only latest receipt
+    latestReceiptByName.forEach((name, receipt) {
+      if (receipt.reminderDate == null) {
+        // ❌ Latest voucher has no reminder → skip
+        return;
+      }
+
       LedgerListModel? ledger;
       try {
         ledger = ledgerList.firstWhere(
@@ -144,9 +195,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     });
 
+    // Sort by reminder date
     reminderList.sort((a, b) => a.reminderDate.compareTo(b.reminderDate));
 
-    debugPrint("Reminder cards: ${reminderList.length}");
+    debugPrint("Filtered Reminder cards: ${reminderList.length}");
   }
 
   Future<void> loadSaleTotal() async {

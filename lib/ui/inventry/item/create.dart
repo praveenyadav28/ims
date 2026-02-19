@@ -72,6 +72,8 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
   final TextEditingController openingStockController = TextEditingController();
   final TextEditingController minOrderController = TextEditingController();
   final TextEditingController minStockController = TextEditingController();
+  final TextEditingController wholeSalePriceController =
+      TextEditingController();
   final TextEditingController reorderController = TextEditingController();
   final TextEditingController marginPercentController = TextEditingController();
   final TextEditingController marginAmtController = TextEditingController();
@@ -177,6 +179,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
     openingStockController.dispose();
     minOrderController.dispose();
     minStockController.dispose();
+    wholeSalePriceController.dispose();
     reorderController.dispose();
     marginPercentController.dispose();
     marginAmtController.dispose();
@@ -1764,9 +1767,9 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
             const SizedBox(width: 24),
             Expanded(
               child: TitleTextFeild(
-                titleText: "Minimum Stock Quantity",
+                titleText: "Whole Sale Price",
                 hintText: "0",
-                controller: minStockController,
+                controller: wholeSalePriceController,
               ),
             ),
           ],
@@ -2081,6 +2084,9 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         'm_o_qty': minOrderController.text,
       if (minStockController.text.isNotEmpty)
         'm_s_qty': minStockController.text,
+      'whole_sale_price': wholeSalePriceController.text.trim().isEmpty
+          ? salePriceController.text
+          : wholeSalePriceController.text.trim(),
       if (mfgDateController.text.isNotEmpty) 'mfg_date': mfgDateController.text,
       if (expDateController.text.isNotEmpty)
         'expiry_date': expDateController.text,
@@ -2264,6 +2270,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         context,
         "🎉 All variant items saved and cleared from list!",
       );
+      Navigator.pop(context, "data");
     } else {
       showCustomSnackbarSuccess(
         context,

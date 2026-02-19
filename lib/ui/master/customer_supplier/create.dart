@@ -796,6 +796,7 @@ class _CreateCusSupState extends State<CreateCusSup>
         ),
         MapEntry("branch_id", Preference.getString(PrefKeys.locationId)),
         MapEntry("customer_type", selectedType),
+        MapEntry("other1", selectedType),
         MapEntry("title", selectedTitle),
         MapEntry("first_name", firstNameController.text.trim()),
         MapEntry("last_name", lastNameController.text.trim()),

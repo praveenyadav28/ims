@@ -1,9 +1,5 @@
 // ignore_for_file: must_be_immutable
-
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
@@ -11,589 +7,196 @@ import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
-import 'package:ims/utils/state_cities.dart';
 import 'package:ims/utils/textfield.dart';
-import 'package:searchfield/searchfield.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:dio/dio.dart';
+
+class UserRight {
+  String title;
+  bool view;
+  bool create;
+  bool update;
+  bool delete;
+
+  UserRight({
+    required this.title,
+    this.view = false,
+    this.create = false,
+    this.update = false,
+    this.delete = false,
+  });
+}
 
 class UserScreenCreate extends StatefulWidget {
   const UserScreenCreate({super.key});
+
   @override
   State<UserScreenCreate> createState() => _UserScreenCreateState();
 }
 
-class _UserScreenCreateState extends State<UserScreenCreate>
-    with SingleTickerProviderStateMixin {
-  TextEditingController companyNameController = TextEditingController();
-  TextEditingController firstNameController = TextEditingController();
-  TextEditingController lastNameController = TextEditingController();
-  TextEditingController firstNameGuardianController = TextEditingController();
-  TextEditingController guardianNameController = TextEditingController();
-  TextEditingController guardianlastNameController = TextEditingController();
-  TextEditingController emailController = TextEditingController();
-  TextEditingController mobileController = TextEditingController();
-  TextEditingController workPhoneController = TextEditingController();
-  TextEditingController whatsappController = TextEditingController();
+class _UserScreenCreateState extends State<UserScreenCreate> {
   TextEditingController userNameController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
-  TextEditingController cityDistrictController = TextEditingController();
-  TextEditingController addressLine1Controller = TextEditingController();
-  TextEditingController addressLine2Controller = TextEditingController();
 
-  String selectedType = "Male";
-  late TabController _tabController;
-
-  List<String> titleList = ["Mr", "Mrs", "Dr"];
-  String selectedTitle = "Mr";
-
-  String selectedTitleParent = "Mr";
-
-  List<String> gstTypeList = [
-    "Unregistered Dealer",
-    "Registered Dealer",
-    "Composition Dealer",
-    "UIN Holder",
-    "Govt. Body",
-  ];
-  bool selectedGstType = true;
-
-  // State & City (SearchField like staff screen)
-  late List<String> statesSuggestions;
-  late List<String> citiesSuggestions;
-  SearchFieldListItem<String>? selectedState;
-  SearchFieldListItem<String>? selectedCity;
-
-  final ImagePicker _picker = ImagePicker();
-
-  List<Map<String, dynamic>> documents = [
-    {"duc_title": "", "image": null},
+  List<UserRight> rightsList = [
+    UserRight(title: "Item"),
+    UserRight(title: "Ledger"),
+    UserRight(title: "Misc Charge"),
+    UserRight(title: "Employee"),
+    UserRight(title: "User"),
+    UserRight(title: "Payment Voucher"),
+    UserRight(title: "Receipt Voucher"),
+    UserRight(title: "Contra Voucher"),
+    UserRight(title: "Expense Voucher"),
+    UserRight(title: "Journal Voucher"),
+    UserRight(title: "Purchase Order"),
+    UserRight(title: "Purchase Invoice"),
+    UserRight(title: "Purchase Return"),
+    UserRight(title: "Debit Note"),
+    UserRight(title: "Estimate"),
+    UserRight(title: "Performa Invoice"),
+    UserRight(title: "Delivery Challan"),
+    UserRight(title: "Sale Invoice"),
+    UserRight(title: "Sale Return"),
+    UserRight(title: "Credit Note"),
   ];
 
-  Future<void> _pickImage(int index) async {
-    final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        documents[index]["image"] = File(picked.path);
-      });
-    }
-  }
+  List<String> singleRights = [
+    "Dashboard",
+    "Outstanding Report",
+    "Profit/Loss Report",
+    "Company Profile",
+    "GSTR-1",
+    "GSTR-2",
+    "Bank Book",
+    "Cash Book",
+    "Day Book",
+    "Ledger Report",
+    "Purchase Invoice Report",
+    "Sale Invoice Report",
+    "GST Purchase Report",
+    "GST Sale Report",
+    "Item Report by Party",
+    "Item Sale-Purchase Summary",
+    "Item Profit/Loss Reprot",
+    "Stock Details Reprot",
+  ];
 
-  void _addNewDocument() {
-    setState(() {
-      documents.add({"duc_title": "", "image": null});
-    });
-  }
+  List<String> singleRightsSelected = [];
 
-  void _removeDocument(int index) {
-    setState(() {
-      documents.removeAt(index);
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    statesSuggestions = stateCities.keys.toList();
-    citiesSuggestions = [];
-    _tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+  bool allViewSelected = false;
+  bool allCreateSelected = false;
+  bool allUpdateSelected = false;
+  bool allDeleteSelected = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.white,
+      backgroundColor: const Color(0xffF9FAFC),
       appBar: AppBar(
         backgroundColor: AppColor.white,
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context, "data");
-          },
-          icon: Icon(Icons.arrow_back, color: AppColor.black),
-        ),
         elevation: .4,
         shadowColor: AppColor.grey,
+        iconTheme: IconThemeData(color: AppColor.black),
         title: Text(
           "Create New User",
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
-            height: 1,
             fontWeight: FontWeight.w700,
             color: AppColor.blackText,
           ),
         ),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.only(
-          right: Sizes.width * .08,
-          left: Sizes.width * .08,
-          top: Sizes.height * .05,
-          bottom: Sizes.height * .02,
+        padding: EdgeInsets.symmetric(
+          horizontal: Sizes.width * .03,
+          vertical: Sizes.height * .04,
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            nameField(
-              text: "Gender",
+            /// USER DETAILS
+            _sectionCard(
+              title: "User Details",
               child: Row(
                 children: [
-                  Radio<String>(
-                    value: "Male",
-                    activeColor: AppColor.primary,
-                    groupValue: selectedType,
-                    onChanged: (value) {
-                      setState(() {
-                        selectedType = value!;
-                      });
-                    },
-                  ),
-                  Text(
-                    "Male",
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColor.blackText,
+                  Expanded(
+                    child: CommonTextField(
+                      hintText: "User Name",
+                      controller: userNameController,
                     ),
                   ),
-                  const SizedBox(width: 20),
-                  Radio<String>(
-                    value: "Female",
-                    groupValue: selectedType,
-                    onChanged: (value) {
-                      setState(() {
-                        selectedType = value!;
-                      });
-                    },
-                  ),
-                  Text(
-                    "Female",
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColor.blackText,
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  Radio<String>(
-                    value: "Other",
-                    groupValue: selectedType,
-                    onChanged: (value) {
-                      setState(() {
-                        selectedType = value!;
-                      });
-                    },
-                  ),
-                  Text(
-                    "Other",
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColor.blackText,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: CommonTextField(
+                      hintText: "Password",
+                      controller: passwordController,
                     ),
                   ),
                 ],
               ),
             ),
-            SizedBox(height: Sizes.height * .02),
-            nameField(
-              text: "Employee Name",
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 1,
-                    child: CommonDropdownField<String>(
-                      hintText: "",
-                      value: selectedTitle,
-                      items: titleList.map((title) {
-                        return DropdownMenuItem(
-                          value: title,
-                          child: Text(title),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        setState(() => selectedTitle = val!);
-                      },
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    flex: 4,
-                    child: CommonTextField(
-                      hintText: "First Name",
-                      controller: firstNameController,
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    flex: 4,
-                    child: CommonTextField(
-                      hintText: "Last Name",
-                      controller: lastNameController,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: Sizes.height * .02),
-            nameField(
-              text: "Guardian Name",
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 1,
-                    child: CommonDropdownField<String>(
-                      hintText: "",
-                      value: selectedTitleParent,
-                      items: titleList.map((title) {
-                        return DropdownMenuItem(
-                          value: title,
-                          child: Text(title),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        setState(() => selectedTitle = val!);
-                      },
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    flex: 4,
-                    child: CommonTextField(
-                      hintText: "First Name",
-                      controller: firstNameGuardianController,
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Spacer(flex: 4),
-                ],
-              ),
-            ),
-            SizedBox(height: Sizes.height * .02),
-            nameField(
-              text: "Email Address",
-              child: CommonTextField(
-                hintText: "Email",
-                controller: emailController,
-              ),
-            ),
-            SizedBox(height: Sizes.height * .02),
-            nameField(
-              text: "Phone",
-              child: Row(
-                children: [
-                  Expanded(
-                    child: CommonTextField(
-                      hintText: "Mobile",
-                      controller: mobileController,
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: CommonTextField(
-                      hintText: "Work Phone",
-                      controller: workPhoneController,
-                    ),
-                  ),
 
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: CommonTextField(
-                      hintText: "Whatsapp",
-                      controller: whatsappController,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: Sizes.height * .05),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: SizedBox(
-                width: Sizes.width * .4,
-                child: TabBar(
-                  controller: _tabController,
-                  labelStyle: GoogleFonts.inter(
-                    color: Color(0xFF565D6D),
-                    fontSize: 14,
-                  ),
-                  unselectedLabelStyle: GoogleFonts.inter(
-                    color: Color(0xFF565D6D),
-                    fontSize: 14,
-                  ),
-                  indicatorColor: AppColor.blue,
-                  tabs: const [
-                    Tab(text: "User Id Details"),
-                    Tab(text: "Address"),
-                    Tab(text: "Documents"),
-                  ],
-                ),
-              ),
-            ),
-            Divider(height: 10, color: Color(0xFFDEE1E6), thickness: 1.5),
+            const SizedBox(height: 25),
+
+            /// MODULE RIGHTS HEADER
+            _moduleHeader(),
+
+            const SizedBox(height: 15),
+
+            /// MODULE RIGHTS LIST
             SizedBox(
-              height: 180,
-              width: Sizes.width,
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  /// GST DETAILS TAB
-                  Column(
-                    children: [
-                      SizedBox(height: Sizes.height * .02),
-                      nameField(
-                        text: "User ID",
-                        child: CommonTextField(
-                          hintText: "User Name",
-                          controller: userNameController,
-                        ),
-                      ),
-                      SizedBox(height: Sizes.height * .02),
-                      nameField(
-                        text: "Password",
-                        child: CommonTextField(
-                          controller: passwordController,
-                          hintText: "Enter password",
-                        ),
-                      ),
-                    ],
-                  ),
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 5,
+                children: rightsList.map((e) => _buildRightCard(e)).toList(),
+              ),
+            ),
 
-                  /// ADDRESS TAB
-                  Column(
-                    children: [
-                      SizedBox(height: Sizes.height * .02),
-                      nameField(
-                        text: "Address 1",
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: CommonSearchableDropdownField<String>(
-                                controller: TextEditingController(
-                                  text: selectedState?.item ?? "",
-                                ),
-                                hintText: "--Select State--",
-                                suggestions: statesSuggestions
-                                    .map(
-                                      (x) => SearchFieldListItem<String>(
-                                        x,
-                                        item: x,
-                                      ),
-                                    )
-                                    .toList(),
-                                onSuggestionTap: (item) {
-                                  setState(() {
-                                    selectedState = item;
-                                    citiesSuggestions =
-                                        stateCities[item.searchKey] ?? [];
-                                    selectedCity = null;
-                                  });
-                                },
-                              ),
-                            ),
-                            SizedBox(width: 55),
-                            Expanded(
-                              child: CommonSearchableDropdownField<String>(
-                                controller: TextEditingController(
-                                  text: selectedCity?.item ?? "",
-                                ),
-                                hintText: "--Select City--",
-                                suggestions: citiesSuggestions
-                                    .map(
-                                      (x) => SearchFieldListItem<String>(
-                                        x,
-                                        item: x,
-                                      ),
-                                    )
-                                    .toList(),
-                                onSuggestionTap: (item) {
-                                  setState(() => selectedCity = item);
-                                },
-                              ),
-                            ),
-                            SizedBox(width: 55),
-                            Expanded(
-                              child: CommonTextField(
-                                controller: cityDistrictController,
-                                hintText: "Type City/District/Village",
-                              ),
-                            ),
-                            SizedBox(width: 55),
-                            Expanded(child: SizedBox()),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: Sizes.height * .02),
-                      nameField(
-                        text: "Address Line",
-                        child: CommonTextField(
-                          controller: addressLine1Controller,
-                          hintText: "Address",
-                        ),
-                      ),
-                      SizedBox(height: Sizes.height * .02),
-                      nameField(
-                        text: "Address Line",
-                        child: CommonTextField(
-                          controller: addressLine2Controller,
-                          hintText: "Address",
-                        ),
-                      ),
-                    ],
-                  ),
+            const SizedBox(height: 30),
 
-                  /// UPLOAD DOCUMENT TAB
-                  Column(
-                    children: [
-                      SizedBox(height: Sizes.height * .02),
-
-                      /// UPLOAD DOCUMENT TAB
-                      SizedBox(
-                        height: 180 - Sizes.height * 0.02, // adjust if needed
-                        child: GridView.builder(
-                          scrollDirection: Axis.horizontal,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                mainAxisSpacing: 16,
-                                crossAxisSpacing: 16,
-                                childAspectRatio: .17,
-                              ),
-                          itemCount: documents.length,
-                          itemBuilder: (context, index) {
-                            final doc = documents[index];
-                            return Container(
-                              key: ValueKey(doc), // 👈 add unique key
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    flex: 2,
-                                    child: CommonTextField(
-                                      key: ValueKey(
-                                        'title_$index',
-                                      ), // 👈 ensures new controller per item
-                                      hintText: "Document Title ${index + 1}",
-                                      initialValue: doc["duc_title"],
-                                      onChanged: (val) =>
-                                          documents[index]["duc_title"] = val
-                                              .trim(),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  OutlinedButton(
-                                    style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(
-                                        color: Color(0xFFD1D5DB),
-                                      ),
-                                      backgroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 18,
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      if (documents[index]["image"] != null) {
-                                        _showImagePopup(
-                                          documents[index]["image"]!,
-                                          index,
-                                        );
-                                      } else {
-                                        _pickImage(index);
-                                      }
-                                    },
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SvgPicture.asset(
-                                          "assets/icons/upload.svg",
-                                          height: 20,
-                                          color:
-                                              documents[index]["image"] != null
-                                              ? Colors.green
-                                              : AppColor.black,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          documents[index]["image"] != null
-                                              ? "Doc Uploaded"
-                                              : " Upload File     ",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            color:
-                                                documents[index]["image"] !=
-                                                    null
-                                                ? Colors.green
-                                                : AppColor.black,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        const Icon(
-                                          Icons.keyboard_arrow_down_sharp,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    icon: Icon(
-                                      index != 0 ? Icons.delete : Icons.add,
-                                      color: index != 0
-                                          ? Colors.redAccent
-                                          : Colors.blue,
-                                    ),
-                                    onPressed: index != 0
-                                        ? () => _removeDocument(index)
-                                        : _addNewDocument,
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+            /// OTHER RIGHTS
+            _sectionCard(
+              title: "Other Rights",
+              child: SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  runSpacing: 20,
+                  spacing: 10,
+                  children: singleRights
+                      .map((e) => _singleRightTile(e))
+                      .toList(),
+                ),
               ),
             ),
           ],
         ),
       ),
+
+      /// BUTTONS
       bottomNavigationBar: Container(
-        padding: EdgeInsets.only(top: 17, bottom: 24, left: 27, right: 27),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
+          color: AppColor.white,
           border: Border(top: BorderSide(color: AppColor.grey, width: .5)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             defaultButton(
-              buttonColor: Color(0xff8947E5),
+              buttonColor: const Color(0xff8947E5),
               text: "Create User",
               height: 40,
               width: 149,
               onTap: () => saveOrUpdate(),
             ),
-
-            SizedBox(width: 18),
+            const SizedBox(width: 18),
             defaultButton(
-              buttonColor: Color(0xffE11414),
+              buttonColor: const Color(0xffE11414),
               text: "Cancel",
               height: 40,
               width: 93,
+              onTap: () => Navigator.pop(context),
             ),
           ],
         ),
@@ -601,43 +204,245 @@ class _UserScreenCreateState extends State<UserScreenCreate>
     );
   }
 
-  void _showImagePopup(File imageFile, int index) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text("Uploaded Document"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.file(imageFile, height: 250, fit: BoxFit.contain),
+  Widget _sectionCard({required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColor.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: Colors.grey),
-                  label: const Text("Cancel"),
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      documents[index]["image"] = null;
-                    });
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  label: const Text(
-                    "Remove",
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-              ],
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _moduleHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          "Module Rights",
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Wrap(
+          spacing: 8,
+          children: [
+            _headerChip("View", allViewSelected, () => _toggleAll("view")),
+            _headerChip(
+              "Create",
+              allCreateSelected,
+              () => _toggleAll("create"),
+            ),
+            _headerChip(
+              "Update",
+              allUpdateSelected,
+              () => _toggleAll("update"),
+            ),
+            _headerChip(
+              "Delete",
+              allDeleteSelected,
+              () => _toggleAll("delete"),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _headerChip(String text, bool selected, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: selected ? const Color(0xff8947E5) : const Color(0xffEDE5FF),
+        ),
+        child: Text(
+          text,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : const Color(0xff8947E5),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _toggleAll(String type) {
+    setState(() {
+      if (type == "view") {
+        allViewSelected = !allViewSelected;
+        for (var e in rightsList) {
+          e.view = allViewSelected;
+        }
+        if (allViewSelected) {
+          singleRightsSelected = List.from(singleRights);
+        } else {
+          singleRightsSelected.clear();
+        }
+      }
+
+      if (type == "create") {
+        allCreateSelected = !allCreateSelected;
+        for (var e in rightsList) {
+          e.create = allCreateSelected;
+          if (allCreateSelected) e.view = true;
+        }
+      }
+
+      if (type == "update") {
+        allUpdateSelected = !allUpdateSelected;
+        for (var e in rightsList) {
+          e.update = allUpdateSelected;
+          if (allUpdateSelected) e.view = true;
+        }
+      }
+
+      if (type == "delete") {
+        allDeleteSelected = !allDeleteSelected;
+        for (var e in rightsList) {
+          e.delete = allDeleteSelected;
+          if (allDeleteSelected) e.view = true;
+        }
+      }
+    });
+  }
+
+  Widget _buildRightCard(UserRight right) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColor.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColor.grey.withOpacity(.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            right.title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 7,
+            children: [
+              _permissionChip(
+                "View",
+                right.view,
+                (v) => setState(() => right.view = v),
+              ),
+              _permissionChip("Create", right.create, (v) {
+                setState(() {
+                  right.create = v;
+                  if (v) right.view = true;
+                });
+              }),
+              _permissionChip("Update", right.update, (v) {
+                setState(() {
+                  right.update = v;
+                  if (v) right.view = true;
+                });
+              }),
+              _permissionChip("Delete", right.delete, (v) {
+                setState(() {
+                  right.delete = v;
+                  if (v) right.view = true;
+                });
+              }),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _permissionChip(String text, bool value, Function(bool) onChanged) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          color: value ? const Color(0xff8947E5) : const Color(0xffF3F4F6),
+        ),
+        child: Text(
+          text,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: value ? Colors.white : Colors.black54,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _singleRightTile(String title) {
+    final selected = singleRightsSelected.contains(title);
+
+    return SizedBox(
+      width: Sizes.width * .215,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: selected ? const Color(0xffEDE5FF) : const Color(0xffF8F9FC),
+          border: Border.all(
+            color: selected ? const Color(0xff8947E5) : Colors.transparent,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Switch(
+              value: selected,
+              activeColor: const Color(0xff8947E5),
+              onChanged: (val) {
+                setState(() {
+                  if (val) {
+                    singleRightsSelected.add(title);
+                  } else {
+                    singleRightsSelected.remove(title);
+                  }
+                });
+              },
             ),
           ],
         ),
@@ -646,93 +451,47 @@ class _UserScreenCreateState extends State<UserScreenCreate>
   }
 
   Future<void> saveOrUpdate() async {
-    try {
-      final dio = Dio();
+    if (userNameController.text.trim().isEmpty) {
+      showCustomSnackbarError(context, "Please enter username");
+      return;
+    }
+    if (passwordController.text.trim().isEmpty) {
+      showCustomSnackbarError(context, "Please enter password");
+      return;
+    }
 
-      final formData = FormData();
+    final payload = {
+      "licence_no": Preference.getint(PrefKeys.licenseNo),
+      "branch_id": Preference.getString(PrefKeys.locationId),
+      "username": userNameController.text.trim(),
+      "password": passwordController.text.trim(),
+      "role": "user",
+      "is_active": "true",
+      "rights": rightsList
+          .map(
+            (e) => {
+              "module": e.title,
+              "view": e.view,
+              "create": e.create,
+              "update": e.update,
+              "delete": e.delete,
+            },
+          )
+          .toList(),
+      "single_rights": singleRightsSelected,
+    };
 
-      // ✅ Text fields
-      formData.fields.addAll([
-        MapEntry(
-          "licence_no",
-          Preference.getint(PrefKeys.licenseNo).toString(),
-        ),
-        MapEntry("branch_id", Preference.getString(PrefKeys.locationId)),
-        MapEntry("gender", selectedType),
-        MapEntry("title", selectedTitle),
-        MapEntry("first_name", firstNameController.text.trim()),
-        MapEntry("last_name", lastNameController.text.trim()),
-        MapEntry("related", selectedTitleParent),
-        MapEntry("parents", firstNameGuardianController.text.trim()),
-        MapEntry("email", emailController.text.trim()),
-        if (workPhoneController.text.isNotEmpty)
-          MapEntry("phone", workPhoneController.text.trim()),
-        if (mobileController.text.isNotEmpty)
-          MapEntry("mobile", mobileController.text.trim()),
-        if (whatsappController.text.isNotEmpty)
-          MapEntry("whatapp", whatsappController.text.trim()),
-        if (userNameController.text.isNotEmpty)
-          MapEntry("username", userNameController.text.trim()),
-        if (userNameController.text.isNotEmpty) MapEntry("role", 'user'),
-        MapEntry("is_active", "true"),
-        if (passwordController.text.isNotEmpty)
-          MapEntry("password", passwordController.text.trim()),
-        MapEntry("address", cityDistrictController.text.trim()),
-        MapEntry("city", selectedCity?.item ?? ""),
-        MapEntry("state", selectedState?.item ?? ""),
-        MapEntry("district", cityDistrictController.text.trim()),
-        MapEntry("address_0", addressLine1Controller.text.trim()),
-        MapEntry("address_1", addressLine2Controller.text.trim()),
-      ]);
+    final res = await ApiService.postData(
+      "user",
+      payload,
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
 
-      // ✅ Documents (same key names multiple times)
-      for (final doc in documents) {
-        final title = doc["duc_title"]?.toString().trim();
-        final imageFile = doc["image"];
-
-        if (imageFile != null && title != null && title.isNotEmpty) {
-          formData.files.add(
-            MapEntry(
-              'image',
-              await MultipartFile.fromFile(
-                imageFile.path,
-                filename: imageFile.path.split('/').last,
-              ),
-            ),
-          );
-          formData.fields.add(MapEntry('duc_title', title));
-        }
-      }
-
-      // ✅ Headers
-      final headers = {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer ${Preference.getString(PrefKeys.token)}',
-        'licence_no': Preference.getint(PrefKeys.licenseNo),
-      };
-
-      // ✅ Send POST requestwha
-      final response = await dio.post(
-        "${ApiService.baseurl}/employee",
-        data: formData,
-        options: Options(headers: headers, contentType: 'multipart/form-data'),
-      );
-
-      if (response.statusCode == 200) {
-        var data = json.decode("$response");
-        print(data);
-        if (data['status'] == true) {
-          // Navigator.pop(context, "data");
-          showCustomSnackbarSuccess(context, data['message']);
-        } else {
-          showCustomSnackbarError(context, "${data['message']}");
-        }
-      } else {
-        showCustomSnackbarError(context, "Failed: ${response.statusMessage}");
-      }
-    } catch (e, s) {
-      print("❌ Error: $e\n$s");
-      showCustomSnackbarError(context, "Something went wrong: $e");
+    if (res != null && res["status"] == true) {
+      Navigator.pop(context, "refresh");
+      showCustomSnackbarSuccess(context, res["message"]);
+    } else {
+      showCustomSnackbarError(context, res?["message"] ?? "Error");
     }
   }
 }

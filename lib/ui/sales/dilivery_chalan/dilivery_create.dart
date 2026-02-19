@@ -366,6 +366,8 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
 
                   SizedBox(height: Sizes.height * .03),
                   GlobalItemsTableSection(
+                    ledgerType:
+                        state.selectedCustomer?.ledgerType ?? 'Individual',
                     rows: state.rows, // list of GlobalItemRow
                     catalogue: state.catalogue, // list of ItemServiceModel
                     hsnList: state.hsnMaster, // list of HsnModel

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:ims/ui/master/company/company_api.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart';
 import 'package:ims/ui/sales/data/transection_list.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/dilivery_chalan/dilivery_create.dart';
 import 'package:ims/ui/sales/models/dilivery_data.dart';
 import 'package:ims/utils/navigation.dart';
+import 'package:ims/utils/print_mapper.dart';
 
 // import 'package:ims/utils/navigation.dart';
 extension DiliveryChallanMapper on DiliveryChallanData {
@@ -36,8 +39,13 @@ class _DiliveryChallanInvoiceListScreenState
       key: listKey, // 👈 IMPORTANT
       title: "Dilivery Challan",
       fetchData: repo.getDiliveryChallan,
-      onView: (e) {
-        print("VIEW Challan PDF: ${e.baseNumber}");
+      onView: (e) async {
+        final doc = e.toPrintModel(); // ✅ no dynamic
+
+        final companyApi = await CompanyProfileAPi.getCompanyProfile();
+        final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+
+        await PdfEngine.printPremiumInvoice(doc: doc, company: company);
       },
       onEdit: (e) async {
         final result = await pushTo(

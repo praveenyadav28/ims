@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:ims/ui/master/company/company_api.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart';
 import 'package:ims/ui/sales/data/transection_list.dart';
 import 'package:ims/ui/sales/models/performa_data.dart';
 import 'package:ims/ui/sales/performa_invoice/performa_screen.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/utils/navigation.dart';
+import 'package:ims/utils/print_mapper.dart';
 
 /// EXTENSION TO CONNECT PERFORMA MODEL TO GLOBAL SCREEN
 extension PerformaMapper on PerformaData {
@@ -39,8 +42,13 @@ class _PerformaInvoiceListScreenState extends State<PerformaInvoiceListScreen> {
       fetchData: repo.getPerforma,
 
       /// ACTIONS
-      onView: (e) {
-        print("VIEW PERFORMA PDF: ${e.baseNumber}");
+       onView: (e) async {
+        final doc = e.toPrintModel(); // ✅ no dynamic
+
+        final companyApi = await CompanyProfileAPi.getCompanyProfile();
+        final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+
+        await PdfEngine.printPremiumInvoice(doc: doc, company: company);
       },
 
       onEdit: (e) async {

@@ -1,4 +1,5 @@
 import 'package:ims/ui/report/global/day_book.dart';
+import 'package:ims/ui/report/global/trial_balance.dart';
 import 'package:ims/ui/report/inventry/item_party.dart';
 import 'package:ims/ui/report/inventry/item_ledger.dart';
 import 'package:ims/ui/report/inventry/itemwise_profit.dart';
@@ -63,6 +64,7 @@ class ReportsDashboardScreen extends StatelessWidget {
             "Bank Book",
             "Cash Book",
             "Day Book",
+            // "Trial Balance",
           ],
           onItemTap: (name) => _navigate(context, name),
         ),
@@ -103,6 +105,8 @@ class ReportsDashboardScreen extends StatelessWidget {
       pushTo(CashBookReportScreen());
     } else if (name == "Day Book") {
       pushTo(DayBookReportScreen());
+    } else if (name == "Trial Balance") {
+      pushTo(TrialBalanceScreen());
     } else {
       ScaffoldMessenger.of(
         context,

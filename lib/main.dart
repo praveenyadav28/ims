@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ims/ui/inventry/consumption_screen.dart';
 import 'package:ims/ui/onboarding/splash_screen.dart';
 import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';
@@ -14,10 +15,9 @@ void main() async {
     RawKeyboardListener(
       focusNode: FocusNode(),
       onKey: (event) {
-        // Prevent the Windows Alt bug
         if (event.logicalKey == LogicalKeyboardKey.altLeft ||
             event.logicalKey == LogicalKeyboardKey.altRight) {
-          return; // swallow event
+          return;
         }
       },
       child: const MyApp(),

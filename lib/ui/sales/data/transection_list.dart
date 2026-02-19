@@ -343,8 +343,8 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
                 if (selected) ...[
                   const SizedBox(width: 10),
                   _action(
-                    Icons.visibility,
-                    Colors.blue,
+                    Icons.picture_as_pdf,
+                    AppColor.primary,
                     () => widget.onView(item),
                   ),
                   _action(Icons.edit, Colors.orange, () => widget.onEdit(item)),

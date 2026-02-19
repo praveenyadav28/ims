@@ -154,7 +154,7 @@ class _Gstr1DashboardScreenState extends State<Gstr1DashboardScreen>
 
             Expanded(
               child: loading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: GlowLoader())
                   : Card(
                       child: ClipRRect(
                         borderRadius: BorderRadiusGeometry.circular(6),

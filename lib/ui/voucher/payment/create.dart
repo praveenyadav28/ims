@@ -382,10 +382,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
                                                     ? const SizedBox(
                                                         height: 10,
                                                         width: 10,
-                                                        child:
-                                                            CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                            ),
+                                                        child: GlowLoader(),
                                                       )
                                                     : Text(
                                                         "₹ ${pendingAmount.toStringAsFixed(2)}",

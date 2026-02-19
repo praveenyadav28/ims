@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:ims/ui/master/company/company_api.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart';
 import 'package:ims/ui/sales/data/transection_list.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/models/sale_invoice_data.dart';
 import 'package:ims/ui/sales/sale_invoice/saleinvoice_create.dart';
 import 'package:ims/utils/navigation.dart';
+import 'package:ims/utils/print_mapper.dart';
 // import 'package:ims/utils/navigation.dart';
 
 /// EXTENSION TO CONNECT SaleInvoice MODEL TO GLOBAL SCREEN
@@ -37,8 +40,13 @@ class _SaleInvoiceInvoiceListScreenState
       key: listKey,
       title: "Sale Invoice",
       fetchData: repo.getSaleInvoice,
-      onView: (e) {
-        print("VIEW Sale Invoice PDF: ${e.id}");
+      onView: (e) async {
+        final doc = e.toPrintModel(); // ✅ no dynamic
+
+        final companyApi = await CompanyProfileAPi.getCompanyProfile();
+        final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+
+        await PdfEngine.printPremiumInvoice(doc: doc, company: company);
       },
       onEdit: (e) async {
         final result = await pushTo(

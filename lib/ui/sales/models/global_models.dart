@@ -10,6 +10,7 @@ class LedgerModelDrop {
   final String? ledgerGroup;
   final String? state;
   final String gstin;
+  final String? ledgerType;
   LedgerModelDrop({
     required this.id,
     required this.name,
@@ -18,6 +19,7 @@ class LedgerModelDrop {
     this.ledgerGroup,
     required this.billingAddress,
     required this.shippingAddress,
+    this.ledgerType,
     this.state,
     this.gstin = '',
   });
@@ -34,6 +36,7 @@ class LedgerModelDrop {
         "${(m['address'] ?? '')}, ${(m['city'] ?? "")}, ${(m['state'] ?? "")}",
     gstin: (m['gst_no'] ?? '').toString(),
     state: (m['state'] ?? '').toString(),
+    ledgerType: (m['other1'] ?? 'Individual').toString(),
   );
 }
 
@@ -81,6 +84,7 @@ class ItemServiceModel {
   final String hsn;
   final String variantValue;
   final double? baseSalePrice;
+  final double? wholesalePrice;
   final double? basePurchasePrice;
   final double gstRate;
   final bool gstIncluded;
@@ -100,6 +104,7 @@ class ItemServiceModel {
     required this.hsn,
     required this.variantValue,
     this.baseSalePrice,
+    this.wholesalePrice,
     this.basePurchasePrice,
     required this.gstRate,
     required this.gstIncluded,
@@ -132,6 +137,7 @@ class ItemServiceModel {
       baseSalePrice: (m['sales_price'] != null)
           ? double.tryParse(m['sales_price'].toString()) ?? 0
           : 0,
+      wholesalePrice: double.tryParse(m['whole_sale_price'].toString()) ?? 0,
       basePurchasePrice: (m['purchase_price_se'] != null)
           ? double.tryParse(m['purchase_price_se'].toString()) ?? 0
           : 0,

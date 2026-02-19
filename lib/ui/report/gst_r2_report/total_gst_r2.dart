@@ -153,7 +153,7 @@ class _Gstr2DashboardScreenState extends State<Gstr2DashboardScreen>
             ),
             Expanded(
               child: loading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: GlowLoader())
                   : Card(
                       child: TabBarView(
                         controller: _tab,

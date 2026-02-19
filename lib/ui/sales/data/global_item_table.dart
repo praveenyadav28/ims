@@ -10,6 +10,7 @@ import 'package:searchfield/searchfield.dart';
 import '../models/global_models.dart';
 
 class GlobalItemsTableSection extends StatelessWidget {
+  final String ledgerType;
   const GlobalItemsTableSection({
     super.key,
     required this.rows,
@@ -21,6 +22,7 @@ class GlobalItemsTableSection extends StatelessWidget {
     required this.onSelectCatalog,
     required this.onSelectHsn,
     required this.onToggleUnit,
+    required this.ledgerType, // 👈
     this.isReturn,
   });
 
@@ -76,6 +78,7 @@ class GlobalItemsTableSection extends StatelessWidget {
                     onSelectHsn: (hsn) => onSelectHsn(r.localId, hsn),
                     onToggleUnit: (v) => onToggleUnit(r.localId, v),
                     isReturn: isReturn,
+                    ledgerType: ledgerType,
                   );
                 }).toList(),
               ),
@@ -140,6 +143,7 @@ class GlobalItemsTableSection extends StatelessWidget {
 }
 
 class _GlobalItemRowWidget extends StatefulWidget {
+  final String ledgerType;
   _GlobalItemRowWidget({
     super.key,
     required this.row,
@@ -151,6 +155,7 @@ class _GlobalItemRowWidget extends StatefulWidget {
     required this.onSelectHsn,
     required this.onToggleUnit,
     required this.isReturn,
+    required this.ledgerType,
   });
 
   final GlobalItemRow row;

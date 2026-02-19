@@ -410,6 +410,10 @@ class _ContraEntryState extends State<ContraEntry> {
 
   Future<void> savePaymentVoucher() async {
     if (selectedFromLedger == null || selectedToLedger == null) return;
+    if (selectedFromLedger!.id == selectedToLedger!.id) {
+      showCustomSnackbarError(context, "From and To ledger cannot be same");
+      return;
+    }
 
     final body = {
       "licence_no": Preference.getint(PrefKeys.licenseNo),

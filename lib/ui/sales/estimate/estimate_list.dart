@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:ims/ui/master/company/company_api.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart';
 import 'package:ims/ui/sales/data/transection_list.dart';
-import 'package:ims/ui/sales/estimate/widgets/estimate_pdf.dart';
+import 'package:ims/utils/print_mapper.dart';
 import '../models/estimate_data.dart';
 import '../estimate/estimate_screen.dart';
 import '../data/global_repository.dart';
@@ -30,7 +32,14 @@ class _EstimateListScreenState extends State<EstimateListScreen> {
       fetchData: repo.getEstimates,
 
       /// ACTIONS
-      onView: generateEstimatePdf,
+        onView: (e) async {
+        final doc = e.toPrintModel(); // ✅ no dynamic
+
+        final companyApi = await CompanyProfileAPi.getCompanyProfile();
+        final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+
+        await PdfEngine.printPremiumInvoice(doc: doc, company: company);
+      },
 
       onEdit: (e) async {
         final result = await pushTo(CreateEstimateFullScreen(estimateData: e));
@@ -53,7 +62,7 @@ class _EstimateListScreenState extends State<EstimateListScreen> {
       /// EXTRACTORS — REQUIRED
       idGetter: (e) => e.id,
       dateGetter: (e) => e.estimateDate,
-      numberGetter: (e) => "${e.prefix}-${e.no}",
+      numberGetter: (e) => "${e.prefix} ${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
       mobile: (e) => e.mobile,
