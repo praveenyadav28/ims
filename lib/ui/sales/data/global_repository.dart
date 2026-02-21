@@ -1,4 +1,4 @@
-import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/credit_note_data.dart';
@@ -190,7 +190,7 @@ class GLobalRepository {
   //Save Trans
   Future<Map<String, dynamic>?> saveEstimate({
     required Map<String, dynamic> payload,
-    XFile? signatureFile,
+    Uint8List? signatureFile,
     String? updateId,
   }) async {
     return await ApiService.uploadMultipart(
@@ -205,7 +205,7 @@ class GLobalRepository {
 
   Future<Map<String, dynamic>?> savePerfroma({
     required Map<String, dynamic> payload,
-    XFile? signatureFile,
+    Uint8List? signatureFile,
     String? updateId,
   }) async {
     return await ApiService.uploadMultipart(
@@ -220,7 +220,7 @@ class GLobalRepository {
 
   Future<Map<String, dynamic>?> saveSaleInvoice({
     required Map<String, dynamic> payload,
-    XFile? signatureFile,
+    Uint8List? signatureFile,
     String? updateId,
   }) async {
     return await ApiService.uploadMultipart(
@@ -235,7 +235,7 @@ class GLobalRepository {
 
   Future<Map<String, dynamic>?> saveSaleReturn({
     required Map<String, dynamic> payload,
-    XFile? signatureFile,
+    Uint8List? signatureFile,
     String? updateId,
   }) async {
     return await ApiService.uploadMultipart(
@@ -250,7 +250,7 @@ class GLobalRepository {
 
   Future<Map<String, dynamic>?> saveDiliveryChallan({
     required Map<String, dynamic> payload,
-    XFile? signatureFile,
+    Uint8List? signatureFile,
     String? updateId,
   }) async {
     return await ApiService.uploadMultipart(
@@ -267,7 +267,7 @@ class GLobalRepository {
 
   Future<Map<String, dynamic>?> saveDebitNote({
     required Map<String, dynamic> payload,
-    XFile? signatureFile,
+    Uint8List? signatureFile,
     String? updateId,
   }) async {
     return await ApiService.uploadMultipart(
@@ -282,7 +282,7 @@ class GLobalRepository {
 
   Future<Map<String, dynamic>?> savePurchaseOrder({
     required Map<String, dynamic> payload,
-    XFile? signatureFile,
+    Uint8List? signatureFile,
     String? updateId,
   }) async {
     return await ApiService.uploadMultipart(
@@ -297,7 +297,7 @@ class GLobalRepository {
 
   Future<Map<String, dynamic>?> savePurchaseInvoice({
     required Map<String, dynamic> payload,
-    XFile? signatureFile,
+    Uint8List? signatureFile,
     String? updateId,
   }) async {
     return await ApiService.uploadMultipart(
@@ -314,7 +314,7 @@ class GLobalRepository {
 
   Future<Map<String, dynamic>?> savePurchaseReturn({
     required Map<String, dynamic> payload,
-    XFile? signatureFile,
+    Uint8List? signatureFile,
     String? updateId,
   }) async {
     return await ApiService.uploadMultipart(
@@ -331,7 +331,7 @@ class GLobalRepository {
 
   Future<Map<String, dynamic>?> saveCreditNote({
     required Map<String, dynamic> payload,
-    XFile? signatureFile,
+    Uint8List? signatureFile,
     String? updateId,
   }) async {
     return await ApiService.uploadMultipart(

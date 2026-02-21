@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ims/ui/report/inventry/excels_item.dart';
 import 'package:intl/intl.dart';
 import 'package:searchfield/searchfield.dart';
 
@@ -304,6 +305,36 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
                 height: 42,
                 onTap: loadLedger,
                 buttonColor: AppColor.primary,
+              ),
+              const SizedBox(width: 10),
+              InkWell(
+                onTap: () async {
+                  if (selectedParty == null || filtered.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("No data to export")),
+                    );
+                    return;
+                  }
+
+                  await PartyLedgerExcel.export(
+                    partyName: selectedParty!.name,
+                    from: fromDate,
+                    to: toDate,
+                    rows: filtered,
+                    total: totalAmount,
+                  );
+                },
+                child: Container(
+                  width: 50,
+                  height: 40,
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(5),
+                    color: AppColor.white,
+                    border: Border.all(width: 1, color: AppColor.borderColor),
+                  ),
+                  child: Image.asset("assets/images/excel.png"),
+                ),
               ),
             ],
           ),

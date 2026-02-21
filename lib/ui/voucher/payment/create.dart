@@ -1,6 +1,6 @@
 // ignore_for_file: must_be_immutable
 
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -54,16 +54,16 @@ class _PaymentEntryState extends State<PaymentEntry> {
   TextEditingController noteController = TextEditingController();
 
   DateTime? selectedDate;
-  File? paymentImage;
+  Uint8List? paymentImage;
   String? existingDocuUrl;
   final ImagePicker _picker = ImagePicker();
   Future<void> pickpaymentImage() async {
     final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
 
     if (picked == null) return;
-
+    final bytes = await picked.readAsBytes();
     setState(() {
-      paymentImage = File(picked.path);
+      paymentImage = bytes;
     });
   }
 
@@ -506,7 +506,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
                                           borderRadius: BorderRadius.circular(
                                             6,
                                           ),
-                                          child: Image.file(
+                                          child: Image.memory(
                                             paymentImage!,
                                             height: 105,
                                             width: 150,
@@ -723,7 +723,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
       endpoint: isEdit ? "payment/${widget.data!.id}" : "payment",
       fields: body,
       updateStatus: isEdit, // 🔥 PUT if edit, POST if new
-      file: paymentImage != null ? XFile(paymentImage!.path) : null,
+      file: paymentImage,
       fileKey: "docu",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );

@@ -1,3 +1,8 @@
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
+import 'package:intl/intl.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart'; // CompanyPrintProfile + amountToWordsIndian
 import 'package:flutter/material.dart';
 import 'package:ims/model/expanse_model.dart';
 import 'package:ims/model/payment_model.dart';
@@ -9,7 +14,6 @@ import 'package:ims/ui/sales/models/sale_return_data.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/textfield.dart';
-import 'package:intl/intl.dart';
 import '../../../utils/api.dart';
 import '../../../utils/prefence.dart';
 
@@ -253,6 +257,34 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
             height: 40,
             width: 150,
             buttonColor: AppColor.blue,
+          ),
+          const SizedBox(width: 10),
+          IconButton(
+            icon: Icon(Icons.print, color: AppColor.primary),
+            onPressed: () async {
+              final companyRes = await ApiService.fetchData(
+                "get/company",
+                licenceNo: Preference.getint(PrefKeys.licenseNo),
+              );
+
+              final company = CompanyPrintProfile.fromApi(companyRes['data']);
+
+              await ProfitLossPdfEngine.printPL(
+                company: company,
+                from: fromDate!,
+                to: toDate!,
+                openingStock: openingStock,
+                closingStock: closingStock,
+                netSales: netSales,
+                netPurchase: netPurchase,
+                grossProfit: grossProfit,
+                totalIncome: totalIncome,
+                totalExpense: totalExpense,
+                netProfit: netProfit,
+                groupedExpenses: _groupExpensesBySupplier(),
+                groupedIncome: _groupIncomeBySupplier(),
+              );
+            },
           ),
         ],
       ),
@@ -501,5 +533,275 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     }
 
     return map;
+  }
+}
+
+class ProfitLossPdfEngine {
+  static Future<void> printPL({
+    required CompanyPrintProfile company,
+    required DateTime from,
+    required DateTime to,
+    required double openingStock,
+    required double closingStock,
+    required double netSales,
+    required double netPurchase,
+    required double grossProfit,
+    required double totalIncome,
+    required double totalExpense,
+    required double netProfit,
+    required Map<String, double> groupedExpenses,
+    required Map<String, double> groupedIncome,
+  }) async {
+    final pdf = pw.Document();
+
+    final logo = await _loadNetImage(company.logoUrl);
+    final otherLogo = await _loadNetImage(company.otherlogoUrl);
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(20),
+        build: (_) => pw.Container(
+          decoration: pw.BoxDecoration(border: pw.Border.all()),
+          padding: const pw.EdgeInsets.all(8),
+          child: pw.Column(
+            children: [
+              _header(company, logo, otherLogo),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                "PROFIT & LOSS STATEMENT",
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+              pw.Text(
+                "From ${DateFormat('dd-MM-yyyy').format(from)} To ${DateFormat('dd-MM-yyyy').format(to)}",
+                style: pw.TextStyle(fontSize: 9),
+              ),
+              pw.SizedBox(height: 8),
+              _plTable(
+                openingStock: openingStock,
+                closingStock: closingStock,
+                netSales: netSales,
+                netPurchase: netPurchase,
+                grossProfit: grossProfit,
+                totalIncome: totalIncome,
+                totalExpense: totalExpense,
+                netProfit: netProfit,
+                groupedExpenses: groupedExpenses,
+                groupedIncome: groupedIncome,
+              ),
+              pw.SizedBox(height: 10),
+              _footer(company.name),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final bytes = await pdf.save();
+    await Printing.layoutPdf(onLayout: (_) async => bytes);
+  }
+
+  // ================= HEADER =================
+  static pw.Widget _header(
+    CompanyPrintProfile c,
+    pw.ImageProvider? logo,
+    pw.ImageProvider? otherLogo,
+  ) {
+    return pw.Row(
+      children: [
+        pw.SizedBox(
+          width: 60,
+          height: 60,
+          child: logo != null ? pw.Image(logo) : pw.Container(),
+        ),
+        pw.Expanded(
+          child: pw.Column(
+            children: [
+              pw.Text(
+                c.name,
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              pw.Text(
+                c.address,
+                textAlign: pw.TextAlign.center,
+                style: pw.TextStyle(fontSize: 9),
+              ),
+              pw.Text("GSTIN: ${c.gst}", style: pw.TextStyle(fontSize: 9)),
+              pw.Text(
+                "Phone: ${c.phone} | Email: ${c.email}",
+                style: pw.TextStyle(fontSize: 9),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(
+          width: 60,
+          height: 60,
+          child: otherLogo != null ? pw.Image(otherLogo) : pw.Container(),
+        ),
+      ],
+    );
+  }
+
+  // ================= MAIN TABLE =================
+  static pw.Widget _plTable({
+    required double openingStock,
+    required double closingStock,
+    required double netSales,
+    required double netPurchase,
+    required double grossProfit,
+    required double totalIncome,
+    required double totalExpense,
+    required double netProfit,
+    required Map<String, double> groupedExpenses,
+    required Map<String, double> groupedIncome,
+  }) {
+    final expenseEntries = groupedExpenses.entries.toList();
+    final incomeEntries = groupedIncome.entries.toList();
+    final maxLen = expenseEntries.length > incomeEntries.length
+        ? expenseEntries.length
+        : incomeEntries.length;
+
+    return pw.Table(
+      border: pw.TableBorder.all(),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(2.5),
+        1: pw.FlexColumnWidth(1.2),
+        2: pw.FlexColumnWidth(.2),
+        3: pw.FlexColumnWidth(2.5),
+        4: pw.FlexColumnWidth(1.2),
+      },
+      children: [
+        _rowH("Particulars", "Amount", "Particulars", "Amount"),
+
+        _row("Opening Stock", openingStock, "Sales Accounts", netSales),
+        _row("Purchase Accounts", netPurchase, "Closing Stock", closingStock),
+        _row("Gross Profit C/F", grossProfit, "", 0, boldLeft: true),
+
+        _row(
+          "TOTAL",
+          openingStock +
+              netPurchase +
+              totalExpense +
+              (netProfit > 0 ? netProfit : 0),
+          "TOTAL",
+          netSales + closingStock + (netProfit < 0 ? netProfit.abs() : 0),
+          boldLeft: true,
+          boldRight: true,
+        ),
+
+        _row("", 0, "Gross Profit B/D", grossProfit, boldRight: true),
+
+        for (int i = 0; i < maxLen; i++)
+          _row(
+            i < expenseEntries.length ? expenseEntries[i].key : "",
+            i < expenseEntries.length ? expenseEntries[i].value : 0,
+            i < incomeEntries.length ? incomeEntries[i].key : "",
+            i < incomeEntries.length ? incomeEntries[i].value : 0,
+          ),
+
+        _row(
+          "Total Expenses",
+          totalExpense,
+          "Total Income",
+          totalIncome,
+          boldLeft: true,
+          boldRight: true,
+        ),
+
+        netProfit >= 0
+            ? _row("Net Profit", netProfit, "", 0, boldLeft: true)
+            : _row("", 0, "Net Loss", netProfit.abs(), boldRight: true),
+      ],
+    );
+  }
+
+  static pw.TableRow _rowH(String l1, String l2, String r1, String r2) {
+    return pw.TableRow(
+      decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+      children: [_th(l1), _th(l2), pw.Container(), _th(r1), _th(r2)],
+    );
+  }
+
+  static pw.TableRow _row(
+    String l1,
+    double l2,
+    String r1,
+    double r2, {
+    bool boldLeft = false,
+    bool boldRight = false,
+  }) {
+    return pw.TableRow(
+      children: [
+        _td(l1, bold: boldLeft),
+        _td(
+          l2 == 0 ? "" : l2.toStringAsFixed(2),
+          bold: boldLeft,
+          alignRight: true,
+        ),
+        pw.Container(),
+        _td(r1, bold: boldRight),
+        _td(
+          r2 == 0 ? "" : r2.toStringAsFixed(2),
+          bold: boldRight,
+          alignRight: true,
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _th(String t) => pw.Padding(
+    padding: const pw.EdgeInsets.all(6),
+    child: pw.Text(
+      t,
+      style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+    ),
+  );
+
+  static pw.Widget _td(
+    String t, {
+    bool bold = false,
+    bool alignRight = false,
+  }) => pw.Padding(
+    padding: const pw.EdgeInsets.all(6),
+    child: pw.Text(
+      t,
+      textAlign: alignRight ? pw.TextAlign.right : pw.TextAlign.left,
+      style: pw.TextStyle(
+        fontSize: 9,
+        fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+      ),
+    ),
+  );
+
+  static pw.Widget _footer(String companyName) {
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        pw.Text(
+          "This is a computer generated statement",
+          style: pw.TextStyle(fontSize: 8),
+        ),
+        pw.Text(
+          "For $companyName\nAuthorised Signatory",
+          style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  static Future<pw.ImageProvider?> _loadNetImage(String url) async {
+    if (url.isEmpty) return null;
+    try {
+      return await networkImage(url);
+    } catch (_) {
+      return null;
+    }
   }
 }

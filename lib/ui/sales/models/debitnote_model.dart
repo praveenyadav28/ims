@@ -60,7 +60,7 @@ class DebitNoteData {
   final List<DiscountModel> discountLines;
   final List<MiscChargeModel> miscCharges;
 
-  final List<NoteItemDetail> itemDetails;
+  final List<ItemDetail> itemDetails;
 
   final String signature;
 
@@ -133,7 +133,7 @@ class DebitNoteData {
         .toList(),
 
     itemDetails: (j["item_details"] as List)
-        .map((e) => NoteItemDetail.fromJson(e))
+        .map((e) => ItemDetail.fromJson(e))
         .toList(),
 
     signature: j["signature"] ?? "",

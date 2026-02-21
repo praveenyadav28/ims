@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ims/ui/inventry/consumption_screen.dart';
+// import 'package:ims/ui/inventry/consumption_screen.dart';
 import 'package:ims/ui/onboarding/splash_screen.dart';
 import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';

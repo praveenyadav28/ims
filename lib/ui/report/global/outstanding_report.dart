@@ -22,7 +22,7 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
   List<Customer> customerList = [];
   bool loading = false;
 
-  DateTime fromDate = DateTime(2000, 1, 1); // 🔥 very old date (fixed)
+  DateTime fromDate = DateTime(1900, 1, 1); // 🔥 very old date (fixed)
   DateTime toDate = DateTime.now(); // 🔥 default today
 
   final toCtrl = TextEditingController();
@@ -40,10 +40,12 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
     setState(() => loading = false);
   }
 
-  // ---------------- LEDGER API ----------------
   Future ledgerApi() async {
+    final apiFrom = DateFormat("yyyy-MM-dd").format(fromDate);
+    final apiTo = DateFormat("yyyy-MM-dd").format(toDate);
+
     var response = await ApiService.fetchData(
-      "get/ledgers?from_date=1900-01-05&to_date=${toCtrl.text}",
+      "get/ledgers?from_date=$apiFrom&to_date=$apiTo",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
@@ -126,28 +128,51 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ================= FILTER BAR =================
-            SizedBox(
-              width: 180,
-              child: TitleTextFeild(
-                titleText: "Outstanding At",
-                controller: toCtrl,
-                onTap: () async {
-                  final d = await showDatePicker(
-                    context: context,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                    initialDate: toDate,
-                  );
-                  if (d != null) {
-                    setState(() {
-                      toDate = d;
-                      toCtrl.text = DateFormat("dd-MM-yyyy").format(toDate);
-                    });
-                    await loadAll();
-                  }
-                },
-                suffixIcon: const Icon(Icons.calendar_today, size: 18),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                SizedBox(
+                  width: 180,
+                  child: TitleTextFeild(
+                    readOnly: true,
+                    titleText: "Outstanding At",
+                    controller: toCtrl,
+                    onTap: () async {
+                      final d = await showDatePicker(
+                        context: context,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                        initialDate: toDate,
+                      );
+                      if (d != null) {
+                        setState(() {
+                          toDate = d;
+                          toCtrl.text = DateFormat(
+                            "dd-MM-yyyy",
+                          ).format(toDate); // UI format
+                        });
+                        await loadAll(); // API yyyy-MM-dd bhejega
+                      }
+                    },
+                    suffixIcon: const Icon(Icons.calendar_today, size: 18),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                InkWell(
+                  onTap: () async {},
+                  child: Container(
+                    width: 50,
+                    height: 40,
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(5),
+                      color: AppColor.white,
+                      border: Border.all(width: 1, color: AppColor.borderColor),
+                    ),
+                    child: Image.asset("assets/images/excel.png"),
+                  ),
+                ),
+              ],
             ),
             SizedBox(height: Sizes.height * .02),
 

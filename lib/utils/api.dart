@@ -1,10 +1,9 @@
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:ims/utils/colors.dart';
-import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:ims/utils/prefence.dart';
 
@@ -144,66 +143,12 @@ class ApiService {
     }
   }
 
-  // -------------------- MULTIPART FILE HELPERS --------------------
 
-  static Future<MultipartFile> toMultipartFile(XFile file) async {
-    final mime = lookupMimeType(file.path) ?? "application/octet-stream";
-    return MultipartFile.fromFile(
-      file.path,
-      filename: file.name,
-      contentType: MediaType.parse(mime),
-    );
-  }
-
-  static Future<dynamic> uploadFiles({
-    required String endpoint,
-    required Map<String, dynamic> fields,
-    XFile? singleFile,
-  }) async {
-    try {
-      final Map<String, dynamic> dataMap = {};
-
-      // Add all fields safely
-      fields.forEach((key, value) {
-        if (value is Map || value is List) {
-          dataMap[key] = jsonEncode(value); // encode complex values
-        } else {
-          dataMap[key] = value;
-        }
-      });
-
-      // Add image from XFile
-      if (singleFile != null) {
-        dataMap["signature"] = await MultipartFile.fromFile(
-          singleFile.path,
-          filename: singleFile.name,
-        );
-      }
-
-      // Create FormData
-      final form = FormData.fromMap(dataMap);
-
-      final response = await dio.post(
-        "/$endpoint",
-        data: form,
-        options: Options(
-          headers: _authHeaders()
-            ..addAll({"Content-Type": "multipart/form-data"}),
-        ),
-      );
-
-      return response.data;
-    } catch (e) {
-      throw _formatError(e);
-    }
-  }
-
-  // -------------------- REUSABLE MULTIPART API CALL --------------------
   static Future<dynamic> uploadMultipart({
     required String endpoint,
     required Map<String, dynamic> fields,
     required bool updateStatus,
-    XFile? file,
+    Uint8List? file, // ✅ bytes
     String fileKey = "signature",
     int? licenceNo,
   }) async {
@@ -219,9 +164,13 @@ class ApiService {
         }
       });
 
-      // Add file if available
+      // ✅ Add file from bytes
       if (file != null) {
-        dataMap[fileKey] = await toMultipartFile(file);
+        dataMap[fileKey] = MultipartFile.fromBytes(
+          file,
+          filename: "signature_${DateTime.now().millisecondsSinceEpoch}.jpg",
+          contentType: MediaType("image", "jpeg"),
+        );
       }
 
       final form = FormData.fromMap(dataMap);

@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -44,15 +43,15 @@ class _JournalEntryState extends State<JournalEntry> {
 
   String? existingDocuUrl;
   DateTime? selectedDate;
-  File? contraImage;
+  Uint8List? contraImage;
   final ImagePicker _picker = ImagePicker();
   Future<void> pickcontraImage() async {
     final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
 
     if (picked == null) return;
-
+    final bytes = await picked.readAsBytes();
     setState(() {
-      contraImage = File(picked.path);
+      contraImage = bytes;
     });
   }
 
@@ -241,7 +240,7 @@ class _JournalEntryState extends State<JournalEntry> {
                     child: contraImage != null
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(6),
-                            child: Image.file(
+                            child: Image.memory(
                               contraImage!,
                               height: 105,
                               width: 150,
@@ -466,7 +465,7 @@ class _JournalEntryState extends State<JournalEntry> {
       endpoint: isEdit ? "journal/${widget.contraModel!.id}" : "journal",
       fields: body,
       updateStatus: isEdit, // 🔥 PUT if edit, POST if new
-      file: contraImage != null ? XFile(contraImage!.path) : null,
+      file: contraImage,
       fileKey: "docu",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );

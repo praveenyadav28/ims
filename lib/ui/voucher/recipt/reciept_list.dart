@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/payment_model.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart';
+import 'package:ims/ui/voucher/pdf_print.dart';
 import 'package:ims/ui/voucher/recipt/create.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';
+import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 
@@ -297,7 +300,7 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
           Expanded(flex: 2, child: Text("Amount")),
           Expanded(flex: 2, child: Text("Type")),
           Expanded(flex: 2, child: Text("Invoice No.")),
-          SizedBox(width: 70),
+          Expanded(flex: 2, child: Text("Action")),
         ],
       ),
     );
@@ -326,6 +329,54 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
           Expanded(flex: 2, child: Text(p.invoiceNo.toString())),
           Row(
             children: [
+              IconButton(
+                icon: const Icon(Icons.print, color: Colors.deepPurple),
+                onPressed: () async {
+                  try {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) =>
+                          const Center(child: CircularProgressIndicator()),
+                    );
+
+                    final companyRes = await ApiService.fetchData(
+                      "get/company",
+                      licenceNo: Preference.getint(PrefKeys.licenseNo),
+                    );
+
+                    Navigator.pop(context);
+
+                    if (companyRes == null || companyRes['status'] != true) {
+                      showCustomSnackbarError(
+                        context,
+                        "Company profile not found",
+                      );
+                      return;
+                    }
+
+                    final data = companyRes['data'];
+
+                    // 🔥 FIX HERE
+                    final Map<String, dynamic> companyMap =
+                        data is List && data.isNotEmpty
+                        ? Map<String, dynamic>.from(data.first)
+                        : Map<String, dynamic>.from(data);
+
+                    final company = CompanyPrintProfile.fromApi(companyMap);
+
+                    await VoucherPdfEngine.printReceipt(
+                      data: p,
+                      company: company,
+                    );
+                  } catch (e, s) {
+                    Navigator.pop(context);
+                    debugPrint("❌ Print error: $e\n$s");
+                    showCustomSnackbarError(context, "Print failed");
+                  }
+                },
+              ),
+
               IconButton(
                 icon: const Icon(Icons.edit, color: Colors.blue),
                 onPressed: () async {

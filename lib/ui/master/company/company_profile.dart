@@ -1,6 +1,6 @@
 // ignore_for_file: must_be_immutable, avoid_print
 
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -24,9 +24,9 @@ class CompanyProfileScreen extends StatefulWidget {
 
 class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
   // Images
-  File? companyLogo;
-  File? otherLogo;
-  File? signatureImage;
+  Uint8List? companyLogo;
+  Uint8List? otherLogo;
+  Uint8List? signatureImage;
   final ImagePicker picker = ImagePicker();
 
   // Controllers
@@ -84,19 +84,20 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
     super.initState();
   }
 
-  // ---------------- PICK IMAGE ----------------
   Future<void> pickImage(String target) async {
     final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
+
+    final bytes = await picked.readAsBytes(); // ✅ Web-safe
+
     setState(() {
-      final file = File(picked.path);
-      if (target == 'company') companyLogo = file;
-      if (target == 'other') otherLogo = file;
-      if (target == 'signature') signatureImage = file;
+      if (target == 'company') companyLogo = bytes;
+      if (target == 'other') otherLogo = bytes;
+      if (target == 'signature') signatureImage = bytes;
     });
   }
 
-  String? companyId; // store _id from backend
+  String? companyId;
   String companyLogoUrl = "";
   String otherLogoUrl = "";
   String signatureUrl = "";
@@ -176,11 +177,10 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
       "business_details": websites,
     };
 
-    final Map<String, File> images = {};
+    final Map<String, Uint8List> images = {};
     if (companyLogo != null) images['company_logo'] = companyLogo!;
     if (otherLogo != null) images['other_logo'] = otherLogo!;
     if (signatureImage != null) images['signature'] = signatureImage!;
-
     try {
       final response = hasExistingProfile
           ? await CompanyProfileAPi.updateCompanyProfile(
@@ -517,7 +517,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
                   : ClipRRect(
                       borderRadius: BorderRadius.circular(6),
                       child: signatureImage != null
-                          ? Image.file(
+                          ? Image.memory(
                               signatureImage!,
                               fit: BoxFit.cover,
                               width: double.infinity,
@@ -549,7 +549,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
     );
   }
 
-  Widget uploadBox(String title, File? file, String target, {double? width}) {
+  Widget uploadBox(String title, Uint8List? file, String target, {double? width}) {
     String imageUrl = "";
     if (target == 'company') imageUrl = companyLogoUrl;
     if (target == 'other') imageUrl = otherLogoUrl;
@@ -572,7 +572,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
               : ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: file != null
-                      ? Image.file(
+                      ? Image.memory(
                           file,
                           fit: BoxFit.cover,
                           width: width ?? 146,

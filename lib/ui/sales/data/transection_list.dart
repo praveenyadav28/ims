@@ -233,7 +233,7 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
   /// TABLE HEADER
   Widget _header() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
         color: AppColor.primary,
         borderRadius: const BorderRadius.only(
@@ -243,14 +243,77 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
       ),
       child: Row(
         children: [
-          Expanded(flex: 2, child: Text("Date", style: headerStyle)),
-          Expanded(flex: 2, child: Text("Number", style: headerStyle)),
-          Expanded(flex: 2, child: Text("Party", style: headerStyle)),
-          Expanded(flex: 2, child: Text("Mobile", style: headerStyle)),
-          Expanded(flex: 2, child: Text("State", style: headerStyle)),
-          Expanded(flex: 2, child: Text("Basic Value", style: headerStyle)),
-          Expanded(flex: 2, child: Text("GST Value", style: headerStyle)),
-          Expanded(flex: 2, child: Text("Final Value", style: headerStyle)),
+          Expanded(
+            flex: 2,
+            child: Text(
+              "Date",
+              style: headerStyle,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Container(height: 40, width: 2, color: AppColor.borderColor),
+          Expanded(
+            flex: 2,
+            child: Text(
+              "Number",
+              style: headerStyle,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Container(height: 40, width: 2, color: AppColor.borderColor),
+          Expanded(
+            flex: 2,
+            child: Text(
+              "Party",
+              style: headerStyle,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Container(height: 40, width: 2, color: AppColor.borderColor),
+          Expanded(
+            flex: 2,
+            child: Text(
+              "Mobile",
+              style: headerStyle,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Container(height: 40, width: 2, color: AppColor.borderColor),
+          Expanded(
+            flex: 2,
+            child: Text(
+              "State",
+              style: headerStyle,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Container(height: 40, width: 2, color: AppColor.borderColor),
+          Expanded(
+            flex: 2,
+            child: Text(
+              "Basic Value",
+              style: headerStyle,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Container(height: 40, width: 2, color: AppColor.borderColor),
+          Expanded(
+            flex: 2,
+            child: Text(
+              "GST Value",
+              style: headerStyle,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Container(height: 40, width: 2, color: AppColor.borderColor),
+          Expanded(
+            flex: 2,
+            child: Text(
+              "Final Value",
+              style: headerStyle,
+              textAlign: TextAlign.center,
+            ),
+          ),
         ],
       ),
     );
@@ -296,7 +359,7 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
         children: [
           Container(
             height: 55,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             decoration: BoxDecoration(
               color: selectedForItem
                   ? AppColor.green.withValues(alpha: .1)
@@ -315,29 +378,67 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
                     style: rowStyle,
                   ),
                 ),
-                Expanded(flex: 2, child: Text(baseNumber, style: rowStyle)),
-                Expanded(flex: 2, child: Text(baseCustomer, style: rowStyle)),
-                Expanded(flex: 2, child: Text(mobile, style: rowStyle)),
-                Expanded(flex: 2, child: Text(placeOfSupply, style: rowStyle)),
+                Container(height: 54, width: 2, color: AppColor.borderColor),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    baseNumber,
+                    style: rowStyle,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Container(height: 54, width: 2, color: AppColor.borderColor),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    baseCustomer,
+                    style: rowStyle,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Container(height: 54, width: 2, color: AppColor.borderColor),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    mobile,
+                    style: rowStyle,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Container(height: 54, width: 2, color: AppColor.borderColor),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    placeOfSupply,
+                    style: rowStyle,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Container(height: 54, width: 2, color: AppColor.borderColor),
                 Expanded(
                   flex: 2,
                   child: Text(
                     "₹${basicAmount.toStringAsFixed(2)}",
                     style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
                   ),
                 ),
+                Container(height: 54, width: 2, color: AppColor.borderColor),
                 Expanded(
                   flex: 2,
                   child: Text(
                     "₹${gstAmount.toStringAsFixed(2)}",
                     style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
                   ),
                 ),
+                Container(height: 54, width: 2, color: AppColor.borderColor),
                 Expanded(
                   flex: 2,
                   child: Text(
                     "₹${finalAmount.toStringAsFixed(2)}",
                     style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 if (selected) ...[

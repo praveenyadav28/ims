@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -72,7 +72,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
   late List<String> statesSuggestions;
   String signatureImageUrl = '';
 
-  File? signatureImage;
+  Uint8List? signatureImage;
   final ImagePicker picker = ImagePicker();
 
   List<String> selectedNotesList = [];
@@ -154,13 +154,13 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
     }
   }
 
-  // ---------------- PICK IMAGE ----------------
   Future<void> pickImage(String target) async {
     final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
+
+    final bytes = await picked.readAsBytes();
     setState(() {
-      final file = File(picked.path);
-      if (target == 'signature') signatureImage = file;
+      if (target == 'signature') signatureImage = bytes;
     });
   }
 
@@ -465,7 +465,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                               ],
                             ),
                             SizedBox(height: 10),
-                            GestureDetector(
+                             GestureDetector(
                               onTap: () => pickImage('signature'),
                               child: SizedBox(
                                 width: double.infinity,
@@ -477,7 +477,9 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                                     dashPattern: [5, 3],
                                     color: AppColor.textLightBlack,
                                   ),
-                                  child: (signatureImage == null)
+                                  child:
+                                      (signatureImage == null &&
+                                          signatureImageUrl.trim().isEmpty)
                                       ? Center(
                                           child: Column(
                                             mainAxisAlignment:
@@ -500,11 +502,23 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                                             ],
                                           ),
                                         )
+                                      : (signatureImage == null)
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          child: Image.network(
+                                            signatureImageUrl,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: 125,
+                                          ),
+                                        )
                                       : ClipRRect(
                                           borderRadius: BorderRadius.circular(
                                             6,
                                           ),
-                                          child: Image.file(
+                                          child: Image.memory(
                                             signatureImage!,
                                             fit: BoxFit.cover,
                                             width: double.infinity,
@@ -514,7 +528,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                                 ),
                               ),
                             ),
-                          ],
+                         ],
                         ),
                       ),
                     ],

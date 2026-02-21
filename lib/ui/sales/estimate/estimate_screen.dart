@@ -1,5 +1,5 @@
 // create_estimate_fullscreen.dart
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
@@ -73,9 +73,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
   DateTime? pickedValidityDate;
-  String signatureImageUrl = '';
 
-  File? signatureImage;
+  Uint8List? signatureBytes; // picked image (web/desktop)
+  String signatureImageUrl = '';
   final ImagePicker picker = ImagePicker();
 
   List<String> selectedNotesList = [];
@@ -203,13 +203,13 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
     }
   }
 
-  // ---------------- PICK IMAGE ----------------
   Future<void> pickImage(String target) async {
     final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
+
+    final bytes = await picked.readAsBytes();
     setState(() {
-      final file = File(picked.path);
-      if (target == 'signature') signatureImage = file;
+      if (target == 'signature') signatureBytes = bytes;
     });
   }
 
@@ -319,7 +319,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                         shippingAddress: cashShippingController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
-                        signatureImage: signatureImage,
+                        signatureImage: signatureBytes,
                         updateId: widget.estimateData?.id,
                         stateName: stateController.text,
                       ),
@@ -420,7 +420,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
                   SizedBox(height: Sizes.height * .03),
                   GlobalItemsTableSection(
-                    rows: state.rows,ledgerType: state.selectedCustomer?.ledgerType ?? 'Individual',
+                    rows: state.rows,
+                    ledgerType:
+                        state.selectedCustomer?.ledgerType ?? 'Individual',
                     catalogue: state.catalogue,
                     hsnList: state.hsnMaster,
                     onAddRow: () => bloc.add(EstAddRow()),
@@ -513,7 +515,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                               ],
                             ),
                             SizedBox(height: 10),
-                            GestureDetector(
+                           GestureDetector(
                               onTap: () => pickImage('signature'),
                               child: SizedBox(
                                 width: double.infinity,
@@ -525,7 +527,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                                     dashPattern: [5, 3],
                                     color: AppColor.textLightBlack,
                                   ),
-                                  child: (signatureImage == null)
+                                  child:
+                                      (signatureBytes == null &&
+                                          signatureImageUrl.trim().isEmpty)
                                       ? Center(
                                           child: Column(
                                             mainAxisAlignment:
@@ -548,12 +552,24 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                                             ],
                                           ),
                                         )
+                                      : (signatureBytes == null)
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          child: Image.network(
+                                            signatureImageUrl,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: 125,
+                                          ),
+                                        )
                                       : ClipRRect(
                                           borderRadius: BorderRadius.circular(
                                             6,
                                           ),
-                                          child: Image.file(
-                                            signatureImage!,
+                                          child: Image.memory(
+                                            signatureBytes!,
                                             fit: BoxFit.cover,
                                             width: double.infinity,
                                             height: 125,
@@ -562,7 +578,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                                 ),
                               ),
                             ),
-                          ],
+                           ],
                         ),
                       ),
                     ],

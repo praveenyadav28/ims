@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:ims/model/ledger_model.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/models/common_data.dart';
@@ -264,7 +263,7 @@ class PurchaseInvoiceSaveWithUIData extends PurchaseInvoiceEvent {
   final String stateName; // ✅ ADD
   final List<String> notes;
   final List<String> terms;
-  final File? signatureImage; // NEW
+  final Uint8List? signatureImage; // NEW
 
   PurchaseInvoiceSaveWithUIData({
     required this.supplierName,
@@ -927,9 +926,7 @@ class PurchaseInvoiceBloc
       } else {
         final res = await repo.savePurchaseInvoice(
           payload: payload,
-          signatureFile: e.signatureImage != null
-              ? XFile(e.signatureImage!.path)
-              : null,
+          signatureFile: e.signatureImage,
           updateId: e.updateId,
         );
 

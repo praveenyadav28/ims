@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'dart:typed_data';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -81,7 +80,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
   List<LedgerListModel> ledgerList = [];
   LedgerListModel? selectedLedger;
 
-  File? signatureImage;
+  Uint8List? signatureImage;
   final ImagePicker picker = ImagePicker();
 
   List<String> selectedNotesList = [];
@@ -178,13 +177,13 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
     }
   }
 
-  // ---------------- PICK IMAGE ----------------
   Future<void> pickImage(String target) async {
     final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
+
+    final bytes = await picked.readAsBytes();
     setState(() {
-      final file = File(picked.path);
-      if (target == 'signature') signatureImage = file;
+      if (target == 'signature') signatureImage = bytes;
     });
   }
 
@@ -399,7 +398,9 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                   ),
 
                   SizedBox(height: Sizes.height * .03),
-                  GlobalItemsTableSection(ledgerType: state.selectedCustomer?.ledgerType ?? 'Individual',
+                  GlobalItemsTableSection(
+                    ledgerType:
+                        state.selectedCustomer?.ledgerType ?? 'Individual',
                     rows: state.rows, // list of GlobalItemRow
                     catalogue: state.catalogue, // list of ItemServiceModel
                     hsnList: state.hsnMaster, // list of HsnModel
@@ -735,7 +736,9 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                                     dashPattern: [5, 3],
                                     color: AppColor.textLightBlack,
                                   ),
-                                  child: (signatureImage == null)
+                                  child:
+                                      (signatureImage == null &&
+                                          signatureImageUrl.trim().isEmpty)
                                       ? Center(
                                           child: Column(
                                             mainAxisAlignment:
@@ -758,11 +761,23 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                                             ],
                                           ),
                                         )
+                                      : (signatureImage == null)
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          child: Image.network(
+                                            signatureImageUrl,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: 125,
+                                          ),
+                                        )
                                       : ClipRRect(
                                           borderRadius: BorderRadius.circular(
                                             6,
                                           ),
-                                          child: Image.file(
+                                          child: Image.memory(
                                             signatureImage!,
                                             fit: BoxFit.cover,
                                             width: double.infinity,

@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
@@ -70,9 +70,9 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
-  String signatureImageUrl = '';
+  String signatureBytesUrl = '';
 
-  File? signatureImage;
+  Uint8List? signatureBytes; // picked image (web/desktop)
   final ImagePicker picker = ImagePicker();
 
   List<String> selectedNotesList = [];
@@ -98,7 +98,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
 
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
-      signatureImageUrl = e.signature;
+      signatureBytesUrl = e.signature;
 
       if (e.caseSale == true) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -162,13 +162,13 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
     }
   }
 
-  // ---------------- PICK IMAGE ----------------
   Future<void> pickImage(String target) async {
     final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
+
+    final bytes = await picked.readAsBytes();
     setState(() {
-      final file = File(picked.path);
-      if (target == 'signature') signatureImage = file;
+      if (target == 'signature') signatureBytes = bytes;
     });
   }
 
@@ -278,7 +278,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                         stateName: stateController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
-                        signatureImage: signatureImage,
+                        signatureImage: signatureBytes,
                         updateId: widget.creditNoteData?.id,
                       ),
                     );
@@ -465,7 +465,9 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                                     dashPattern: [5, 3],
                                     color: AppColor.textLightBlack,
                                   ),
-                                  child: (signatureImage == null)
+                                  child:
+                                      (signatureBytes == null &&
+                                          signatureBytesUrl.trim().isEmpty)
                                       ? Center(
                                           child: Column(
                                             mainAxisAlignment:
@@ -488,12 +490,24 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                                             ],
                                           ),
                                         )
+                                      : (signatureBytes == null)
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          child: Image.network(
+                                            signatureBytesUrl,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: 125,
+                                          ),
+                                        )
                                       : ClipRRect(
                                           borderRadius: BorderRadius.circular(
                                             6,
                                           ),
-                                          child: Image.file(
-                                            signatureImage!,
+                                          child: Image.memory(
+                                            signatureBytes!,
                                             fit: BoxFit.cover,
                                             width: double.infinity,
                                             height: 125,

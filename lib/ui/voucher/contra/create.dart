@@ -1,5 +1,7 @@
 // ignore_for_file: must_be_immutable
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/contra_model.dart';
@@ -13,7 +15,6 @@ import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:searchfield/searchfield.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
 class ContraEntry extends StatefulWidget {
@@ -42,15 +43,15 @@ class _ContraEntryState extends State<ContraEntry> {
 
   String? existingDocuUrl;
   DateTime? selectedDate;
-  File? contraImage;
+  Uint8List? contraImage;
   final ImagePicker _picker = ImagePicker();
   Future<void> pickcontraImage() async {
     final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
-
     if (picked == null) return;
 
+    final bytes = await picked.readAsBytes();
     setState(() {
-      contraImage = File(picked.path);
+      contraImage = bytes; // ✅ bytes store karo
     });
   }
 
@@ -290,7 +291,7 @@ class _ContraEntryState extends State<ContraEntry> {
                                           borderRadius: BorderRadius.circular(
                                             6,
                                           ),
-                                          child: Image.file(
+                                          child: Image.memory(
                                             contraImage!,
                                             height: 105,
                                             width: 150,
@@ -434,7 +435,7 @@ class _ContraEntryState extends State<ContraEntry> {
       endpoint: isEdit ? "contra/${widget.contraModel!.id}" : "contra",
       fields: body,
       updateStatus: isEdit, // 🔥 PUT if edit, POST if new
-      file: contraImage != null ? XFile(contraImage!.path) : null,
+      file: contraImage,
       fileKey: "docu",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );

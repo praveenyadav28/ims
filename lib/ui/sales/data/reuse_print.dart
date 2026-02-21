@@ -1,283 +1,3 @@
-// import 'package:ims/ui/sales/models/print_model.dart';
-// import 'package:pdf/widgets.dart' as pw;
-// import 'package:pdf/pdf.dart';
-// import 'package:printing/printing.dart';
-// import 'package:intl/intl.dart';
-
-// class PdfEngine {
-//   static Future<void> printPremiumInvoice({
-//     required PrintDocModel doc,
-//     required CompanyPrintProfile company,
-//   }) async {
-//     final pdf = pw.Document();
-
-//     pdf.addPage(
-//       pw.MultiPage(
-//         pageFormat: PdfPageFormat.a4,
-//         margin: const pw.EdgeInsets.all(24),
-//         build: (_) => [
-//           _premiumHeader(company, doc),
-//           pw.SizedBox(height: 16),
-//           _buyerCard(doc),
-//           pw.SizedBox(height: 16),
-//           _premiumItemsTable(doc),
-//           pw.SizedBox(height: 16),
-//           _summaryCard(doc),
-//           pw.SizedBox(height: 16),
-//           _notesAndTerms(doc),
-//           pw.SizedBox(height: 24),
-//           _premiumFooter(company),
-//         ],
-//       ),
-//     );
-
-//     final bytes = await pdf.save();
-
-//     try {
-//       await Printing.layoutPdf(onLayout: (_) async => bytes);
-//     } catch (_) {
-//       // Desktop / Web fallback
-//     }
-//   }
-
-//   // ================= HEADER =================
-//   static pw.Widget _premiumHeader(CompanyPrintProfile c, PrintDocModel d) {
-//     return pw.Container(
-//       padding: const pw.EdgeInsets.all(16),
-//       decoration: pw.BoxDecoration(
-//         borderRadius: pw.BorderRadius.circular(10),
-//         color: PdfColors.grey100,
-//       ),
-//       child: pw.Row(
-//         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-//         children: [
-//           pw.Column(
-//             crossAxisAlignment: pw.CrossAxisAlignment.start,
-//             children: [
-//               pw.Text(
-//                 c.name,
-//                 style: pw.TextStyle(
-//                   fontSize: 18,
-//                   fontWeight: pw.FontWeight.bold,
-//                 ),
-//               ),
-//               pw.Text(c.address),
-//               pw.Text("GST: ${c.gst}"),
-//               pw.Text("Phone: ${c.phone}"),
-//             ],
-//           ),
-//           pw.Container(
-//             padding: const pw.EdgeInsets.all(12),
-//             decoration: pw.BoxDecoration(
-//               borderRadius: pw.BorderRadius.circular(8),
-//               color: PdfColors.white,
-//               border: pw.Border.all(color: PdfColors.grey400),
-//             ),
-//             child: pw.Column(
-//               crossAxisAlignment: pw.CrossAxisAlignment.end,
-//               children: [
-//                 pw.Text(
-//                   d.title.toUpperCase(),
-//                   style: pw.TextStyle(
-//                     fontSize: 14,
-//                     fontWeight: pw.FontWeight.bold,
-//                   ),
-//                 ),
-//                 pw.Text("No: ${d.number}"),
-//                 pw.Text("Date: ${DateFormat("dd MMM yyyy").format(d.date)}"),
-//               ],
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   // ================= BUYER =================
-//   static pw.Widget _buyerCard(PrintDocModel d) {
-//     return pw.Container(
-//       padding: const pw.EdgeInsets.all(14),
-//       decoration: pw.BoxDecoration(
-//         borderRadius: pw.BorderRadius.circular(10),
-//         border: pw.Border.all(color: PdfColors.grey400),
-//       ),
-//       child: pw.Row(
-//         children: [
-//           pw.Expanded(
-//             child: pw.Column(
-//               crossAxisAlignment: pw.CrossAxisAlignment.start,
-//               children: [
-//                 pw.Text(
-//                   "Bill To",
-//                   style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-//                 ),
-//                 pw.SizedBox(height: 4),
-//                 pw.Text(d.partyName),
-//                 pw.Text("${d.address0} ${d.address1}"),
-//                 pw.Text("Mobile: ${d.mobile}"),
-//                 pw.Text("State: ${d.placeOfSupply}"),
-//               ],
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   // ================= ITEMS =================
-//   static pw.Widget _premiumItemsTable(PrintDocModel d) {
-//     return pw.Table(
-//       border: pw.TableBorder.all(color: PdfColors.grey400),
-//       columnWidths: const {
-//         0: pw.FlexColumnWidth(1),
-//         1: pw.FlexColumnWidth(4),
-//         2: pw.FlexColumnWidth(1.5),
-//         3: pw.FlexColumnWidth(2),
-//         4: pw.FlexColumnWidth(2),
-//       },
-//       children: [
-//         pw.TableRow(
-//           decoration: pw.BoxDecoration(color: PdfColors.grey300),
-//           children: [
-//             _th("No"),
-//             _th("Item"),
-//             _th("Qty"),
-//             _th("Rate"),
-//             _th("Amount"),
-//           ],
-//         ),
-//         ...d.items.asMap().entries.map(
-//           (e) => pw.TableRow(
-//             decoration: pw.BoxDecoration(
-//               color: e.key.isEven ? PdfColors.white : PdfColors.grey100,
-//             ),
-//             children: [
-//               _td("${e.key + 1}"),
-//               _td(e.value.name),
-//               _td("${e.value.qty}"),
-//               _td(e.value.price.toStringAsFixed(2)),
-//               _td(e.value.amount.toStringAsFixed(2)),
-//             ],
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-
-//   // ================= SUMMARY =================
-//   static pw.Widget _summaryCard(PrintDocModel d) {
-//     return pw.Align(
-//       alignment: pw.Alignment.centerRight,
-//       child: pw.Container(
-//         width: 220,
-//         padding: const pw.EdgeInsets.all(12),
-//         decoration: pw.BoxDecoration(
-//           borderRadius: pw.BorderRadius.circular(10),
-//           color: PdfColors.grey100,
-//         ),
-//         child: pw.Column(
-//           crossAxisAlignment: pw.CrossAxisAlignment.end,
-//           children: [
-//             _sumRow("Sub Total", d.subTotal),
-//             _sumRow("GST", d.gstTotal),
-//             pw.Divider(),
-//             pw.Text(
-//               "Total: Rs. ${d.grandTotal.toStringAsFixed(2)}",
-//               style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-
-//   static pw.Widget _sumRow(String k, double v) {
-//     return pw.Row(
-//       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-//       children: [pw.Text(k), pw.Text("Rs. ${v.toStringAsFixed(2)}")],
-//     );
-//   }
-
-//   // ================= NOTES =================
-//   static pw.Widget _notesAndTerms(PrintDocModel d) {
-//     return pw.Row(
-//       crossAxisAlignment: pw.CrossAxisAlignment.start,
-//       children: [
-//         pw.Expanded(
-//           child: pw.Container(
-//             padding: const pw.EdgeInsets.all(12),
-//             decoration: pw.BoxDecoration(
-//               borderRadius: pw.BorderRadius.circular(10),
-//               border: pw.Border.all(color: PdfColors.grey400),
-//             ),
-//             child: pw.Column(
-//               crossAxisAlignment: pw.CrossAxisAlignment.start,
-//               children: [
-//                 pw.Text(
-//                   "Notes",
-//                   style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-//                 ),
-//                 ...d.notes.map((e) => pw.Text("• $e")),
-//               ],
-//             ),
-//           ),
-//         ),
-//         pw.SizedBox(width: 12),
-//         pw.Expanded(
-//           child: pw.Container(
-//             padding: const pw.EdgeInsets.all(12),
-//             decoration: pw.BoxDecoration(
-//               borderRadius: pw.BorderRadius.circular(10),
-//               border: pw.Border.all(color: PdfColors.grey400),
-//             ),
-//             child: pw.Column(
-//               crossAxisAlignment: pw.CrossAxisAlignment.start,
-//               children: [
-//                 pw.Text(
-//                   "Terms",
-//                   style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-//                 ),
-//                 ...d.terms.map((e) => pw.Text("• $e")),
-//               ],
-//             ),
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-
-//   // ================= FOOTER =================
-//   static pw.Widget _premiumFooter(CompanyPrintProfile c) {
-//     return pw.Row(
-//       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-//       children: [
-//         pw.Text("This is a computer generated invoice"),
-//         pw.Column(
-//           crossAxisAlignment: pw.CrossAxisAlignment.end,
-//           children: [
-//             pw.Text(
-//               "For ${c.name}",
-//               style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-//             ),
-//             pw.SizedBox(height: 30),
-//             pw.Text("Authorised Signatory"),
-//           ],
-//         ),
-//       ],
-//     );
-//   }
-
-//   static pw.Widget _th(String t) => pw.Padding(
-//     padding: const pw.EdgeInsets.all(8),
-//     child: pw.Text(t, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-//   );
-
-//   static pw.Widget _td(String t) =>
-//       pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(t));
-// }
-
-// ignore_for_file: prefer_interpolation_to_compose_strings
-
 import 'package:ims/ui/sales/models/print_model.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
@@ -323,11 +43,11 @@ class PdfEngine {
               pw.SizedBox(height: 6),
               _itemTableClassic(doc),
               pw.SizedBox(height: 6),
-              _totalsClassic(doc),
+              _totalsClassic(doc, company),
               pw.SizedBox(height: 6),
-              _gstSummary(doc),
+              _gstSummary(doc, company),
               pw.SizedBox(height: 6),
-              _termsAndSign(company, sign),
+              _termsAndSign(company, sign, doc),
               pw.SizedBox(height: 6),
               pw.Center(
                 child: pw.Text("Page 1 of 1", style: pw.TextStyle(fontSize: 9)),
@@ -352,8 +72,8 @@ class PdfEngine {
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Container(
-          width: 60,
-          height: 60,
+          width: 100,
+          height: 100,
           child: logo != null ? pw.Image(logo) : pw.Container(),
         ),
         pw.Expanded(
@@ -372,9 +92,14 @@ class PdfEngine {
                 style: pw.TextStyle(fontSize: 9),
               ),
               pw.Text(
-                "GSTIN: ${c.gst}  |  PAN: ${c.pan}",
+                "City: ${c.city} | District: ${c.district}",
                 style: pw.TextStyle(fontSize: 9),
               ),
+              pw.Text(
+                "State: ${c.state} | Pin Code: ${c.pincode}",
+                style: pw.TextStyle(fontSize: 9),
+              ),
+              pw.Text("GSTIN: ${c.gst}", style: pw.TextStyle(fontSize: 9)),
               pw.Text(
                 "Phone: ${c.phone} | Email: ${c.email}",
                 style: pw.TextStyle(fontSize: 9),
@@ -383,8 +108,8 @@ class PdfEngine {
           ),
         ),
         pw.Container(
-          width: 60,
-          height: 60,
+          width: 100,
+          height: 100,
           child: otherLogo != null ? pw.Image(otherLogo) : pw.Container(),
         ),
       ],
@@ -413,12 +138,11 @@ class PdfEngine {
         pw.TableRow(
           children: [
             _cell("Address"),
-            _cell("${d.address0} ${d.address1}"),
+            _cell(d.address0),
             _cell("Date"),
             _cell(DateFormat("dd-MM-yyyy").format(d.date)),
           ],
         ),
-        pw.TableRow(children: [_cell("GSTIN"), _cell(d.gstTotal.toString())]),
         pw.TableRow(children: [_cell("State"), _cell(d.placeOfSupply)]),
       ],
     );
@@ -461,10 +185,13 @@ class PdfEngine {
               _td(it.name),
               _td(it.hsn),
               _td("${it.qty}"),
-              _td(it.price.toStringAsFixed(2)),
+              _td(it.amount.toStringAsFixed(2)),
               _td(it.discount.toStringAsFixed(2)),
               _td("${it.gstRate}%"),
-              _td(it.amount.toStringAsFixed(2)),
+              _td(
+                (it.amount - ((it.amount * it.gstRate) / (100 + it.gstRate)))
+                    .toStringAsFixed(2),
+              ),
             ],
           );
         }),
@@ -473,12 +200,12 @@ class PdfEngine {
   }
 
   // ================= TOTALS =================
-  static pw.Widget _totalsClassic(PrintDocModel d) {
+  static pw.Widget _totalsClassic(PrintDocModel d, CompanyPrintProfile p) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
         pw.Text(
-          "Amount in Words: ${d.grandTotal}",
+          "Amount in Words: ${amountToWordsIndian(d.grandTotal.round())} Only",
           style: pw.TextStyle(fontSize: 9),
         ),
         pw.Container(
@@ -487,9 +214,9 @@ class PdfEngine {
             border: pw.TableBorder.all(),
             children: [
               _row2("Taxable Amount", d.subTotal),
-              _row2("CGST", d.gstTotal),
-              _row2("SGST", d.gstTotal),
-              _row2("IGST", d.gstTotal),
+              _row2("IGST", d.placeOfSupply == p.state ? d.gstTotal : 0),
+              _row2("CGST", d.placeOfSupply != p.state ? d.gstTotal / 2 : 0),
+              _row2("SGST", d.placeOfSupply != p.state ? d.gstTotal / 2 : 0),
               _row2("Grand Total", d.grandTotal),
             ],
           ),
@@ -499,42 +226,83 @@ class PdfEngine {
   }
 
   // ================= GST SUMMARY =================
-  static pw.Widget _gstSummary(PrintDocModel d) {
+  static pw.Widget _gstSummary(PrintDocModel d, CompanyPrintProfile p) {
+    final rows = _buildGstSummaryRows(d, p);
+
     return pw.Table(
       border: pw.TableBorder.all(),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(1.2), // GST Rate
+        1: pw.FlexColumnWidth(2), // Taxable
+        2: pw.FlexColumnWidth(1.5), // IGST
+        3: pw.FlexColumnWidth(1.5), // CGST
+        4: pw.FlexColumnWidth(1.5), // SGST
+      },
       children: [
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.grey300),
           children: [
-            _th("GST Summary"),
-            _th("Taxable"),
+            _th("GST Rate"),
+            _th("Taxable Amount"),
+            _th("IGST"),
             _th("CGST"),
             _th("SGST"),
-            _th("IGST"),
           ],
         ),
-        pw.TableRow(
-          children: [
-            _td("Total"),
-            _td(d.subTotal.toStringAsFixed(2)),
-            _td(d.gstTotal.toStringAsFixed(2)),
-            _td(d.gstTotal.toStringAsFixed(2)),
-            _td(d.gstTotal.toStringAsFixed(2)),
-          ],
-        ),
+        ...rows,
       ],
     );
+  }
+
+  static List<pw.TableRow> _buildGstSummaryRows(
+    PrintDocModel d,
+    CompanyPrintProfile p,
+  ) {
+    final Map<double, double> rateWiseTaxable = {};
+
+    // 1️⃣ Group taxable amount by GST Rate
+    for (final item in d.items) {
+      final rate = item.gstRate.toDouble();
+      final taxable =
+          item.amount - ((item.amount * item.gstRate) / (100 + item.gstRate));
+
+      rateWiseTaxable[rate] = (rateWiseTaxable[rate] ?? 0) + taxable;
+    }
+
+    // 2️⃣ Convert into table rows
+    return rateWiseTaxable.entries.map((e) {
+      final rate = e.key;
+      final taxable = e.value;
+
+      final totalGst = taxable * rate / 100;
+
+      final igst = d.placeOfSupply == p.state ? totalGst : 0;
+      final cgst = d.placeOfSupply != p.state ? totalGst / 2 : 0;
+      final sgst = d.placeOfSupply != p.state ? totalGst / 2 : 0;
+
+      return pw.TableRow(
+        children: [
+          _td("${rate.toStringAsFixed(0)}%"),
+          _td(taxable.toStringAsFixed(2)),
+          _td(igst.toStringAsFixed(2)),
+          _td(cgst.toStringAsFixed(2)),
+          _td(sgst.toStringAsFixed(2)),
+        ],
+      );
+    }).toList();
   }
 
   // ================= TERMS + SIGN =================
   static pw.Widget _termsAndSign(
     CompanyPrintProfile c,
     pw.ImageProvider? sign,
+    PrintDocModel p,
   ) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Expanded(
+          flex: 2,
           child: pw.Container(
             padding: const pw.EdgeInsets.all(6),
             decoration: pw.BoxDecoration(border: pw.Border.all()),
@@ -545,13 +313,13 @@ class PdfEngine {
                   "Terms & Conditions",
                   style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                 ),
-                pw.Text(
-                  "1. Goods once sold will not be taken back.",
-                  style: pw.TextStyle(fontSize: 9),
-                ),
-                pw.Text(
-                  "2. Interest @18% will be charged if payment delayed.",
-                  style: pw.TextStyle(fontSize: 9),
+                pw.Column(
+                  children: List.generate(p.terms.length, (i) {
+                    return pw.Text(
+                      "${i + 1}. ${p.terms[i]}",
+                      style: pw.TextStyle(fontSize: 9),
+                    );
+                  }),
                 ),
               ],
             ),
@@ -620,6 +388,10 @@ class CompanyPrintProfile {
   final String phone;
   final String email;
   final String address;
+  final String city;
+  final String district;
+  final String state;
+  final String pincode;
   final String gst;
   final String pan;
   final String logoUrl;
@@ -631,6 +403,10 @@ class CompanyPrintProfile {
     required this.phone,
     required this.email,
     required this.address,
+    required this.city,
+    required this.district,
+    required this.state,
+    required this.pincode,
     required this.gst,
     required this.pan,
     required this.logoUrl,
@@ -643,8 +419,11 @@ class CompanyPrintProfile {
       name: company["business_name"] ?? "",
       phone: company["phone_no"]?.toString() ?? "",
       email: company["email"] ?? "",
-      address:
-          "${company["address"] ?? ""}, ${company["city"] ?? ""}, ${company["state"] ?? ""}-${company["pincode"] ?? ""}",
+      address: company["address"] ?? "",
+      city: company["city"] ?? "",
+      state: company["state"] ?? "",
+      district: company["district"] ?? "",
+      pincode: company["pincode"].toString(),
       gst: company["gst_no"] ?? "",
       pan: company["pan_number"] ?? "",
       logoUrl: company["company_logo"] ?? "",
@@ -652,4 +431,56 @@ class CompanyPrintProfile {
       signatureUrl: company["signature"] ?? "",
     );
   }
+}
+
+String amountToWordsIndian(int number) {
+  const units = [
+    '',
+    'One',
+    'Two',
+    'Three',
+    'Four',
+    'Five',
+    'Six',
+    'Seven',
+    'Eight',
+    'Nine',
+    'Ten',
+    'Eleven',
+    'Twelve',
+    'Thirteen',
+    'Fourteen',
+    'Fifteen',
+    'Sixteen',
+    'Seventeen',
+    'Eighteen',
+    'Nineteen',
+  ];
+  const tens = [
+    '',
+    '',
+    'Twenty',
+    'Thirty',
+    'Forty',
+    'Fifty',
+    'Sixty',
+    'Seventy',
+    'Eighty',
+    'Ninety',
+  ];
+
+  String twoDigits(int n) {
+    if (n < 20) return units[n];
+    return tens[n ~/ 10] + (n % 10 != 0 ? " ${units[n % 10]}" : "");
+  }
+
+  String words(int n) {
+    if (n < 100) return twoDigits(n);
+    if (n < 1000) return "${units[n ~/ 100]} Hundred ${words(n % 100)}";
+    if (n < 100000) return "${words(n ~/ 1000)} Thousand ${words(n % 1000)}";
+    if (n < 10000000) return "${words(n ~/ 100000)} Lakh ${words(n % 100000)}";
+    return "${words(n ~/ 10000000)} Crore ${words(n % 10000000)}";
+  }
+
+  return words(number).replaceAll(RegExp(r'\s+'), ' ').trim();
 }

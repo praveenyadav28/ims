@@ -115,26 +115,26 @@ extension SaleReturnPrintMapper on SaleReturnData {
   }
 }
 
-// extension CreditNotePrintMapper on CreditNoteData {
-//   PrintDocModel toPrintModel() {
-//     return PrintDocModel(
-//       title: "Credit Note",
-//       number: "$prefix $no",
-//       date: creditNoteDate,
-//       partyName: ledgerName,
-//       mobile: mobile,
-//       address0: address0,
-//       address1: address1,
-//       placeOfSupply: placeOfSupply,
-//       items: itemDetails,
-//       subTotal: subTotal,
-//       gstTotal: subGst,
-//       grandTotal: totalAmount,
-//       notes: notes,
-//       terms: terms,
-//     );
-//   }
-// }
+extension CreditNotePrintMapper on CreditNoteData {
+  PrintDocModel toPrintModel() {
+    return PrintDocModel(
+      title: "Credit Note",
+      number: "$prefix $no",
+      date: creditNoteDate,
+      partyName: ledgerName,
+      mobile: mobile,
+      address0: address0,
+      address1: address1,
+      placeOfSupply: placeOfSupply,
+      items: itemDetails,
+      subTotal: subTotal,
+      gstTotal: subGst,
+      grandTotal: totalAmount,
+      notes: notes,
+      terms: terms,
+    );
+  }
+}
 
 extension PurchaseOrderPrintMapper on PurchaseOrderData {
   PrintDocModel toPrintModel() {
@@ -199,23 +199,23 @@ extension PurchaseReturnPrintMapper on PurchaseReturnData {
   }
 }
 
-// extension DebitNotePrintMapper on DebitNoteData {
-//   PrintDocModel toPrintModel() {
-//     return PrintDocModel(
-//       title: "Debit Note",
-//       number: "$prefix $no",
-//       date: debitNoteDate,
-//       partyName: customerName,
-//       mobile: mobile,
-//       address0: address0,
-//       address1: address1,
-//       placeOfSupply: placeOfSupply,
-//       items: itemDetails,
-//       subTotal: subTotal,
-//       gstTotal: subGst,
-//       grandTotal: totalAmount,
-//       notes: notes,
-//       terms: terms,
-//     );
-//   }
-// }
+extension DebitNotePrintMapper on DebitNoteData {
+  PrintDocModel toPrintModel() {
+    return PrintDocModel(
+      title: "Debit Note",
+      number: "$prefix $no",
+      date: debitNoteDate,
+      partyName: customerName,
+      mobile: mobile,
+      address0: address0,
+      address1: address1,
+      placeOfSupply: placeOfSupply,
+      items: itemDetails,
+      subTotal: subTotal,
+      gstTotal: subGst,
+      grandTotal: totalAmount,
+      notes: notes,
+      terms: terms,
+    );
+  }
+}

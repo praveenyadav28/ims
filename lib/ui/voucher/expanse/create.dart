@@ -1,4 +1,6 @@
 // ignore_for_file: must_be_immutable
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/expanse_model.dart';
@@ -12,7 +14,6 @@ import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 import 'package:searchfield/searchfield.dart';
-import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
 class ExpenseEntry extends StatefulWidget {
@@ -44,15 +45,15 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
   );
 
   DateTime? selectedDate;
-  File? expenseImage;
+  Uint8List? expenseImage;
   final ImagePicker _picker = ImagePicker();
   Future<void> pickExpenseImage() async {
     final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
 
     if (picked == null) return;
-
+    final bytes = await picked.readAsBytes();
     setState(() {
-      expenseImage = File(picked.path);
+      expenseImage = bytes;
     });
   }
 
@@ -243,7 +244,7 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
                     child: expenseImage != null
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(6),
-                            child: Image.file(
+                            child: Image.memory(
                               expenseImage!,
                               height: 105,
                               width: 150,
@@ -474,7 +475,7 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
         endpoint: isEdit ? "expense/${widget.expenseModel!.id}" : "expense",
         fields: fields,
         updateStatus: isEdit, // 🔥 PUT if edit, POST if new
-        file: expenseImage != null ? XFile(expenseImage!.path) : null,
+        file: expenseImage ,
         fileKey: "docu",
         licenceNo: Preference.getint(PrefKeys.licenseNo),
       );

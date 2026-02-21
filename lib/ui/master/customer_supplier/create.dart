@@ -1,7 +1,7 @@
 // ignore_for_file: must_be_immutable
 
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -83,8 +83,9 @@ class _CreateCusSupState extends State<CreateCusSup>
   Future<void> _pickImage(int index) async {
     final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
+      final bytes = await picked.readAsBytes();
       setState(() {
-        documents[index]["image"] = File(picked.path);
+        documents[index]["image"] = bytes;
       });
     }
   }
@@ -738,7 +739,7 @@ class _CreateCusSupState extends State<CreateCusSup>
     );
   }
 
-  void _showImagePopup(File imageFile, int index) {
+  void _showImagePopup(dynamic imageFile, int index) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -749,7 +750,9 @@ class _CreateCusSupState extends State<CreateCusSup>
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.file(imageFile, height: 250, fit: BoxFit.contain),
+              child: imageFile is Uint8List
+                  ? Image.memory(imageFile, height: 250, fit: BoxFit.contain)
+                  : Image.network(imageFile, height: 250, fit: BoxFit.contain),
             ),
             const SizedBox(height: 20),
             Row(
@@ -835,19 +838,18 @@ class _CreateCusSupState extends State<CreateCusSup>
         MapEntry("address_0", addressLine1Controller.text.trim()),
         MapEntry("address_1", addressLine2Controller.text.trim()),
       ]);
-
       // ✅ Documents (same key names multiple times)
       for (final doc in documents) {
         final title = doc["duc_title"]?.toString().trim();
-        final imageFile = doc["image"];
+        final Uint8List? imageFile = doc["image"];
 
         if (imageFile != null && title != null && title.isNotEmpty) {
           formData.files.add(
             MapEntry(
               'image',
-              await MultipartFile.fromFile(
-                imageFile.path,
-                filename: imageFile.path.split('/').last,
+              MultipartFile.fromBytes(
+                imageFile,
+                filename: "doc_${DateTime.now().millisecondsSinceEpoch}.jpg",
               ),
             ),
           );

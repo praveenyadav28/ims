@@ -135,6 +135,21 @@ class _FifoReportScreenState extends State<FifoReportScreen> {
             height: 40,
             width: 180,
           ),
+          const SizedBox(width: 10),
+          InkWell(
+            onTap: () async {},
+            child: Container(
+              width: 50,
+              height: 40,
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(5),
+                color: AppColor.white,
+                border: Border.all(width: 1, color: AppColor.borderColor),
+              ),
+              child: Image.asset("assets/images/excel.png"),
+            ),
+          ),
         ],
       ),
     );

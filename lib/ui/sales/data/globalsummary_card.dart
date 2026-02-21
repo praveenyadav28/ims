@@ -59,8 +59,8 @@ class GlobalSummaryCard extends StatelessWidget {
         children: [
           _row('Subtotal', subtotal),
           _row('Total GST', totalGst),
-          _row('SGST', sgst),
-          _row('CGST', cgst),
+          // _row('SGST', sgst),
+          // _row('CGST', cgst),
 
           /// ---------- Injected Sections ----------
           additionalChargesSection,
@@ -87,7 +87,7 @@ class GlobalSummaryCard extends StatelessWidget {
                   fontSize: 14,
                   color: AppColor.textColor,
                 ),
-              )
+              ),
             ],
           ),
 

@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -54,16 +53,16 @@ class _RecieptEntryState extends State<RecieptEntry> {
   TextEditingController noteController = TextEditingController();
 
   DateTime? selectedDate;
-  File? recieptImage;
+  Uint8List? recieptImage;
   String? existingDocuUrl;
   final ImagePicker _picker = ImagePicker();
   Future<void> pickrecieptImage() async {
     final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
 
     if (picked == null) return;
-
+    final bytes = await picked.readAsBytes();
     setState(() {
-      recieptImage = File(picked.path);
+      recieptImage = bytes;
     });
   }
 
@@ -98,6 +97,7 @@ class _RecieptEntryState extends State<RecieptEntry> {
     prefixController.text = d.prefix;
     voucherNoController.text = d.voucherNo.toString();
     noteController.text = d.note;
+    existingDocuUrl = d.docu;
 
     // match selected ledger
     selectedLedger = ledgerList.firstWhere(
@@ -457,7 +457,7 @@ class _RecieptEntryState extends State<RecieptEntry> {
                                           borderRadius: BorderRadius.circular(
                                             6,
                                           ),
-                                          child: Image.file(
+                                          child: Image.memory(
                                             recieptImage!,
                                             height: 105,
                                             width: 150,
@@ -465,7 +465,7 @@ class _RecieptEntryState extends State<RecieptEntry> {
                                           ),
                                         )
                                       : existingDocuUrl != null &&
-                                            existingDocuUrl!.isNotEmpty
+                                            (existingDocuUrl ?? "").isNotEmpty
                                       ? Image.network(
                                           existingDocuUrl!,
                                           fit: BoxFit.cover,
@@ -676,8 +676,8 @@ class _RecieptEntryState extends State<RecieptEntry> {
     final response = await ApiService.uploadMultipart(
       endpoint: isEdit ? "reciept/${widget.recieptModel!.id}" : "reciept",
       fields: body,
-      updateStatus: isEdit, // 🔥 PUT if edit, POST if new
-      file: recieptImage != null ? XFile(recieptImage!.path) : null,
+      updateStatus: isEdit,
+      file: recieptImage,
       fileKey: "docu",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
