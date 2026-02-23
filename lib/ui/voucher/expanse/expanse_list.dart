@@ -370,9 +370,8 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
                         data: p,
                         company: company,
                       );
-                    } catch (e, s) {
+                    } catch (e) {
                       Navigator.pop(context);
-                      debugPrint("❌ Print error: $e\n$s");
                       showCustomSnackbarError(context, "Print failed");
                     }
                   },

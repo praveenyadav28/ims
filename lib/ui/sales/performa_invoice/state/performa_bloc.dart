@@ -4,11 +4,14 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:ims/ui/master/company/company_api.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/models/performa_data.dart';
 import 'package:ims/utils/prefence.dart';
+import 'package:ims/utils/print_mapper.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:intl/intl.dart';
 
@@ -237,6 +240,7 @@ class PerfromaSaveWithUIData extends PerformaEvent {
   final List<String> notes;
   final List<String> terms;
   final Uint8List? signatureImage; // NEW
+  final bool printAfterSave;
 
   PerfromaSaveWithUIData({
     required this.customerName,
@@ -246,6 +250,7 @@ class PerfromaSaveWithUIData extends PerformaEvent {
     required this.stateName, // ✅
     required this.notes,
     required this.terms,
+    required this.printAfterSave,
     this.updateId,
     this.signatureImage,
   });
@@ -319,9 +324,7 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
       );
 
       add(PerfromaCalculate());
-    } catch (err) {
-      print("❌ Load error: $err");
-    }
+    } catch (err) {}
   }
 
   void _onSelectCustomer(
@@ -784,6 +787,16 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
             perfromaNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+          if (e.printAfterSave) {
+            final data = PerformaData.fromJson(res!['data']); // 👈 sahi tareeka
+
+            final doc = data.toPrintModel(); // ✅ no dynamic
+
+            final companyApi = await CompanyProfileAPi.getCompanyProfile();
+            final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+
+            await PdfEngine.printPremiumInvoice(doc: doc, company: company);
+          }
           // 🔥 GO BACK TO PREVIOUS SCREEN
           Navigator.of(ctx).pop(true); // true = success result
         } else {

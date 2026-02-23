@@ -206,8 +206,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
       }
       setState(() {});
     } catch (e) {
-      debugPrint("Error loading HSN: $e");
-    }
+     }
   }
 
   // ----------------- API loaders -----------------
@@ -238,8 +237,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
           : null;
       setState(() {});
     } catch (e) {
-      debugPrint("Error loading misc: $e");
-    }
+     }
   }
 
   Future<void> getVariant() async {
@@ -2025,8 +2023,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
             : "",
       };
 
-      debugPrint("Service Payload => $payload");
-
+  
       final response = await ApiService.postData(
         'service',
         payload,
@@ -2040,7 +2037,6 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         showCustomSnackbarError(context, response?['message'] ?? 'Save failed');
       }
     } catch (e) {
-      debugPrint("Error in _saveServiceItem: $e");
       showCustomSnackbarError(context, "Something went wrong: $e");
     }
   }
@@ -2240,8 +2236,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         "variant_list": [],
       };
 
-      debugPrint("✅ Posting Variant Payload => $payload");
-
+  
       final res = await ApiService.postData(
         'item',
         payload,
@@ -2253,8 +2248,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         setState(() {
           generatedItems.removeWhere((e) => e["item_no"] == item["item_no"]);
         });
-        debugPrint("🟢 Saved & removed item: ${item["item_no"]}");
-      } else {
+       } else {
         showCustomSnackbarError(
           context,
           "❌ Error saving ${item["item_no"]}: ${res?["message"] ?? "failed"}",

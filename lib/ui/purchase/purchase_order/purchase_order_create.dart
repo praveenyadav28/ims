@@ -83,6 +83,14 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
   List<MiscChargeModelList> miscList = [];
+
+  bool printAfterSave = false;
+  void onTogglePrint(bool value) {
+    setState(() {
+      printAfterSave = value;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -310,6 +318,34 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                   ),
                 ),
                 actions: [
+                  SizedBox(
+                    width: 170,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Checkbox(
+                          fillColor: WidgetStatePropertyAll(AppColor.primary),
+                          shape: ContinuousRectangleBorder(
+                            borderRadius: BorderRadiusGeometry.circular(5),
+                          ),
+                          value: printAfterSave,
+                          onChanged: (v) {
+                            onTogglePrint(v ?? true);
+                            setState(() {});
+                          },
+                        ),
+                        Text(
+                          "Print After Save",
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            color: AppColor.black,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -356,6 +392,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                               terms: selectedTermsList,
                               signatureImage: signatureImage,
                               updateId: widget.purchaseOrderData?.id,
+                              printAfterSave:printAfterSave
                             ),
                           );
                         },
@@ -462,7 +499,9 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
 
                   SizedBox(height: Sizes.height * .03),
                   GlobalItemsTableSection(
-                    rows: state.rows,ledgerType: state.selectedCustomer?.ledgerType ?? 'Individual',
+                    rows: state.rows,
+                    ledgerType:
+                        state.selectedCustomer?.ledgerType ?? 'Individual',
                     catalogue: state.catalogue,
                     hsnList: state.hsnMaster,
                     onAddRow: () => bloc.add(PurchaseOrderAddRow()),
@@ -556,7 +595,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                               ],
                             ),
                             SizedBox(height: 10),
-                           GestureDetector(
+                            GestureDetector(
                               onTap: () => pickImage('signature'),
                               child: SizedBox(
                                 width: double.infinity,
@@ -619,7 +658,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                                 ),
                               ),
                             ),
-                           ],
+                          ],
                         ),
                       ),
                     ],

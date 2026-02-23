@@ -2,11 +2,14 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:ims/ui/master/company/company_api.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/models/purchaseorder_model.dart';
 import 'package:ims/utils/prefence.dart';
+import 'package:ims/utils/print_mapper.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:intl/intl.dart';
 
@@ -235,6 +238,7 @@ class PurchaseOrderSaveWithUIData extends PurchaseOrderEvent {
   final String shippingAddress;
   final String stateName; // ✅ ADD
   final List<String> notes;
+  final bool printAfterSave;
   final List<String> terms;
   final Uint8List? signatureImage; // NEW
 
@@ -246,6 +250,7 @@ class PurchaseOrderSaveWithUIData extends PurchaseOrderEvent {
     required this.stateName,
     required this.notes,
     required this.terms,
+    required this.printAfterSave,
     this.updateId,
     this.signatureImage,
   });
@@ -323,9 +328,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       );
 
       add(PurchaseOrderCalculate());
-    } catch (err) {
-      print("❌ Load error: $err");
-    }
+    } catch (err) {}
   }
 
   void _onSelectCustomer(
@@ -821,6 +824,18 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
             purchaseOrderNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+          if (e.printAfterSave) {
+            final data = PurchaseOrderData.fromJson(
+              res!['data'],
+            ); // 👈 sahi tareeka
+
+            final doc = data.toPrintModel(); // ✅ no dynamic
+
+            final companyApi = await CompanyProfileAPi.getCompanyProfile();
+            final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+
+            await PdfEngine.printPremiumInvoice(doc: doc, company: company);
+          }
           Navigator.of(ctx).pop(true);
         } else {
           showCustomSnackbarError(

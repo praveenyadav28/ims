@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/ui/sales/data/excel.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -216,8 +217,35 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
             ],
           ),
         ),
+        SizedBox(width: 10),
+        InkWell(
+          onTap: () => exportTransactionsExcel<T>(
+            title: widget.title,
+            list: filtered,
+            dateGetter: widget.dateGetter,
+            numberGetter: widget.numberGetter,
+            customerGetter: widget.customerGetter,
+            mobile: widget.mobile,
+            placeOfSupply: widget.placeOfSupply,
+            basicGetter: widget.basicGetter,
+            gstGetter: widget.gstGetter,
+            amountGetter: widget.amountGetter,
+          ),
+          child: Container(
+            width: 50,
+            height: 40,
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(5),
+              color: AppColor.white,
+              border: Border.all(width: 1, color: AppColor.borderColor),
+            ),
+            child: Image.asset("assets/images/excel.png"),
+          ),
+        ),
 
         const Spacer(flex: 3),
+
         if (widget.onCreate != null)
           defaultButton(
             height: 40,

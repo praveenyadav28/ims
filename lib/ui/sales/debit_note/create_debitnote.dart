@@ -79,6 +79,13 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
   List<MiscChargeModelList> miscList = [];
+  
+  bool printAfterSave = false;
+  void onTogglePrint(bool value) {
+    setState(() {
+      printAfterSave = value;
+    });
+  }
   @override
   void initState() {
     super.initState();
@@ -245,6 +252,34 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
             ),
           ),
           actions: [
+                SizedBox(
+              width: 170,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    fillColor: WidgetStatePropertyAll(AppColor.primary),
+                    shape: ContinuousRectangleBorder(
+                      borderRadius: BorderRadiusGeometry.circular(5),
+                    ),
+                    value: printAfterSave,
+                    onChanged: (v) {
+                      onTogglePrint(v ?? true);
+                      setState(() {});
+                    },
+                  ),
+                  Text(
+                    "Print After Save",
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: AppColor.black,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -273,6 +308,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                         signatureImage: signatureImage,
                         updateId: widget.debitNoteData?.id,
                         stateName: stateController.text,
+                              printAfterSave:printAfterSave
                       ),
                     );
                   },

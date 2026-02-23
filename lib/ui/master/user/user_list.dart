@@ -35,7 +35,10 @@ class _UserEmpTableScreenState extends State<UserEmpTableScreen> {
 
     List responseData = response['data'] ?? [];
     setState(() {
-      list = responseData.map((e) => UserModel.fromJson(e)).toList();
+      list = responseData
+          .map((e) => UserModel.fromJson(e))
+          .where((test) => test.role != "admin")
+          .toList();
     });
   }
 
@@ -76,7 +79,7 @@ class _UserEmpTableScreenState extends State<UserEmpTableScreen> {
               width: 150,
               onTap: () async {
                 var data = await pushTo(UserScreenCreate());
-                if (data == "data") loadData();
+                if (data != null) loadData();
               },
               text: "Create",
               buttonColor: AppColor.blue,

@@ -4,13 +4,16 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ims/model/ledger_model.dart';
+import 'package:ims/ui/master/company/company_api.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart';
 import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/prefence.dart';
+import 'package:ims/utils/print_mapper.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:intl/intl.dart';
 
@@ -264,6 +267,7 @@ class PurchaseInvoiceSaveWithUIData extends PurchaseInvoiceEvent {
   final List<String> notes;
   final List<String> terms;
   final Uint8List? signatureImage; // NEW
+  final bool printAfterSave; // NEW
 
   PurchaseInvoiceSaveWithUIData({
     required this.supplierName,
@@ -275,6 +279,7 @@ class PurchaseInvoiceSaveWithUIData extends PurchaseInvoiceEvent {
     required this.terms,
     this.updateId,
     this.signatureImage,
+    required this.printAfterSave,
   });
 }
 
@@ -358,9 +363,7 @@ class PurchaseInvoiceBloc
       );
 
       add(PurchaseInvoiceCalculate());
-    } catch (err) {
-      print("❌ Load error: $err");
-    }
+    } catch (err) {}
   }
 
   void _onSelectCustomer(
@@ -736,7 +739,6 @@ class PurchaseInvoiceBloc
         "Transaction loaded",
       );
     } catch (err) {
-      print("❌ transaction fetch error: $err");
       showCustomSnackbarError(
         purchaseInvoiceNavigatorKey.currentContext!,
         "Transaction not found",
@@ -935,6 +937,13 @@ class PurchaseInvoiceBloc
             purchaseInvoiceNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+          if (e.printAfterSave) {
+            final data = PurchaseInvoiceData.fromJson(res!['data']);
+            final doc = data.toPrintModel(); // ✅ no dynamic
+            final companyApi = await CompanyProfileAPi.getCompanyProfile();
+            final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+            await PdfEngine.printPremiumInvoice(doc: doc, company: company);
+          }
 
           final ctx = purchaseInvoiceNavigatorKey.currentContext!;
           Navigator.of(ctx).pop(true);

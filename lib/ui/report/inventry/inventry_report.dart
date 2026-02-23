@@ -1,3 +1,7 @@
+import 'package:excel/excel.dart' hide Border;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/utils/button.dart';
@@ -200,7 +204,7 @@ class _InventoryAdvancedReportScreenState
           ),
           const SizedBox(width: 10),
           InkWell(
-            onTap: () async {},
+            onTap: exportStockDetailsExcel,
             child: Container(
               width: 50,
               height: 40,
@@ -323,6 +327,61 @@ class _InventoryAdvancedReportScreenState
           }
         },
       ),
+    );
+  }
+
+  Future<void> exportStockDetailsExcel() async {
+    final excel = Excel.createExcel();
+    final sheet = excel['Stock Details'];
+
+    // 🔹 Header info
+    sheet.appendRow([
+      TextCellValue('From Date'),
+      TextCellValue(fromDateCtrl.text),
+      TextCellValue(''),
+      TextCellValue('To Date'),
+      TextCellValue(toDateCtrl.text),
+      TextCellValue(''),
+      TextCellValue(''),
+    ]);
+
+    // 🔹 Table header
+    sheet.appendRow([
+      TextCellValue('Item No'),
+      TextCellValue('Item Name'),
+      TextCellValue('Variant'),
+      TextCellValue('Opening'),
+      TextCellValue('Inward'),
+      TextCellValue('Outward'),
+      TextCellValue('Closing'),
+      TextCellValue('Group'),
+    ]);
+
+    // 🔹 Data rows (filtered list)
+    for (final i in filtered) {
+      sheet.appendRow([
+        TextCellValue(i.itemNo),
+        TextCellValue(i.itemName),
+        TextCellValue(i.varientName.isNotEmpty ? i.varientName : '-'),
+        TextCellValue(i.openingStock),
+        TextCellValue(i.inword),
+        TextCellValue(i.outword),
+        TextCellValue(i.closingStock),
+        TextCellValue(i.group),
+      ]);
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/StockDetails_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+    await OpenFilex.open(file.path);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Excel exported successfully")),
     );
   }
 }

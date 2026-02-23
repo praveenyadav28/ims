@@ -894,8 +894,7 @@ class _CreateCusSupState extends State<CreateCusSup>
       } else {
         showCustomSnackbarError(context, "Failed: ${response.statusMessage}");
       }
-    } catch (e, s) {
-      print("❌ Error: $e\n$s");
+    } catch (e) {
       showCustomSnackbarError(context, "Something went wrong: $e");
     }
   }

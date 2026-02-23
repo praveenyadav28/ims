@@ -89,6 +89,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
   List<String> selectedTermsList = [];
   List<MiscChargeModelList> miscList = [];
 
+  bool printAfterSave = false;
   bool fullyPaid = false;
 
   String balanceAmt = "";
@@ -96,6 +97,12 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
   void onToggleFPaid(bool value) {
     setState(() {
       fullyPaid = value;
+    });
+  }
+
+  void onTogglePrint(bool value) {
+    setState(() {
+      printAfterSave = value;
     });
   }
 
@@ -281,6 +288,34 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
             ),
           ),
           actions: [
+            SizedBox(
+              width: 170,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    fillColor: WidgetStatePropertyAll(AppColor.primary),
+                    shape: ContinuousRectangleBorder(
+                      borderRadius: BorderRadiusGeometry.circular(5),
+                    ),
+                    value: printAfterSave,
+                    onChanged: (v) {
+                      onTogglePrint(v ?? true);
+                      setState(() {});
+                    },
+                  ),
+                  Text(
+                    "Print After Save",
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: AppColor.black,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -309,6 +344,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                         terms: selectedTermsList,
                         signatureImage: signatureImage,
                         updateId: widget.purchaseInvoiceData?.id,
+                        printAfterSave: printAfterSave,
                       ),
                     );
                     if (widget.purchaseInvoiceData == null) {

@@ -5,8 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/cussup_model.dart';
 import 'package:ims/model/expanse_model.dart';
 import 'package:ims/model/ledger_model.dart';
-import 'package:ims/model/payment_model.dart';
-import 'package:ims/model/reminder_card_modeld.dart';
 import 'package:ims/ui/report/report_screen.dart';
 
 import 'package:ims/ui/sales/models/sale_invoice_data.dart';
@@ -45,10 +43,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<int, double> saleMonthly = {};
   Map<int, double> purchaseMonthly = {};
 
-  List<PaymentModel> allReceipts = [];
   List<LedgerListModel> ledgerList = [];
-
-  List<ReminderCardModel> reminderList = [];
 
   @override
   void initState() {
@@ -72,23 +67,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> loadRemindersData() async {
-    final recRes = await ApiService.fetchData(
-      'get/reciept',
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-
-    debugPrint("RAW RECIEPT API => ${recRes['data']}"); // 🔥 ADD
-
-    allReceipts = (recRes['data'] as List)
-        .map((e) => PaymentModel.fromJson(e))
-        .toList();
-
-    for (final r in allReceipts) {
-      debugPrint(
-        "Parsed -> name: ${r.supplierName}, reminder: ${r.reminderDate}",
-      );
-    }
-
     final ledRes = await ApiService.fetchData(
       "get/ledger",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
@@ -96,109 +74,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     ledgerList = (ledRes['data'] as List)
         .map((e) => LedgerListModel.fromJson(e))
+        .where((l) => (l.closingBalance ?? 0) > 0)
         .toList();
-
-    buildOutstandingReminders();
-  }
-
-  // void buildOutstandingReminders() {
-  //   final Map<String, PaymentModel> lastReminderByName = {};
-
-  //   for (final r in allReceipts) {
-  //     final name = (r.supplierName).trim();
-  //     if (name.isEmpty) continue;
-
-  //     if (r.reminderDate == null)
-  //       continue; // 🔥 only consider reminder receipts
-
-  //     if (!lastReminderByName.containsKey(name)) {
-  //       lastReminderByName[name] = r;
-  //     } else {
-  //       if (r.date.isAfter(lastReminderByName[name]!.date)) {
-  //         lastReminderByName[name] = r;
-  //       }
-  //     }
-  //   }
-
-  //   reminderList.clear();
-
-  //   lastReminderByName.forEach((name, receipt) {
-  //     LedgerListModel? ledger;
-  //     try {
-  //       ledger = ledgerList.firstWhere(
-  //         (l) =>
-  //             (l.ledgerName ?? "").trim().toLowerCase().replaceAll(" ", "") ==
-  //             name.toLowerCase().replaceAll(" ", ""),
-  //       );
-  //     } catch (_) {
-  //       ledger = null;
-  //     }
-
-  //     reminderList.add(
-  //       ReminderCardModel(
-  //         customerId: ledger?.id ?? "",
-  //         name: ledger?.ledgerName ?? name,
-  //         reminderDate: receipt.reminderDate!,
-  //         closingBalance: ledger?.closingBalance ?? 0,
-  //       ),
-  //     );
-  //   });
-
-  //   reminderList.sort((a, b) => a.reminderDate.compareTo(b.reminderDate));
-
-  //   debugPrint("Reminder cards: ${reminderList.length}");
-  // }
-  void buildOutstandingReminders() {
-    final Map<String, PaymentModel> latestReceiptByName = {};
-
-    // Step 1: Get latest receipt for each ledger
-    for (final r in allReceipts) {
-      final name = (r.supplierName).trim();
-      if (name.isEmpty) continue;
-
-      if (!latestReceiptByName.containsKey(name)) {
-        latestReceiptByName[name] = r;
-      } else {
-        if (r.date.isAfter(latestReceiptByName[name]!.date)) {
-          latestReceiptByName[name] = r;
-        }
-      }
-    }
-
-    reminderList.clear();
-
-    // Step 2: Check only latest receipt
-    latestReceiptByName.forEach((name, receipt) {
-      if (receipt.reminderDate == null) {
-        // ❌ Latest voucher has no reminder → skip
-        return;
-      }
-
-      LedgerListModel? ledger;
-      try {
-        ledger = ledgerList.firstWhere(
-          (l) =>
-              (l.ledgerName ?? "").trim().toLowerCase().replaceAll(" ", "") ==
-              name.toLowerCase().replaceAll(" ", ""),
-        );
-      } catch (_) {
-        ledger = null;
-      }
-
-      reminderList.add(
-        ReminderCardModel(
-          customerId: ledger?.id ?? "",
-          name: ledger?.ledgerName ?? name,
-          reminderDate: receipt.reminderDate!,
-          closingBalance: ledger?.closingBalance ?? 0,
-        ),
-      );
-    });
-
-    // Sort by reminder date
-    reminderList.sort((a, b) => a.reminderDate.compareTo(b.reminderDate));
-
-    debugPrint("Filtered Reminder cards: ${reminderList.length}");
   }
 
   Future<void> loadSaleTotal() async {
@@ -535,51 +412,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _expenseList() {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xff111827),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Big Expenses List",
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                // Chip(
-                //   backgroundColor: const Color(0xff7C3AED),
-                //   label: Text(
-                //     "Weekly",
-                //     style: GoogleFonts.inter(color: Colors.white),
-                //   ),
-                // ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (expenses.isEmpty)
-              const Text(
-                "No Expenses",
-                style: TextStyle(color: Colors.white54),
+      child: Column(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xff111827),
+                borderRadius: BorderRadius.circular(12),
               ),
-
-            ...expenses
-                .take(5)
-                .map(
-                  (e) => _expense(
-                    e.supplierName,
-                    "₹ ${e.amount.toStringAsFixed(0)}",
+              child: Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Big Expenses List",
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          // Chip(
+                          //   backgroundColor: const Color(0xff7C3AED),
+                          //   label: Text(
+                          //     "Weekly",
+                          //     style: GoogleFonts.inter(color: Colors.white),
+                          //   ),
+                          // ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (expenses.isEmpty)
+                        const Text(
+                          "No Expenses",
+                          style: TextStyle(color: Colors.white54),
+                        ),
+                      ...expenses
+                          .take(5)
+                          .map(
+                            (e) => _expense(
+                              e.supplierName,
+                              "₹ ${e.amount.toStringAsFixed(0)}",
+                            ),
+                          ),
+                    ],
                   ),
                 ),
-          ],
-        ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -635,8 +521,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             "License Number",
             Preference.getint(PrefKeys.licenseNo).toString(),
           ),
-          _row("Company Name", "Modern Software"),
-          _row("Owner Name", "Kapil"),
+          _row("Company Name", Preference.getString(PrefKeys.branchName)),
           _row("Address", Preference.getString(PrefKeys.branchAddress)),
           const SizedBox(height: 12),
           Container(
@@ -645,9 +530,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: const Color(0xffF2F3F7),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                "Validity   2023-01-15  -  2024-01-14",
+                "Validity  -  ${Preference.getString(PrefKeys.amcDueDate)}",
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -690,57 +575,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
           color: const Color(0xff111827),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Outstanding Reminders",
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 12),
+        child: Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Outstanding",
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
 
-            if (reminderList.isEmpty)
-              const Text(
-                "No Pending Reminders",
-                style: TextStyle(color: Colors.white54),
-              ),
-
-            ...reminderList
-                .take(5)
-                .map(
-                  (r) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                if (ledgerList.isEmpty)
+                  const Text(
+                    "No Pending Reminders",
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                ...ledgerList
+                    .take(5)
+                    .map(
+                      (r) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              r.name,
+                              r.ledgerName ?? "",
                               style: GoogleFonts.inter(color: Colors.red),
                             ),
+
                             Text(
-                              "Remind: ${r.reminderDate.toString().split(' ').first}",
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: Colors.white54,
-                              ),
+                              "₹ ${r.closingBalance!.abs()}",
+                              style: GoogleFonts.inter(color: Colors.red),
                             ),
                           ],
                         ),
-                        Text(
-                          "₹ ${r.closingBalance.abs()}",
-                          style: GoogleFonts.inter(color: Colors.red),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );

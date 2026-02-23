@@ -40,7 +40,6 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-    print(data);
     return data;
   }
 
@@ -50,7 +49,6 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-    print(data);
     return data;
   }
 
@@ -60,7 +58,6 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-    print(data);
     return data;
   }
 
@@ -70,7 +67,7 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-    print(data);
+    
     return data;
   }
 
@@ -80,7 +77,7 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-    print(data);
+   
     return data;
   }
 
@@ -90,7 +87,7 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-    print(data);
+   
     return data;
   }
 
@@ -100,7 +97,7 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-    print(data);
+  
     return data;
   }
 
@@ -110,7 +107,6 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-    print(data);
     return data;
   }
 
@@ -120,7 +116,6 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-    print(data);
     return data;
   }
 
@@ -130,8 +125,7 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-    print(data);
-    return data;
+     return data;
   }
 
   //
@@ -485,7 +479,6 @@ class GLobalRepository {
     required int transNo,
     required String transType,
   }) async {
-    print(transType);
     final res = await ApiService.postData("get/getreletedrecode", {
       "trans_no": transNo,
       "trans_type": transType,

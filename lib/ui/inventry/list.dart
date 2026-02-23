@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:excel/excel.dart' hide Border;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/inventry/item/create.dart';
@@ -10,6 +13,8 @@ import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'item_model.dart';
 
@@ -253,22 +258,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   icon: Icons.trending_up,
                 ),
                 _infoCard(
+                  title: "Stock Value (NDP)",
+                  value: "₹ ${stockValueNDP.toStringAsFixed(2)}",
+                  icon: Icons.trending_up,
+                ),
+                _infoCard(
                   title: "Low Stock",
                   value: lowStockCount.toString(),
                   bgColor: const Color(0xffFFF7E6),
                   textColor: Colors.orange,
                   icon: Icons.warning,
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _infoCard(
-                  title: "Stock Value (NDP)",
-                  value: "₹ ${stockValueNDP.toStringAsFixed(2)}",
-                  icon: Icons.trending_up,
-                ),
+
                 _infoCard(
                   title: "Dead Stock",
                   value: deadStockCount.toString(),
@@ -391,10 +392,24 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     ],
                   ),
                 ),
-
+                InkWell(
+                  onTap: exportItemsExcel,
+                  child: Container(
+                    width: 50,
+                    height: 40,
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(5),
+                      color: AppColor.white,
+                      border: Border.all(width: 1, color: AppColor.borderColor),
+                    ),
+                    child: Image.asset("assets/images/excel.png"),
+                  ),
+                ),
+                SizedBox(width: 10),
                 defaultButton(
                   buttonColor: AppColor.blue,
-                  height: 35,
+                  height: 40,
                   width: 100,
                   onTap: () async {
                     var data = await pushTo(CreateNewItemScreen());
@@ -441,6 +456,59 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
+  Future<void> exportItemsExcel() async {
+    final excel = Excel.createExcel();
+    final sheet = excel['Items'];
+
+    sheet.appendRow([
+      TextCellValue('Item Name'),
+      TextCellValue('Item Code'),
+      TextCellValue('Category'),
+      TextCellValue('Stock Qty'),
+      TextCellValue('Unit'),
+      TextCellValue('Selling Price'),
+      TextCellValue('Purchase Price'),
+      TextCellValue('HSN Code'),
+      TextCellValue('Low Stock'),
+      TextCellValue('Dead Stock'),
+    ]);
+
+    final data = filteredList; // ✅ now accessible
+
+    for (final item in data) {
+      final qty = double.tryParse(item.stockQty) ?? 0;
+      final reorder = double.tryParse(item.reorderLevel) ?? 0;
+
+      final isLowStock = reorder > 0 && qty <= reorder;
+      final isDeadStock = deadStockItemIds.contains(item.id);
+
+      sheet.appendRow([
+        TextCellValue(item.itemName),
+        TextCellValue(item.itemNo),
+        TextCellValue(item.group),
+        DoubleCellValue(qty),
+        TextCellValue(item.baseUnit),
+        DoubleCellValue(double.tryParse(item.salesPrice) ?? 0),
+        DoubleCellValue(double.tryParse(item.purchasePriceSe) ?? 0),
+        TextCellValue(item.hsnCode),
+        TextCellValue(isLowStock ? 'Yes' : 'No'),
+        TextCellValue(isDeadStock ? 'Yes' : 'No'),
+      ]);
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/Inventory_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+
+    await OpenFilex.open(file.path);
+
+    showCustomSnackbarSuccess(context, "Excel exported successfully");
+  }
+
   /// ================== WIDGETS ==================
   Widget _infoCard({
     required String title,
@@ -474,8 +542,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     title,
                     style: GoogleFonts.inter(fontSize: 13, color: textColor),
                   ),
-                  const Spacer(),
-                  const Icon(Icons.open_in_new, size: 16),
                 ],
               ),
               const Spacer(),

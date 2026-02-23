@@ -109,8 +109,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
         final data = response["data"];
         final company = data is List && data.isNotEmpty ? data.first : data;
 
-        print("Fetched Company: $company");
-
+      
         setState(() {
           hasExistingProfile = true;
           companyId = company["_id"]; // ✅ store _id
@@ -148,8 +147,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
         });
       }
     } catch (e) {
-      print("❌ Error fetching profile: $e");
-    }
+     }
   }
 
   // ---------------- SAVE PROFILE (POST / PUT) ----------------

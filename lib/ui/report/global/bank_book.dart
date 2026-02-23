@@ -72,8 +72,7 @@ class _BankBookReportScreenState extends State<BankBookReportScreen> {
       "get/ledgerreports/${selectedLedger!.id}",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    print(res);
-
+  
     /// ================= OPENING =================
     double opening = (res['Ledger']['opening_balance'] ?? 0).toDouble();
     String openingType = res['Ledger']['opening_type'] ?? "DR";

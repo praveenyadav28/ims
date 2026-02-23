@@ -459,7 +459,6 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
       showCustomSnackbarError(context, "Please enter password");
       return;
     }
-
     final payload = {
       "licence_no": Preference.getint(PrefKeys.licenseNo),
       "branch_id": Preference.getString(PrefKeys.locationId),
@@ -478,7 +477,7 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
             },
           )
           .toList(),
-      "single_rights": singleRightsSelected,
+      "singlr_tight": singleRightsSelected,
     };
 
     final res = await ApiService.postData(
@@ -488,6 +487,7 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
     );
 
     if (res != null && res["status"] == true) {
+      print(res);
       Navigator.pop(context, "refresh");
       showCustomSnackbarSuccess(context, res["message"]);
     } else {

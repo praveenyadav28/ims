@@ -4,7 +4,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/expanse_model.dart';
+import 'package:ims/ui/master/company/company_api.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
+import 'package:ims/ui/voucher/pdf_print.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -57,6 +60,13 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
     });
   }
 
+  bool printAfterSave = false;
+  void onTogglePrint(bool value) {
+    setState(() {
+      printAfterSave = value;
+    });
+  }
+
   /// ================= INIT =================
   @override
   void initState() {
@@ -106,6 +116,34 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
         ),
 
         actions: [
+          SizedBox(
+            width: 170,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Checkbox(
+                  fillColor: WidgetStatePropertyAll(AppColor.primary),
+                  shape: ContinuousRectangleBorder(
+                    borderRadius: BorderRadiusGeometry.circular(5),
+                  ),
+                  value: printAfterSave,
+                  onChanged: (v) {
+                    onTogglePrint(v ?? true);
+                    setState(() {});
+                  },
+                ),
+                Text(
+                  "Print After Save",
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: AppColor.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           Row(
             children: [
               defaultButton(
@@ -475,13 +513,21 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
         endpoint: isEdit ? "expense/${widget.expenseModel!.id}" : "expense",
         fields: fields,
         updateStatus: isEdit, // 🔥 PUT if edit, POST if new
-        file: expenseImage ,
+        file: expenseImage,
         fileKey: "docu",
         licenceNo: Preference.getint(PrefKeys.licenseNo),
       );
 
       if (res['status'] == true) {
         showCustomSnackbarSuccess(context, res['message']);
+        if (printAfterSave) {
+          final p = ExpanseModel.fromJson(res!['data']);
+
+          final companyApi = await CompanyProfileAPi.getCompanyProfile();
+          final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+
+          await VoucherPdfEngine.printExpense(data: p, company: company);
+        }
         Navigator.pop(context, true);
       } else {
         showCustomSnackbarError(context, res['message']);

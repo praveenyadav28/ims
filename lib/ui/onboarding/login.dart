@@ -13,6 +13,7 @@ import 'package:ims/utils/sizes.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/textfield.dart';
+import 'package:intl/intl.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -203,8 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         showCustomSnackbarError(context, response["message"]);
       }
-    } catch (e, stack) {
-      debugPrint("Error in getBranches: $e\n$stack");
+    } catch (e) {
       showCustomSnackbarError(
         context,
         "Something went wrong while fetching branches.",
@@ -223,15 +223,26 @@ class _LoginScreenState extends State<LoginScreen> {
       },
       licenceNo: int.parse(licenceNoController.text.trim().toString()),
     );
+    print(response);
     if (response["status"] == true) {
-      print(response);
       Preference.setString(PrefKeys.token, response['token']);
       Preference.setInt(
         PrefKeys.licenseNo,
         int.parse(licenceNoController.text.trim()),
       );
       Preference.setString(PrefKeys.locationId, response['user']['branch_id']);
-      // Preference.setString(PrefKeys.rights, response['user']['rights']);
+      Preference.setString(
+        PrefKeys.branchName,
+        response['user']['branch_name'],
+      );
+      Preference.setString(PrefKeys.branchAddress, response['user']['address']);
+      Preference.setString(PrefKeys.state, response['user']['state']);
+      Preference.setString(
+        PrefKeys.amcDueDate,
+        DateFormat(
+          'dd-MM-yyyy',
+        ).format(DateTime.parse(response['user']['amc_due_date'])),
+      );
       showCustomSnackbarSuccess(context, response['message']);
       // await fetchAndSaveActiveSessionId();
       pushNdRemove(FullScreen());

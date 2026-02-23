@@ -3,7 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ims/model/ledger_model.dart';
+import 'package:ims/ui/master/company/company_api.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart';
 import 'package:ims/ui/sales/debit_note/widgets/item_model.dart';
 import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/debitnote_model.dart';
@@ -249,6 +251,8 @@ class DebitNoteSaveWithUIData extends DebitNoteEvent {
   final String stateName; // ✅ ADD
   final List<String> notes;
   final List<String> terms;
+
+  final bool printAfterSave;
   final Uint8List? signatureImage; // NEW
 
   DebitNoteSaveWithUIData({
@@ -259,6 +263,7 @@ class DebitNoteSaveWithUIData extends DebitNoteEvent {
     required this.stateName, // ✅
     required this.notes,
     required this.terms,
+    required this.printAfterSave,
     this.updateId,
     this.signatureImage,
   });
@@ -337,9 +342,7 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
       );
 
       add(DebitNoteCalculate());
-    } catch (err) {
-      print("❌ Load error: $err");
-    }
+    } catch (err) {}
   }
 
   void _onSelectCustomer(
@@ -604,7 +607,6 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
         "Transaction loaded",
       );
     } catch (err) {
-      print("❌ transaction fetch error: $err");
       showCustomSnackbarError(
         debitNoteNavigatorKey.currentContext!,
         "Transaction not found",
@@ -789,6 +791,16 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
           debitNoteNavigatorKey.currentContext!,
           res?['message'] ?? "Saved",
         );
+        if (e.printAfterSave) {
+          final data = DebitNoteData.fromJson(res!['data']);
+
+          final doc = data.toPrintModel(); // ✅ no dynamic
+
+          final companyApi = await CompanyProfileAPi.getCompanyProfile();
+          final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+
+          await PdfEngine.printPremiumInvoice(doc: doc, company: company);
+        }
         Navigator.of(ctx).pop(true);
       } else {
         showCustomSnackbarError(

@@ -1,3 +1,7 @@
+import 'package:excel/excel.dart' hide Border;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
 import 'package:ims/utils/colors.dart';
@@ -15,6 +19,8 @@ class GstPurchaseReportScreen extends StatefulWidget {
 }
 
 class _GstPurchaseReportScreenState extends State<GstPurchaseReportScreen> {
+  final ScrollController _hController = ScrollController();
+  final ScrollController _vController = ScrollController();
   List<PurchaseInvoiceData> invoiceList = [];
   List<PurchaseInvoiceData> filteredList = [];
 
@@ -198,7 +204,7 @@ class _GstPurchaseReportScreenState extends State<GstPurchaseReportScreen> {
             },
           ),
           InkWell(
-            onTap: () async {},
+            onTap: exportGstPurchaseExcel,
             child: Container(
               width: 50,
               height: 40,
@@ -276,27 +282,43 @@ class _GstPurchaseReportScreenState extends State<GstPurchaseReportScreen> {
       return const Center(child: Text("No Records Found"));
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return Scrollbar(
+      controller: _hController,
+      thumbVisibility: true,
+      interactive: true,
+      notificationPredicate: (n) => n.metrics.axis == Axis.horizontal,
       child: SingleChildScrollView(
-        child: DataTable(
-          headingRowColor: MaterialStateProperty.all(const Color(0xffF2F2F2)),
-          border: TableBorder.all(color: Colors.black12),
-          columns: const [
-            DataColumn(label: Text("Invoice No")),
-            DataColumn(label: Text("Date")),
-            DataColumn(label: Text("Customer")),
-            DataColumn(label: Text("State")),
-            DataColumn(label: Text("HSN")),
-            DataColumn(label: Text("Item")),
-            DataColumn(label: Text("Qty")),
-            DataColumn(label: Text("Taxable")),
-            DataColumn(label: Text("IGST")),
-            DataColumn(label: Text("CGST")),
-            DataColumn(label: Text("SGST")),
-            DataColumn(label: Text("Total")),
-          ],
-          rows: _buildRows(filteredList),
+        scrollDirection: Axis.horizontal,
+        controller: _hController,
+        child: Scrollbar(
+          controller: _vController,
+          thumbVisibility: true,
+          interactive: true,
+          notificationPredicate: (n) => n.metrics.axis == Axis.vertical,
+          child: SingleChildScrollView(
+            controller: _vController,
+            child: DataTable(
+              headingRowColor: MaterialStateProperty.all(
+                const Color(0xffF2F2F2),
+              ),
+              border: TableBorder.all(color: Colors.black12),
+              columns: const [
+                DataColumn(label: Text("Invoice No")),
+                DataColumn(label: Text("Date")),
+                DataColumn(label: Text("Customer")),
+                DataColumn(label: Text("State")),
+                DataColumn(label: Text("HSN")),
+                DataColumn(label: Text("Item")),
+                DataColumn(label: Text("Qty")),
+                DataColumn(label: Text("Taxable")),
+                DataColumn(label: Text("IGST")),
+                DataColumn(label: Text("CGST")),
+                DataColumn(label: Text("SGST")),
+                DataColumn(label: Text("Total")),
+              ],
+              rows: _buildRows(filteredList),
+            ),
+          ),
         ),
       ),
     );
@@ -366,5 +388,102 @@ class _GstPurchaseReportScreenState extends State<GstPurchaseReportScreen> {
       }
     }
     return rows;
+  }
+
+  Future<void> exportGstPurchaseExcel() async {
+    final excel = Excel.createExcel();
+    final sheet = excel['GST Purchase'];
+
+    // 🔹 Header info
+    sheet.appendRow([
+      TextCellValue('From Date'),
+      TextCellValue(
+        fromDate == null ? '' : DateFormat('dd-MM-yyyy').format(fromDate!),
+      ),
+      TextCellValue(''),
+      TextCellValue('To Date'),
+      TextCellValue(
+        toDate == null ? '' : DateFormat('dd-MM-yyyy').format(toDate!),
+      ),
+      TextCellValue(''),
+    ]);
+
+    // 🔹 Table header
+    sheet.appendRow([
+      TextCellValue('Invoice No'),
+      TextCellValue('Date'),
+      TextCellValue('Supplier'),
+      TextCellValue('State'),
+      TextCellValue('HSN'),
+      TextCellValue('Item'),
+      TextCellValue('Qty'),
+      TextCellValue('Taxable'),
+      TextCellValue('IGST'),
+      TextCellValue('CGST'),
+      TextCellValue('SGST'),
+      TextCellValue('Total'),
+    ]);
+
+    final companyState = Preference.getString(
+      PrefKeys.state,
+    ).trim().toLowerCase();
+
+    for (final inv in filteredList) {
+      final invoiceState = inv.placeOfSupply.trim().toLowerCase();
+      final bool isSameState =
+          invoiceState.isNotEmpty &&
+          companyState.isNotEmpty &&
+          invoiceState == companyState;
+
+      for (final item in inv.itemDetails) {
+        double taxable;
+        double gst;
+        double total;
+
+        if (item.inclusive) {
+          taxable = item.amount / (1 + (item.gstRate / 100));
+          gst = item.amount - taxable;
+          total = item.amount;
+        } else {
+          taxable = item.amount;
+          gst = taxable * item.gstRate / 100;
+          total = taxable + gst;
+        }
+
+        final igst = isSameState ? 0 : gst;
+        final cgst = isSameState ? gst / 2 : 0;
+        final sgst = isSameState ? gst / 2 : 0;
+
+        sheet.appendRow([
+          TextCellValue(inv.no.toString()),
+          TextCellValue(
+            DateFormat('dd-MM-yyyy').format(inv.purchaseInvoiceDate),
+          ),
+          TextCellValue(inv.supplierName),
+          TextCellValue(inv.placeOfSupply),
+          TextCellValue(item.hsn),
+          TextCellValue(item.name),
+          DoubleCellValue(item.qty.toDouble()),
+          DoubleCellValue(double.parse(taxable.toStringAsFixed(2))),
+          DoubleCellValue(double.parse(igst.toStringAsFixed(2))),
+          DoubleCellValue(double.parse(cgst.toStringAsFixed(2))),
+          DoubleCellValue(double.parse(sgst.toStringAsFixed(2))),
+          DoubleCellValue(double.parse(total.toStringAsFixed(2))),
+        ]);
+      }
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/GST_Purchase_Report_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+    await OpenFilex.open(file.path);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Excel exported successfully")),
+    );
   }
 }

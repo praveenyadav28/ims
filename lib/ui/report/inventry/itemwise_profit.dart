@@ -1,3 +1,7 @@
+import 'package:excel/excel.dart' hide Border;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/inventry/item_model.dart';
@@ -137,7 +141,7 @@ class _FifoReportScreenState extends State<FifoReportScreen> {
           ),
           const SizedBox(width: 10),
           InkWell(
-            onTap: () async {},
+            onTap: exportFifoExcel,
             child: Container(
               width: 50,
               height: 40,
@@ -269,6 +273,85 @@ class _FifoReportScreenState extends State<FifoReportScreen> {
           }
         },
       ),
+    );
+  }
+
+  Future<void> exportFifoExcel() async {
+    final excel = Excel.createExcel();
+    final sheet = excel['Item Profit Loss'];
+
+    // 🔹 Header Info
+    sheet.appendRow([
+      TextCellValue('From Date'),
+      TextCellValue('To Date'),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+    ]);
+
+    sheet.appendRow([
+      TextCellValue(fromDateCtrl.text),
+      TextCellValue(toDateCtrl.text),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+    ]);
+
+    // 🔹 Table Header
+    sheet.appendRow([
+      TextCellValue('Item Name'),
+      TextCellValue('Item No'),
+      TextCellValue('Sale'),
+      TextCellValue('Sale Return'),
+      TextCellValue('Purchase'),
+      TextCellValue('Purchase Return'),
+      TextCellValue('Opening'),
+      TextCellValue('Closing'),
+      TextCellValue('Tax Receivable'),
+      TextCellValue('Tax Payable'),
+      TextCellValue('Profit / Loss'),
+    ]);
+
+    // 🔹 Data Rows (filtered list)
+    for (final i in filteredList) {
+      sheet.appendRow([
+        TextCellValue(i.itemName),
+        TextCellValue(i.itemNo),
+        TextCellValue(i.saleAmount),
+        TextCellValue(i.saleReturnAmount),
+        TextCellValue(i.purchaseAmount),
+        TextCellValue(i.purchaseReturnAmount),
+        TextCellValue(i.openingStock),
+        TextCellValue(i.closingStock),
+        TextCellValue(i.taxReceivable),
+        TextCellValue(i.taxPayable),
+        TextCellValue(i.netProfitLoss),
+      ]);
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/ItemProfitLoss_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+    await OpenFilex.open(file.path);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Excel exported successfully")),
     );
   }
 }

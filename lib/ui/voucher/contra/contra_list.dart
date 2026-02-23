@@ -375,9 +375,8 @@ class _ContraListTableScreenState extends State<ContraListTableScreen> {
                         data: p,
                         company: company,
                       );
-                    } catch (e, s) {
+                    } catch (e) {
                       Navigator.pop(context);
-                      debugPrint("❌ Print error: $e\n$s");
                       showCustomSnackbarError(context, "Print failed");
                     }
                   },

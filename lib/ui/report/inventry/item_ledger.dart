@@ -1,3 +1,7 @@
+import 'package:excel/excel.dart' hide Border;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -129,6 +133,7 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
     /// PURCHASE
     for (var p in res['Purchaseinvoice'] ?? []) {
       for (var i in p['item_details']) {
+        if (i['item_id'] != selectedItem!.id) continue; // 👈 filte
         addEntry(
           date: DateTime.parse(p['purchaseinvoice_date']),
           type: "Purchase",
@@ -144,6 +149,7 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
     /// PURCHASE RETURN
     for (var p in res['Purchasereturn'] ?? []) {
       for (var i in p['item_details']) {
+        if (i['item_id'] != selectedItem!.id) continue; // 👈 filte
         addEntry(
           date: DateTime.parse(p['purchasereturn_date']),
           type: "Purchase Return",
@@ -159,6 +165,7 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
     /// SALE
     for (var s in res['Saleinvoice'] ?? []) {
       for (var i in s['item_details']) {
+        if (i['item_id'] != selectedItem!.id) continue; // 👈 filte
         addEntry(
           date: DateTime.parse(s['invoice_date']),
           type: "Sale",
@@ -174,6 +181,7 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
     /// SALE RETURN
     for (var s in res['Salereturn'] ?? []) {
       for (var i in s['item_details']) {
+        if (i['item_id'] != selectedItem!.id) continue; // 👈 filte
         addEntry(
           date: DateTime.parse(s['returnsale_date']),
           type: "Sale Return",
@@ -238,7 +246,7 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
         ),
         const SizedBox(width: 10),
         InkWell(
-          onTap: () async {},
+          onTap: exportItemLedgerExcel,
           child: Container(
             width: 50,
             height: 40,
@@ -405,6 +413,94 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
         style: GoogleFonts.inter(fontSize: 13),
         overflow: TextOverflow.ellipsis,
       ),
+    );
+  }
+
+  Future<void> exportItemLedgerExcel() async {
+    if (selectedItem == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select an item first")),
+      );
+      return;
+    }
+
+    final excel = Excel.createExcel();
+    final sheet = excel['Item Ledger'];
+
+    // 🔹 Header Info
+    sheet.appendRow([
+      TextCellValue('Item'),
+      TextCellValue('From Date'),
+      TextCellValue('To Date'),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+    ]);
+
+    sheet.appendRow([
+      TextCellValue(selectedItem!.name),
+      TextCellValue(df.format(fromDate)),
+      TextCellValue(df.format(toDate)),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+    ]);
+
+    // 🔹 Table Header
+    sheet.appendRow([
+      TextCellValue('Date'),
+      TextCellValue('No'),
+      TextCellValue('Type'),
+      TextCellValue('Party'),
+      TextCellValue('In Qty'),
+      TextCellValue('Out Qty'),
+      TextCellValue('Rate'),
+      TextCellValue('Value'),
+    ]);
+
+    // 🔹 Data rows
+    for (final e in ledger) {
+      sheet.appendRow([
+        TextCellValue(df.format(e.date)),
+        TextCellValue(e.tranNo),
+        TextCellValue(e.type),
+        TextCellValue(e.party),
+        DoubleCellValue(e.inwardQty),
+        DoubleCellValue(e.outwardQty),
+        DoubleCellValue(e.rate),
+        DoubleCellValue(e.value),
+      ]);
+    }
+
+    final balance = openingStock + inward - outward;
+
+    // 🔹 Summary row
+    sheet.appendRow([
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue('Opening: ${openingStock.toStringAsFixed(2)}'),
+      TextCellValue('In: ${inward.toStringAsFixed(2)}'),
+      TextCellValue('Out: ${outward.toStringAsFixed(2)}'),
+      TextCellValue('Balance'),
+      DoubleCellValue(balance),
+    ]);
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/ItemLedger_${selectedItem!.name}_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+    await OpenFilex.open(file.path);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Excel exported successfully")),
     );
   }
 }

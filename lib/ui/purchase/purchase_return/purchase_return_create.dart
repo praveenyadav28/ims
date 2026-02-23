@@ -81,6 +81,14 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
   List<MiscChargeModelList> miscList = [];
+
+  bool printAfterSave = false;
+  void onTogglePrint(bool value) {
+    setState(() {
+      printAfterSave = value;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -261,6 +269,34 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
             ),
           ),
           actions: [
+            SizedBox(
+              width: 170,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    fillColor: WidgetStatePropertyAll(AppColor.primary),
+                    shape: ContinuousRectangleBorder(
+                      borderRadius: BorderRadiusGeometry.circular(5),
+                    ),
+                    value: printAfterSave,
+                    onChanged: (v) {
+                      onTogglePrint(v ?? true);
+                      setState(() {});
+                    },
+                  ),
+                  Text(
+                    "Print After Save",
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: AppColor.black,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -289,6 +325,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                         signatureImage: signatureImage,
                         updateId: widget.purchaseReturnData?.id,
                         stateName: stateController.text,
+                        printAfterSave: printAfterSave,
                       ),
                     );
                   },
@@ -473,7 +510,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                               ],
                             ),
                             SizedBox(height: 10),
-                             GestureDetector(
+                            GestureDetector(
                               onTap: () => pickImage('signature'),
                               child: SizedBox(
                                 width: double.infinity,
@@ -536,7 +573,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                                 ),
                               ),
                             ),
-                         ],
+                          ],
                         ),
                       ),
                     ],

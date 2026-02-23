@@ -205,7 +205,6 @@ class _ForgotPasswordState extends State<ForgotPassword> {
         showCustomSnackbarError(context, response['message']);
       }
     } catch (e) {
-      debugPrint("Error loading users: $e");
     }
   }
 }

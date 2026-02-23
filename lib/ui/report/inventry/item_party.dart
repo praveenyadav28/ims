@@ -1,6 +1,10 @@
+import 'dart:io';
+
+import 'package:excel/excel.dart' hide Border;
 import 'package:flutter/material.dart';
-import 'package:ims/ui/report/inventry/excels_item.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:searchfield/searchfield.dart';
 
 import 'package:ims/utils/api.dart';
@@ -308,22 +312,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
               ),
               const SizedBox(width: 10),
               InkWell(
-                onTap: () async {
-                  if (selectedParty == null || filtered.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("No data to export")),
-                    );
-                    return;
-                  }
-
-                  await PartyLedgerExcel.export(
-                    partyName: selectedParty!.name,
-                    from: fromDate,
-                    to: toDate,
-                    rows: filtered,
-                    total: totalAmount,
-                  );
-                },
+                onTap: exportPartyLedgerExcel,
                 child: Container(
                   width: 50,
                   height: 40,
@@ -487,6 +476,84 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
         ),
       ),
     );
+  }
+
+  // 👇 YAHI paste karo
+  Future<void> exportPartyLedgerExcel() async {
+    if (selectedParty == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select a party first")),
+      );
+      return;
+    }
+
+    final excel = Excel.createExcel();
+    final sheet = excel['Item Report By Party'];
+
+    sheet.appendRow([
+      TextCellValue('Party'),
+      TextCellValue('From Date'),
+      TextCellValue('To Date'),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+    ]);
+
+    sheet.appendRow([
+      TextCellValue(selectedParty!.name),
+      TextCellValue(df.format(fromDate)),
+      TextCellValue(df.format(toDate)),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+    ]);
+
+    sheet.appendRow([
+      TextCellValue('Date'),
+      TextCellValue('Invoice No'),
+      TextCellValue('Type'),
+      TextCellValue('Item Name'),
+      TextCellValue('Qty'),
+      TextCellValue('Rate'),
+      TextCellValue('Amount'),
+    ]);
+
+    for (final e in filtered) {
+      sheet.appendRow([
+        TextCellValue(df.format(e.date)),
+        TextCellValue(e.invoiceNo),
+        TextCellValue(e.type),
+        TextCellValue(e.itemName),
+        DoubleCellValue(e.qty),
+        DoubleCellValue(e.rate),
+        DoubleCellValue(e.amount),
+      ]);
+    }
+
+    sheet.appendRow([
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue('Total'),
+      TextCellValue(''),
+      TextCellValue(''),
+      DoubleCellValue(totalAmount),
+    ]);
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/ItemReportByParty_${selectedParty!.name}_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+    await OpenFilex.open(file.path);
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text("Excel exported successfully")));
   }
 }
 

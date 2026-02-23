@@ -1,3 +1,7 @@
+import 'package:excel/excel.dart' hide Border;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
@@ -30,8 +34,8 @@ class _PurchaseInvoiceAdvancedReportScreenState
 
   // ---------------- FILTER STATE ----------------
   String supplierFilter = "All";
+  String state = "All";
   String itemFilter = "All";
-  String paymentFilter = "All"; // All / Cash / Credit
   bool gstOnly = false;
   bool discountOnly = false;
 
@@ -98,18 +102,15 @@ class _PurchaseInvoiceAdvancedReportScreenState
       temp = temp.where((e) => e.supplierName == supplierFilter).toList();
     }
 
+    if (state != "All") {
+      temp = temp.where((e) => e.placeOfSupply == state).toList();
+    }
+
     // ITEM
     if (itemFilter != "All") {
       temp = temp
           .where((e) => e.itemDetails.any((i) => i.name == itemFilter))
           .toList();
-    }
-
-    // PAYMENT
-    if (paymentFilter == "Cash") {
-      temp = temp.where((e) => e.caseSale == true).toList();
-    } else if (paymentFilter == "Credit") {
-      temp = temp.where((e) => e.caseSale == false).toList();
     }
 
     // GST ONLY
@@ -156,8 +157,8 @@ class _PurchaseInvoiceAdvancedReportScreenState
 
   void clearFilters() {
     supplierFilter = "All";
+    state = "All";
     itemFilter = "All";
-    paymentFilter = "All";
     gstOnly = false;
     discountOnly = false;
     minAmount = null;
@@ -231,21 +232,15 @@ class _PurchaseInvoiceAdvancedReportScreenState
                 supplierFilter = v!;
                 applyFilters();
               }),
+              _dropdown("State", state, _states(), (v) {
+                state = v!;
+                applyFilters();
+              }),
 
               _dropdown("Item", itemFilter, _items(), (v) {
                 itemFilter = v!;
                 applyFilters();
               }),
-
-              _dropdown(
-                "Payment",
-                paymentFilter,
-                const ["All", "Cash", "Credit"],
-                (v) {
-                  paymentFilter = v!;
-                  applyFilters();
-                },
-              ),
             ],
           ),
           SizedBox(height: Sizes.height * .02),
@@ -331,7 +326,7 @@ class _PurchaseInvoiceAdvancedReportScreenState
                 ),
               ),
               InkWell(
-                onTap: () async {},
+                onTap: exportPurchaseInvoiceExcel,
                 child: Container(
                   width: 50,
                   height: 40,
@@ -434,8 +429,8 @@ class _PurchaseInvoiceAdvancedReportScreenState
           _h("Date", 2),
           _h("Number", 2),
           _h("Supplier", 3),
+          _h("State", 2),
           _h("Amount", 2),
-          _h("Payment", 2),
           _h("Items", 3),
         ],
       ),
@@ -467,8 +462,8 @@ class _PurchaseInvoiceAdvancedReportScreenState
           _c(DateFormat("dd MMM yyyy").format(e.purchaseInvoiceDate), 2),
           _c("${e.prefix} ${e.no}", 2),
           _c(e.supplierName, 3),
+          _c(e.placeOfSupply, 2),
           _c("₹${e.totalAmount.toStringAsFixed(2)}", 2, bold: true),
-          _c(e.caseSale ? "Cash" : "Credit", 2),
           _c(e.itemDetails.map((i) => i.name).join(", "), 3),
         ],
       ),
@@ -496,6 +491,11 @@ class _PurchaseInvoiceAdvancedReportScreenState
   List<String> _suppliers() => [
     "All",
     ...{for (var e in allItems) e.supplierName},
+  ];
+
+  List<String> _states() => [
+    "All",
+    ...{for (var e in allItems) e.placeOfSupply},
   ];
 
   List<String> _items() => [
@@ -560,14 +560,81 @@ class _PurchaseInvoiceAdvancedReportScreenState
     TextEditingController ctrl,
     VoidCallback onChange,
   ) {
-    return SizedBox(
-      width: 260,
+    return Expanded(
       child: TitleTextFeild(
         controller: ctrl,
         hintText: hint,
         titleText: title,
         onChanged: (_) => onChange(),
       ),
+    );
+  }
+
+  Future<void> exportPurchaseInvoiceExcel() async {
+    final excel = Excel.createExcel();
+    final sheet = excel['Purchase Invoices'];
+
+    // 🔹 Header info
+    sheet.appendRow([
+      TextCellValue('From Date'),
+      TextCellValue(fromDateCtrl.text),
+      TextCellValue(''),
+      TextCellValue('To Date'),
+      TextCellValue(toDateCtrl.text),
+      TextCellValue(''),
+    ]);
+
+    // 🔹 Table header
+    sheet.appendRow([
+      TextCellValue('Date'),
+      TextCellValue('Invoice No'),
+      TextCellValue('Supplier'),
+      TextCellValue('State'),
+      TextCellValue('Amount'),
+      TextCellValue('Items'),
+      TextCellValue('GST Amount'),
+      TextCellValue('Discount'),
+    ]);
+
+    // 🔹 Data rows (filtered list)
+    for (final e in filtered) {
+      sheet.appendRow([
+        TextCellValue(DateFormat("dd-MM-yyyy").format(e.purchaseInvoiceDate)),
+        TextCellValue("${e.prefix} ${e.no}"),
+        TextCellValue(e.supplierName),
+        TextCellValue(e.placeOfSupply),
+        DoubleCellValue(e.totalAmount),
+        TextCellValue(e.itemDetails.map((i) => i.name).join(", ")),
+        DoubleCellValue(e.subGst),
+        TextCellValue(e.discountLines.isNotEmpty ? "Yes" : "No"),
+      ]);
+    }
+
+    // 🔹 Summary row
+    final totalAmount = filtered.fold<double>(0, (p, e) => p + e.totalAmount);
+    sheet.appendRow([
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue('Total'),
+      TextCellValue(''),
+      DoubleCellValue(totalAmount),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+    ]);
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/PurchaseInvoiceReport_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+    await OpenFilex.open(file.path);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Excel exported successfully")),
     );
   }
 }

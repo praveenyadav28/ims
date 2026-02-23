@@ -3,7 +3,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:ims/ui/master/company/company_api.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
+import 'package:ims/ui/sales/data/reuse_print.dart';
 import 'package:ims/ui/sales/debit_note/widgets/item_model.dart';
 import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/credit_note_data.dart';
@@ -228,6 +230,7 @@ class CreditNoteSaveWithUIData extends CreditNoteEvent {
   final List<String> notes;
   final List<String> terms;
   final Uint8List? signatureImage; // NEW
+  final bool printAfterSave; // NEW
 
   CreditNoteSaveWithUIData({
     required this.ledgerName,
@@ -239,6 +242,7 @@ class CreditNoteSaveWithUIData extends CreditNoteEvent {
     required this.terms,
     this.updateId,
     this.signatureImage,
+    required this.printAfterSave,
   });
 }
 
@@ -314,9 +318,7 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
       );
 
       add(CreditNoteCalculate());
-    } catch (err) {
-      print("❌ Load error: $err");
-    }
+    } catch (err) {}
   }
 
   void _onSelectLedger(
@@ -589,7 +591,6 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
         "Transaction loaded",
       );
     } catch (err) {
-      print("❌ transaction fetch error: $err");
       showCustomSnackbarError(
         creditNoteNavigatorKey.currentContext!,
         "Transaction not found",
@@ -721,6 +722,18 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
             creditNoteNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+          if (e.printAfterSave) {
+            final data = CreditNoteData.fromJson(
+              res!['data'],
+            ); // 👈 sahi tareeka
+
+            final doc = data.toPrintModel(); // ✅ no dynamic
+
+            final companyApi = await CompanyProfileAPi.getCompanyProfile();
+            final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+
+            await PdfEngine.printPremiumInvoice(doc: doc, company: company);
+          }
           final ctx = creditNoteNavigatorKey.currentContext!;
           Navigator.of(ctx).pop(true);
         } else {

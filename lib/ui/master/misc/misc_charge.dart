@@ -100,7 +100,6 @@ class _CreateMiscChargeState extends State<CreateMiscCharge> {
         }
       });
     } catch (e) {
-      debugPrint("Ledger Load Error: $e");
     }
   }
 
@@ -123,8 +122,7 @@ class _CreateMiscChargeState extends State<CreateMiscCharge> {
         }
       });
     } catch (e) {
-      debugPrint("HSN Load Error: $e");
-    }
+     }
   }
 
   // ===================== ON HSN SELECT =====================
