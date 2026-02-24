@@ -1,3 +1,8 @@
+// top of file
+import 'dart:io';
+import 'package:excel/excel.dart' hide Border;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/payment_model.dart';
@@ -145,6 +150,24 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
           ),
         ),
         actions: [
+          Center(
+            child: InkWell(
+              onTap: exportPaymentExcel,
+              child: Container(
+                width: 50,
+                height: 40,
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                  color: AppColor.white,
+                  border: Border.all(width: 1, color: AppColor.borderColor),
+                ),
+                child: Image.asset("assets/images/excel.png"),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+
           Center(
             child: defaultButton(
               onTap: () async {
@@ -301,7 +324,6 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
           Expanded(flex: 2, child: Text("Type")),
           Expanded(flex: 2, child: Text("Invoice No.")),
           Expanded(flex: 2, child: Text("Action")),
-        
         ],
       ),
     );
@@ -328,55 +350,57 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
           ),
           Expanded(flex: 2, child: Text(p.type)),
           Expanded(flex: 2, child: Text(p.invoiceNo.toString())),
-          Expanded(flex: 2,
+          Expanded(
+            flex: 2,
             child: Row(
-              children: [     IconButton(
-                    icon: const Icon(Icons.print, color: Colors.deepPurple),
-                    onPressed: () async {
-                      try {
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (_) =>
-                              const Center(child: CircularProgressIndicator()),
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.print, color: Colors.deepPurple),
+                  onPressed: () async {
+                    try {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) =>
+                            const Center(child: CircularProgressIndicator()),
+                      );
+
+                      final companyRes = await ApiService.fetchData(
+                        "get/company",
+                        licenceNo: Preference.getint(PrefKeys.licenseNo),
+                      );
+
+                      Navigator.pop(context);
+
+                      if (companyRes == null || companyRes['status'] != true) {
+                        showCustomSnackbarError(
+                          context,
+                          "Company profile not found",
                         );
-            
-                        final companyRes = await ApiService.fetchData(
-                          "get/company",
-                          licenceNo: Preference.getint(PrefKeys.licenseNo),
-                        );
-            
-                        Navigator.pop(context);
-            
-                        if (companyRes == null || companyRes['status'] != true) {
-                          showCustomSnackbarError(
-                            context,
-                            "Company profile not found",
-                          );
-                          return;
-                        }
-            
-                        final data = companyRes['data'];
-            
-                        // 🔥 FIX HERE
-                        final Map<String, dynamic> companyMap =
-                            data is List && data.isNotEmpty
-                            ? Map<String, dynamic>.from(data.first)
-                            : Map<String, dynamic>.from(data);
-            
-                        final company = CompanyPrintProfile.fromApi(companyMap);
-            
-                        await VoucherPdfEngine.printPayment(
-                          data: p,
-                          company: company,
-                        );
-                      } catch (e) {
-                        Navigator.pop(context);
-                        showCustomSnackbarError(context, "Print failed");
+                        return;
                       }
-                    },
-                  ),
-             
+
+                      final data = companyRes['data'];
+
+                      // 🔥 FIX HERE
+                      final Map<String, dynamic> companyMap =
+                          data is List && data.isNotEmpty
+                          ? Map<String, dynamic>.from(data.first)
+                          : Map<String, dynamic>.from(data);
+
+                      final company = CompanyPrintProfile.fromApi(companyMap);
+
+                      await VoucherPdfEngine.printPayment(
+                        data: p,
+                        company: company,
+                      );
+                    } catch (e) {
+                      Navigator.pop(context);
+                      showCustomSnackbarError(context, "Print failed");
+                    }
+                  },
+                ),
+
                 IconButton(
                   icon: const Icon(Icons.edit, color: Colors.blue),
                   onPressed: () async {
@@ -422,6 +446,80 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> exportPaymentExcel() async {
+    if (list.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("No data to export")));
+      return;
+    }
+
+    final excel = Excel.createExcel();
+    final sheet = excel['Payments'];
+
+    CellValue cv(dynamic v) {
+      if (v == null) return TextCellValue('');
+      if (v is num) return DoubleCellValue(v.toDouble());
+      return TextCellValue(v.toString());
+    }
+
+    // 🔹 Header Info
+    sheet.appendRow([
+      cv('From Date'),
+      cv('To Date'),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+    ]);
+
+    sheet.appendRow([
+      cv(fromDateCtrl.text),
+      cv(toDateCtrl.text),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+    ]);
+
+    // 🔹 Table Header
+    sheet.appendRow([
+      cv('Date'),
+      cv('Payment No'),
+      cv('Party Name'),
+      cv('Amount'),
+      cv('Type'),
+      cv('Invoice No'),
+    ]);
+
+    // 🔹 Data Rows (filtered list only)
+    for (final p in list) {
+      sheet.appendRow([
+        cv(DateFormat('yyyy-MM-dd').format(p.date)),
+        cv("${p.prefix} ${p.voucherNo}"),
+        cv(p.supplierName),
+        cv(p.amount), // numeric cell
+        cv(p.type),
+        cv(p.invoiceNo.toString()),
+      ]);
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/Payments_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+    await OpenFilex.open(file.path);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Payments Excel exported successfully")),
     );
   }
 }

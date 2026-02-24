@@ -1,3 +1,8 @@
+// top of file
+import 'dart:io';
+import 'package:excel/excel.dart' hide Border;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/contra_model.dart';
@@ -145,6 +150,24 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
           ),
         ),
         actions: [
+          Center(
+            child: InkWell(
+              onTap: exportJournalExcel,
+              child: Container(
+                width: 50,
+                height: 40,
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                  color: AppColor.white,
+                  border: Border.all(width: 1, color: AppColor.borderColor),
+                ),
+                child: Image.asset("assets/images/excel.png"),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+
           Center(
             child: defaultButton(
               onTap: () async {
@@ -328,56 +351,57 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
             flex: 3,
             child: Text(p.note, maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
-          Expanded(flex:2,
+          Expanded(
+            flex: 2,
             child: Row(
-              children: [     IconButton(
-                    icon: const Icon(Icons.print, color: Colors.deepPurple),
-                    onPressed: () async {
-                      try {
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (_) =>
-                              const Center(child: CircularProgressIndicator()),
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.print, color: Colors.deepPurple),
+                  onPressed: () async {
+                    try {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) =>
+                            const Center(child: CircularProgressIndicator()),
+                      );
+
+                      final companyRes = await ApiService.fetchData(
+                        "get/company",
+                        licenceNo: Preference.getint(PrefKeys.licenseNo),
+                      );
+
+                      Navigator.pop(context);
+
+                      if (companyRes == null || companyRes['status'] != true) {
+                        showCustomSnackbarError(
+                          context,
+                          "Company profile not found",
                         );
-            
-                        final companyRes = await ApiService.fetchData(
-                          "get/company",
-                          licenceNo: Preference.getint(PrefKeys.licenseNo),
-                        );
-            
-                        Navigator.pop(context);
-            
-                        if (companyRes == null || companyRes['status'] != true) {
-                          showCustomSnackbarError(
-                            context,
-                            "Company profile not found",
-                          );
-                          return;
-                        }
-            
-                        final data = companyRes['data'];
-            
-                        // 🔥 FIX HERE
-                        final Map<String, dynamic> companyMap =
-                            data is List && data.isNotEmpty
-                            ? Map<String, dynamic>.from(data.first)
-                            : Map<String, dynamic>.from(data);
-            
-                        final company = CompanyPrintProfile.fromApi(companyMap);
-            
-                        await VoucherPdfEngine.printJournal(
-                          data: p,
-                          company: company,
-                        );
-                      } catch (e) {
-                        Navigator.pop(context);
-                        showCustomSnackbarError(context, "Print failed");
+                        return;
                       }
-                    },
-                  ),
-             
-             
+
+                      final data = companyRes['data'];
+
+                      // 🔥 FIX HERE
+                      final Map<String, dynamic> companyMap =
+                          data is List && data.isNotEmpty
+                          ? Map<String, dynamic>.from(data.first)
+                          : Map<String, dynamic>.from(data);
+
+                      final company = CompanyPrintProfile.fromApi(companyMap);
+
+                      await VoucherPdfEngine.printJournal(
+                        data: p,
+                        company: company,
+                      );
+                    } catch (e) {
+                      Navigator.pop(context);
+                      showCustomSnackbarError(context, "Print failed");
+                    }
+                  },
+                ),
+
                 IconButton(
                   icon: const Icon(Icons.edit, color: Colors.blue),
                   onPressed: () async {
@@ -421,6 +445,80 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> exportJournalExcel() async {
+    if (list.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("No data to export")));
+      return;
+    }
+
+    final excel = Excel.createExcel();
+    final sheet = excel['Journal'];
+
+    CellValue cv(dynamic v) {
+      if (v == null) return TextCellValue('');
+      if (v is num) return DoubleCellValue(v.toDouble());
+      return TextCellValue(v.toString());
+    }
+
+    // 🔹 Header Info (current filters)
+    sheet.appendRow([
+      cv('From Date'),
+      cv('To Date'),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+    ]);
+
+    sheet.appendRow([
+      cv(fromDateCtrl.text),
+      cv(toDateCtrl.text),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+    ]);
+
+    // 🔹 Table Header
+    sheet.appendRow([
+      cv('Date'),
+      cv('Journal No'),
+      cv('Credit Ledger'),
+      cv('Debit Ledger'),
+      cv('Amount'),
+      cv('Narration'),
+    ]);
+
+    // 🔹 Data Rows (filtered list)
+    for (final p in list) {
+      sheet.appendRow([
+        cv(DateFormat('yyyy-MM-dd').format(p.date)),
+        cv("${p.prefix} ${p.voucherNo}"),
+        cv(p.toAccount), // Credit Ledger
+        cv(p.fromAccount), // Debit Ledger
+        cv(p.amount), // numeric
+        cv(p.note),
+      ]);
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/Journal_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+    await OpenFilex.open(file.path);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Journal Excel exported successfully")),
     );
   }
 }

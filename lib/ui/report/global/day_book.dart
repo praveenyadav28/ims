@@ -1,3 +1,8 @@
+// top of file
+import 'dart:io';
+import 'package:excel/excel.dart' hide Border;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/utils/api.dart';
@@ -121,9 +126,10 @@ class _DayBookReportScreenState extends State<DayBookReportScreen> {
           height: 40,
           width: 120,
           buttonColor: AppColor.primary,
-        ),  const SizedBox(width: 10),
+        ),
+        const SizedBox(width: 10),
         InkWell(
-          onTap: () async {},
+          onTap: exportDayBookExcel,
           child: Container(
             width: 50,
             height: 40,
@@ -228,6 +234,68 @@ class _DayBookReportScreenState extends State<DayBookReportScreen> {
           _C(r.amount.toStringAsFixed(2), 2),
         ],
       ),
+    );
+  }
+
+  Future<void> exportDayBookExcel() async {
+    if (rows.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("No data to export")));
+      return;
+    }
+
+    final excel = Excel.createExcel();
+    final sheet = excel['Day Book'];
+
+    CellValue cv(dynamic v) {
+      if (v == null) return TextCellValue('');
+      if (v is num) return DoubleCellValue(v.toDouble());
+      return TextCellValue(v.toString());
+    }
+
+    // 🔹 Header Info (like FIFO/Bank Book style)
+    sheet.appendRow([cv('From Date'), cv('To Date'), cv(''), cv(''), cv('')]);
+
+    sheet.appendRow([
+      cv(fromCtrl.text),
+      cv(toCtrl.text),
+      cv(''),
+      cv(''),
+      cv(''),
+    ]);
+
+    // 🔹 Table Header
+    sheet.appendRow([
+      cv('Date'),
+      cv('Type'),
+      cv('Voucher No'),
+      cv('Party / Ledger'),
+      cv('Amount'),
+    ]);
+
+    // 🔹 Data Rows
+    for (final r in rows) {
+      sheet.appendRow([
+        cv(DateFormat("dd-MM-yyyy").format(r.date)),
+        cv(r.type),
+        cv("${r.prefix}${r.voucherNo}"),
+        cv(r.party),
+        cv(r.amount),
+      ]);
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/DayBook_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+    await OpenFilex.open(file.path);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Day Book Excel exported successfully")),
     );
   }
 }

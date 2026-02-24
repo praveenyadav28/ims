@@ -267,7 +267,11 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                 licenceNo: Preference.getint(PrefKeys.licenseNo),
               );
 
-              final company = CompanyPrintProfile.fromApi(companyRes['data']);
+              final data = companyRes['data'];
+
+              final company = CompanyPrintProfile.fromApi(
+                data is List ? data.first : data,
+              );
 
               await ProfitLossPdfEngine.printPL(
                 company: company,

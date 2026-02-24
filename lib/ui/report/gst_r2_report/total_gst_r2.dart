@@ -1,3 +1,8 @@
+import 'package:excel/excel.dart' hide Border;
+import 'package:ims/ui/report/gst_r1_report/gstr_1_total.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/cussup_model.dart';
@@ -10,11 +15,6 @@ import 'package:ims/ui/report/gst_r2_report/gst_r2_hsn.dart';
 import 'package:ims/ui/report/gst_r2_report/gst_r2_itc.dart';
 import 'package:ims/ui/sales/models/credit_note_data.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
-// import 'package:ims/ui/report/gst_r2_report/gstr2_b2b.dart';
-// import 'package:ims/ui/report/gst_r2_report/gstr2_b2bur.dart';
-// import 'package:ims/ui/report/gst_r2_report/gstr2_cdnr.dart';
-// import 'package:ims/ui/report/gst_r2_report/gstr2_hsn.dart';
-// import 'package:ims/ui/report/gst_r2_report/gstr2_docs.dart';
 import 'package:ims/ui/sales/models/purchase_return_data.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
@@ -221,7 +221,7 @@ class _Gstr2DashboardScreenState extends State<Gstr2DashboardScreen>
       ),
       const SizedBox(width: 10),
       InkWell(
-        onTap: () async {},
+        onTap: _exportGstr2Excel,
         child: Container(
           width: 50,
           height: 40,
@@ -261,5 +261,368 @@ class _Gstr2DashboardScreenState extends State<Gstr2DashboardScreen>
         },
       ),
     );
+  }
+
+  Future<void> _exportGstr2Excel() async {
+    final excel = Excel.createExcel();
+
+    _addGstr2B2BSheet(excel);
+    _addGstr2B2BURSheet(excel);
+    _addGstr2CDNRSheet(excel);
+    _addGstr2CDNURSheet(excel);
+    _addGstr2HSNSheet(excel);
+    _addGstr2DocsSheet(excel);
+    _addGstr2ItcSheet(excel);
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/GSTR_2_${DateFormat('MMM_yyyy').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+
+    await OpenFilex.open(file.path);
+  }
+
+  void _addHeader(Sheet sheet, List<String> headers) {
+    sheet.appendRow(headers.map((e) => TextCellValue(e)).toList());
+  }
+
+  void _addGstr2B2BSheet(Excel excel) {
+    final sheet = excel['B2B'];
+
+    _addHeader(sheet, [
+      "GSTIN of Supplier",
+      "Invoice No",
+      "Invoice Date",
+      "Invoice Value",
+      "Place Of Supply",
+      "Reverse Charge",
+      "Invoice Type",
+      "Rate",
+      "Taxable Value",
+      "IGST Paid",
+      "CGST Paid",
+      "SGST Paid",
+      "Eligibility for ITC",
+      "Availed ITC IGST",
+      "Availed ITC CGST",
+      "Availed ITC SGST",
+    ]);
+
+    final sellerState = Preference.getString(PrefKeys.state);
+
+    for (final inv in fInvoices) {
+      final supplier = suppliers.firstWhere(
+        (s) =>
+            s.companyName.trim().toLowerCase() ==
+            inv.supplierName.trim().toLowerCase(),
+        orElse: () => TableStyle.emptyCustomer,
+      );
+
+      if (supplier.gstType != "Registered Dealer") continue;
+
+      final isInter =
+          inv.placeOfSupply.toLowerCase() != sellerState.toLowerCase();
+
+      for (final item in inv.itemDetails) {
+        final taxable = (item.qty * item.price) * 100 / (100 + item.gstRate);
+        final gstAmt = taxable * item.gstRate / 100;
+
+        final igst = isInter ? gstAmt : 0;
+        final cgst = isInter ? 0 : gstAmt / 2;
+        final sgst = isInter ? 0 : gstAmt / 2;
+
+        sheet.appendRow([
+          TextCellValue(supplier.gstNo),
+          TextCellValue("${inv.prefix}${inv.no}"),
+          TextCellValue(
+            DateFormat("dd-MMM-yyyy").format(inv.purchaseInvoiceDate),
+          ),
+          DoubleCellValue(inv.totalAmount),
+          TextCellValue(inv.placeOfSupply),
+          TextCellValue("N"),
+          TextCellValue("Regular"),
+          DoubleCellValue(item.gstRate),
+          DoubleCellValue(taxable),
+          DoubleCellValue(igst.toDouble()),
+          DoubleCellValue(cgst.toDouble()),
+          DoubleCellValue(sgst.toDouble()),
+          TextCellValue("Eligible"),
+          DoubleCellValue(igst.toDouble()),
+          DoubleCellValue(cgst.toDouble()),
+          DoubleCellValue(sgst.toDouble()),
+        ]);
+      }
+    }
+  }
+
+  void _addGstr2B2BURSheet(Excel excel) {
+    final sheet = excel['B2BUR'];
+
+    _addHeader(sheet, [
+      "Supplier Name",
+      "Invoice No",
+      "Invoice Date",
+      "Invoice Value",
+      "Place Of Supply",
+      "Rate",
+      "Taxable Value",
+      "IGST",
+      "CGST",
+      "SGST",
+    ]);
+
+    final sellerState = Preference.getString(PrefKeys.state);
+
+    for (final inv in fInvoices) {
+      final supplier = suppliers.firstWhere(
+        (s) =>
+            s.companyName.trim().toLowerCase() ==
+            inv.supplierName.trim().toLowerCase(),
+        orElse: () => TableStyle.emptyCustomer,
+      );
+
+      if (supplier.gstType == "Registered Dealer") continue;
+
+      final isInter =
+          inv.placeOfSupply.toLowerCase() != sellerState.toLowerCase();
+
+      for (final item in inv.itemDetails) {
+        final taxable = (item.qty * item.price) * 100 / (100 + item.gstRate);
+        final gstAmt = taxable * item.gstRate / 100;
+
+        sheet.appendRow([
+          TextCellValue(inv.supplierName),
+          TextCellValue("${inv.prefix}${inv.no}"),
+          TextCellValue(
+            DateFormat("dd-MMM-yyyy").format(inv.purchaseInvoiceDate),
+          ),
+          DoubleCellValue(inv.totalAmount),
+          TextCellValue(inv.placeOfSupply),
+          DoubleCellValue(item.gstRate),
+          DoubleCellValue(taxable),
+          DoubleCellValue(isInter ? gstAmt : 0),
+          DoubleCellValue(isInter ? 0 : gstAmt / 2),
+          DoubleCellValue(isInter ? 0 : gstAmt / 2),
+        ]);
+      }
+    }
+  }
+
+  void _addGstr2CDNRSheet(Excel excel) {
+    final sheet = excel['CDNR'];
+
+    _addHeader(sheet, [
+      "GSTIN of Supplier",
+      "Supplier Name",
+      "Note No",
+      "Note Date",
+      "Type (C/D)",
+      "Place Of Supply",
+      "Rate",
+      "Taxable",
+      "IGST",
+      "CGST",
+      "SGST",
+    ]);
+
+    final sellerState = Preference.getString(PrefKeys.state);
+
+    for (final pr in fReturns) {
+      final supplier = suppliers.firstWhere(
+        (s) =>
+            s.companyName.trim().toLowerCase() ==
+            pr.supplierName.trim().toLowerCase(),
+        orElse: () => TableStyle.emptyCustomer,
+      );
+      if (supplier.gstType != "Registered Dealer") continue;
+
+      final isInter =
+          pr.placeOfSupply.toLowerCase() != sellerState.toLowerCase();
+
+      for (final item in pr.itemDetails) {
+        final taxable = (item.qty * item.price) * 100 / (100 + item.gstRate);
+        final gstAmt = taxable * item.gstRate / 100;
+
+        sheet.appendRow([
+          TextCellValue(supplier.gstNo),
+          TextCellValue(pr.supplierName),
+          TextCellValue("${pr.prefix}${pr.no}"),
+          TextCellValue(
+            DateFormat("dd-MMM-yyyy").format(pr.purchaseReturnDate),
+          ),
+          TextCellValue("C"),
+          TextCellValue(pr.placeOfSupply),
+          DoubleCellValue(item.gstRate),
+          DoubleCellValue(taxable),
+          DoubleCellValue(isInter ? gstAmt : 0),
+          DoubleCellValue(isInter ? 0 : gstAmt / 2),
+          DoubleCellValue(isInter ? 0 : gstAmt / 2),
+        ]);
+      }
+    }
+  }
+
+  void _addGstr2CDNURSheet(Excel excel) {
+    final sheet = excel['CDNUR'];
+
+    _addHeader(sheet, [
+      "Supplier Name",
+      "Note No",
+      "Note Date",
+      "Type (C/D)",
+      "Place Of Supply",
+      "Rate",
+      "Taxable",
+      "IGST",
+      "CGST",
+      "SGST",
+    ]);
+
+    final sellerState = Preference.getString(PrefKeys.state);
+
+    for (final pr in fReturns) {
+      final supplier = suppliers.firstWhere(
+        (s) =>
+            s.companyName.trim().toLowerCase() ==
+            pr.supplierName.trim().toLowerCase(),
+        orElse: () => TableStyle.emptyCustomer,
+      );
+      if (supplier.gstType == "Registered Dealer") continue;
+
+      final isInter =
+          pr.placeOfSupply.toLowerCase() != sellerState.toLowerCase();
+
+      for (final item in pr.itemDetails) {
+        final taxable = (item.qty * item.price) * 100 / (100 + item.gstRate);
+        final gstAmt = taxable * item.gstRate / 100;
+
+        sheet.appendRow([
+          TextCellValue(pr.supplierName),
+          TextCellValue("${pr.prefix}${pr.no}"),
+          TextCellValue(
+            DateFormat("dd-MMM-yyyy").format(pr.purchaseReturnDate),
+          ),
+          TextCellValue("C"),
+          TextCellValue(pr.placeOfSupply),
+          DoubleCellValue(item.gstRate),
+          DoubleCellValue(taxable),
+          DoubleCellValue(isInter ? gstAmt : 0),
+          DoubleCellValue(isInter ? 0 : gstAmt / 2),
+          DoubleCellValue(isInter ? 0 : gstAmt / 2),
+        ]);
+      }
+    }
+  }
+
+  void _addGstr2HSNSheet(Excel excel) {
+    final sheet = excel['HSN'];
+
+    _addHeader(sheet, [
+      "HSN",
+      "Description",
+      "Qty",
+      "Total Value",
+      "Rate",
+      "Taxable",
+      "IGST",
+      "CGST",
+      "SGST",
+      "Cess",
+    ]);
+
+    final sellerState = Preference.getString(PrefKeys.state);
+
+    for (final inv in fInvoices) {
+      final isInter =
+          inv.placeOfSupply.toLowerCase() != sellerState.toLowerCase();
+
+      for (final item in inv.itemDetails) {
+        final gross = item.qty * item.price;
+        final taxable = gross * 100 / (100 + item.gstRate);
+        final gstAmt = taxable * item.gstRate / 100;
+
+        sheet.appendRow([
+          TextCellValue(item.hsn),
+          TextCellValue(item.name),
+          DoubleCellValue(item.qty),
+          DoubleCellValue(gross),
+          DoubleCellValue(item.gstRate),
+          DoubleCellValue(taxable),
+          DoubleCellValue(isInter ? gstAmt : 0),
+          DoubleCellValue(isInter ? 0 : gstAmt / 2),
+          DoubleCellValue(isInter ? 0 : gstAmt / 2),
+          DoubleCellValue(0),
+        ]);
+      }
+    }
+  }
+
+  void _addGstr2DocsSheet(Excel excel) {
+    final sheet = excel['DOCS'];
+
+    _addHeader(sheet, [
+      "Nature of Document",
+      "Sr. No. From",
+      "Sr. No. To",
+      "Total",
+      "Cancelled",
+    ]);
+
+    if (fInvoices.isNotEmpty) {
+      final nums = fInvoices.map((e) => e.no).toList()..sort();
+      sheet.appendRow([
+        TextCellValue("Invoices for inward supply"),
+        IntCellValue(nums.first),
+        IntCellValue(nums.last),
+        IntCellValue(nums.length),
+        IntCellValue(0),
+      ]);
+    }
+  }
+
+  void _addGstr2ItcSheet(Excel excel) {
+    final sheet = excel['ITC'];
+
+    _addHeader(sheet, ["Type of ITC", "ITC Available", "ITC Availed"]);
+
+    double igst = 0, cgst = 0, sgst = 0;
+
+    final sellerState = Preference.getString(PrefKeys.state);
+
+    for (final inv in fInvoices) {
+      final isInter =
+          inv.placeOfSupply.toLowerCase() != sellerState.toLowerCase();
+
+      for (final item in inv.itemDetails) {
+        final taxable = (item.qty * item.price) * 100 / (100 + item.gstRate);
+        final gstAmt = taxable * item.gstRate / 100;
+
+        if (isInter) {
+          igst += gstAmt;
+        } else {
+          cgst += gstAmt / 2;
+          sgst += gstAmt / 2;
+        }
+      }
+    }
+
+    sheet.appendRow([
+      TextCellValue("IGST"),
+      DoubleCellValue(igst),
+      DoubleCellValue(igst),
+    ]);
+    sheet.appendRow([
+      TextCellValue("CGST"),
+      DoubleCellValue(cgst),
+      DoubleCellValue(cgst),
+    ]);
+    sheet.appendRow([
+      TextCellValue("SGST"),
+      DoubleCellValue(sgst),
+      DoubleCellValue(sgst),
+    ]);
   }
 }

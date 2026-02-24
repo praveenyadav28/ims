@@ -1,3 +1,7 @@
+import 'dart:io';
+import 'package:excel/excel.dart' hide Border;
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/ledger_model.dart';
@@ -72,7 +76,7 @@ class _BankBookReportScreenState extends State<BankBookReportScreen> {
       "get/ledgerreports/${selectedLedger!.id}",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-  
+
     /// ================= OPENING =================
     double opening = (res['Ledger']['opening_balance'] ?? 0).toDouble();
     String openingType = res['Ledger']['opening_type'] ?? "DR";
@@ -239,9 +243,10 @@ class _BankBookReportScreenState extends State<BankBookReportScreen> {
           height: 40,
           width: 150,
           buttonColor: AppColor.blue,
-        ),  const SizedBox(width: 10),
+        ),
+        const SizedBox(width: 10),
         InkWell(
-          onTap: () async {},
+          onTap: exportBankBookExcel,
           child: Container(
             width: 50,
             height: 40,
@@ -405,6 +410,95 @@ class _BankBookReportScreenState extends State<BankBookReportScreen> {
     return Expanded(
       flex: flex,
       child: Text(text, overflow: TextOverflow.ellipsis),
+    );
+  }
+
+  Future<void> exportBankBookExcel() async {
+    if (rows.isEmpty || selectedLedger == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("No data to export")));
+      return;
+    }
+
+    final excel = Excel.createExcel();
+    final sheet = excel['Bank Book'];
+
+    CellValue cv(dynamic v) {
+      if (v == null) return TextCellValue('');
+      if (v is num) return DoubleCellValue(v.toDouble());
+      return TextCellValue(v.toString());
+    }
+
+    // 🔹 Header Info (like FIFO)
+    sheet.appendRow([
+      cv('Bank'),
+      cv('From Date'),
+      cv('To Date'),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+    ]);
+
+    sheet.appendRow([
+      cv(selectedLedger!.ledgerName ?? '-'),
+      cv(fromCtrl.text),
+      cv(toCtrl.text),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+    ]);
+
+    // 🔹 Table Header
+    sheet.appendRow([
+      cv('Date'),
+      cv('Voucher No'),
+      cv('Type'),
+      cv('Party'),
+      cv('Debit'),
+      cv('Credit'),
+      cv('Balance'),
+    ]);
+
+    // 🔹 Data Rows (with running balance)
+    double runningBalance = openingBalance;
+
+    for (final r in rows) {
+      runningBalance += (r.debit - r.credit);
+
+      sheet.appendRow([
+        cv(df.format(r.date)),
+        cv(r.voucherNo),
+        cv(r.type),
+        cv(r.party),
+        cv(r.debit),
+        cv(r.credit),
+        cv(runningBalance),
+      ]);
+    }
+
+    // 🔹 Summary
+    final balance = openingBalance + debitTotal - creditTotal;
+
+    sheet.appendRow([cv('')]);
+    sheet.appendRow([cv('Opening'), cv(openingBalance)]);
+    sheet.appendRow([cv('Total Debit'), cv(debitTotal)]);
+    sheet.appendRow([cv('Total Credit'), cv(creditTotal)]);
+    sheet.appendRow([cv('Balance'), cv(balance)]);
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/BankBook_${selectedLedger!.ledgerName}_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+    await OpenFilex.open(file.path);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Bank Book Excel exported successfully")),
     );
   }
 }

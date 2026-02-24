@@ -1,6 +1,9 @@
 import 'package:ims/ui/home/reminder_screen.dart';
+import 'package:ims/ui/report/global/balance_sheet.dart';
 import 'package:ims/ui/report/global/day_book.dart';
+import 'package:ims/ui/report/global/ledger_balance.dart';
 import 'package:ims/ui/report/global/trial_balance.dart';
+// import 'package:ims/ui/report/gstr_3b_report/gstr_3b.dart';
 import 'package:ims/ui/report/inventry/item_party.dart';
 import 'package:ims/ui/report/inventry/item_ledger.dart';
 import 'package:ims/ui/report/inventry/itemwise_profit.dart';
@@ -52,7 +55,10 @@ class ReportsDashboardScreen extends StatelessWidget {
         _ProReportCard(
           title: "GST Reports",
           icon: Icons.receipt_long_outlined,
-          items: const ["GSTR-1", "GSTR-2"],
+          items: const [
+            "GSTR-1", "GSTR-2",
+            // "GSTR-3B"
+          ],
           onItemTap: (name) => _navigate(context, name),
         ),
         _ProReportCard(
@@ -62,11 +68,13 @@ class ReportsDashboardScreen extends StatelessWidget {
             "Profit and Loss Report",
             "Ledger Report",
             "OutStanding Report",
+            "Ledger Balance Report",
             "Bank Book",
             "Cash Book",
             "Day Book",
             "OutStanding Reminder",
-            // "Trial Balance",
+            "Trial Balance",
+            "Balance Sheet",
           ],
           onItemTap: (name) => _navigate(context, name),
         ),
@@ -95,12 +103,18 @@ class ReportsDashboardScreen extends StatelessWidget {
       pushTo(Gstr1DashboardScreen());
     } else if (name == "GSTR-2") {
       pushTo(Gstr2DashboardScreen());
-    } else if (name == "Profit and Loss Report") {
+    }
+    // else if (name == "GSTR-3B") {
+    //   pushTo(Gstr3BDashboardScreen());
+    // }
+    else if (name == "Profit and Loss Report") {
       pushTo(ProfitLossScreen());
     } else if (name == "Ledger Report") {
       pushTo(LedgerReportScreen());
     } else if (name == "OutStanding Report") {
       pushTo(OutstandingReportScreen());
+    } else if (name == "Ledger Balance Report") {
+      pushTo(BalanceReportScreen());
     } else if (name == "Bank Book") {
       pushTo(BankBookReportScreen());
     } else if (name == "Cash Book") {
@@ -111,6 +125,8 @@ class ReportsDashboardScreen extends StatelessWidget {
       pushTo(OutStandingReminder());
     } else if (name == "Trial Balance") {
       pushTo(TrialBalanceScreen());
+    } else if (name == "Balance Sheet") {
+      pushTo(BalanceSheetAllInOneScreen());
     } else {
       ScaffoldMessenger.of(
         context,

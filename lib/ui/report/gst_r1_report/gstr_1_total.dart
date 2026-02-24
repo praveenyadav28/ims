@@ -225,11 +225,13 @@ class _Gstr1DashboardScreenState extends State<Gstr1DashboardScreen>
       ),
       const SizedBox(width: 10),
       InkWell(
-        onTap: () async {},
+        onTap: () async {
+          await exportGstr1SingleExcel();
+        },
         child: Container(
           width: 50,
           height: 40,
-          padding: EdgeInsets.all(8),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(5),
             color: AppColor.white,
@@ -265,6 +267,329 @@ class _Gstr1DashboardScreenState extends State<Gstr1DashboardScreen>
         },
       ),
     );
+  }
+
+  Future<void> exportGstr1SingleExcel() async {
+    final excel = Excel.createExcel();
+
+    _addB2BSheet(excel);
+    _addB2CLSheet(excel);
+    _addB2CSSheet(excel);
+    _addCDNRSheet(excel);
+    _addCDNURSheet(excel);
+    _addHSNSheet(excel);
+    _addDocsSheet(excel);
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/GSTR1_${DateFormat('MMyyyy').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+    await OpenFilex.open(file.path);
+  }
+
+  void _addB2BSheet(Excel excel) {
+    final sheet = excel['B2B'];
+
+    sheet.appendRow([
+      TextCellValue('GSTIN/UIN of Recipient'),
+      TextCellValue('Receiver Name'),
+      TextCellValue('Invoice Number'),
+      TextCellValue('Invoice date'),
+      TextCellValue('Invoice Value'),
+      TextCellValue('Place Of Supply'),
+      TextCellValue('Reverse Charge'),
+      TextCellValue('Applicable % of Tax Rate'),
+      TextCellValue('Invoice Type'),
+      TextCellValue('E-Commerce GSTIN'),
+      TextCellValue('Rate'),
+      TextCellValue('Taxable Value'),
+      TextCellValue('Cess Amount'),
+    ]);
+
+    for (final inv in fInvoices) {
+      final customer = customers.firstWhere(
+        (c) =>
+            c.companyName.trim().toLowerCase() ==
+            inv.customerName.trim().toLowerCase(),
+        orElse: () => TableStyle.emptyCustomer,
+      );
+
+      if (customer.gstType != "Registered Dealer") continue;
+
+      for (final item in inv.itemDetails) {
+        final gross = item.qty * item.price;
+        final gst = item.gstRate.toDouble();
+        final taxable = gst == 0 ? gross : gross * 100 / (100 + gst);
+
+        sheet.appendRow([
+          TextCellValue(customer.gstNo),
+          TextCellValue(inv.customerName),
+          TextCellValue("${inv.prefix}${inv.no}"),
+          TextCellValue(DateFormat("dd-MMM-yyyy").format(inv.saleInvoiceDate)),
+          DoubleCellValue(inv.totalAmount),
+          TextCellValue(inv.placeOfSupply),
+          TextCellValue("N"),
+          TextCellValue(""),
+          TextCellValue("Regular B2B"),
+          TextCellValue(""),
+          DoubleCellValue(gst),
+          DoubleCellValue(double.parse(taxable.toStringAsFixed(2))),
+          DoubleCellValue(0),
+        ]);
+      }
+    }
+  }
+
+  void _addB2CLSheet(Excel excel) {
+    final sheet = excel['B2CL'];
+
+    sheet.appendRow([
+      TextCellValue('Invoice Number'),
+      TextCellValue('Invoice date'),
+      TextCellValue('Invoice Value'),
+      TextCellValue('Place Of Supply'),
+      TextCellValue('Applicable % of Tax Rate'),
+      TextCellValue('Rate'),
+      TextCellValue('Taxable Value'),
+      TextCellValue('Cess Amount'),
+      TextCellValue('E-Commerce GSTIN'),
+    ]);
+
+    final sellerState = Preference.getString(PrefKeys.state);
+
+    for (final inv in fInvoices) {
+      final customer = customers.firstWhere(
+        (c) =>
+            c.companyName.trim().toLowerCase() ==
+            inv.customerName.trim().toLowerCase(),
+        orElse: () => TableStyle.emptyCustomer,
+      );
+
+      final isUnregistered =
+          customer.gstNo.isEmpty || customer.gstType != "Registered Dealer";
+
+      final isInterState =
+          inv.placeOfSupply.toLowerCase() != sellerState.toLowerCase();
+
+      final isLarge = inv.totalAmount > 250000;
+
+      if (!(isUnregistered && isInterState && isLarge)) continue;
+
+      for (final item in inv.itemDetails) {
+        final gross = item.qty * item.price;
+        final gst = item.gstRate.toDouble();
+        final taxable = gst == 0 ? gross : gross * 100 / (100 + gst);
+
+        sheet.appendRow([
+          TextCellValue("${inv.prefix}${inv.no}"),
+          TextCellValue(DateFormat("dd-MMM-yyyy").format(inv.saleInvoiceDate)),
+          DoubleCellValue(inv.totalAmount),
+          TextCellValue(inv.placeOfSupply),
+          TextCellValue(""),
+          DoubleCellValue(gst),
+          DoubleCellValue(double.parse(taxable.toStringAsFixed(2))),
+          DoubleCellValue(0),
+          TextCellValue(""),
+        ]);
+      }
+    }
+  }
+
+  void _addB2CSSheet(Excel excel) {
+    final sheet = excel['B2CS'];
+
+    sheet.appendRow([
+      TextCellValue('Type'),
+      TextCellValue('Place Of Supply'),
+      TextCellValue('Applicable % of Tax Rate'),
+      TextCellValue('Rate'),
+      TextCellValue('Taxable Value'),
+      TextCellValue('Cess Amount'),
+      TextCellValue('E-Commerce GSTIN'),
+    ]);
+
+    for (final inv in fInvoices) {
+      for (final item in inv.itemDetails) {
+        final gross = item.qty * item.price;
+        final gst = item.gstRate.toDouble();
+        final taxable = gst == 0 ? gross : gross * 100 / (100 + gst);
+
+        sheet.appendRow([
+          TextCellValue(""),
+          TextCellValue(inv.placeOfSupply),
+          TextCellValue(""),
+          DoubleCellValue(gst),
+          DoubleCellValue(double.parse(taxable.toStringAsFixed(2))),
+          DoubleCellValue(0),
+          TextCellValue(""),
+        ]);
+      }
+    }
+  }
+
+  void _addCDNRSheet(Excel excel) {
+    final sheet = excel['CDNR'];
+
+    sheet.appendRow([
+      TextCellValue('GSTIN/UIN of Recipient'),
+      TextCellValue('Receiver Name'),
+      TextCellValue('Note Number'),
+      TextCellValue('Note Date'),
+      TextCellValue('Type'),
+      TextCellValue('Place Of Supply'),
+      TextCellValue('Rate'),
+      TextCellValue('Taxable Value'),
+      TextCellValue('Cess Amount'),
+    ]);
+
+    for (final sr in fReturns) {
+      final customer = customers.firstWhere(
+        (c) =>
+            c.companyName.trim().toLowerCase() ==
+            sr.customerName.trim().toLowerCase(),
+        orElse: () => TableStyle.emptyCustomer,
+      );
+
+      if (customer.gstType != "Registered Dealer") continue;
+
+      for (final item in sr.itemDetails) {
+        final gross = item.qty * item.price;
+        final gst = item.gstRate.toDouble();
+        final taxable = gst == 0 ? gross : gross * 100 / (100 + gst);
+
+        sheet.appendRow([
+          TextCellValue(customer.gstNo),
+          TextCellValue(sr.customerName),
+          TextCellValue("${sr.prefix}${sr.no}"),
+          TextCellValue(DateFormat("dd-MMM-yyyy").format(sr.saleReturnDate)),
+          TextCellValue("C"),
+          TextCellValue(sr.placeOfSupply),
+          DoubleCellValue(gst),
+          DoubleCellValue(double.parse(taxable.toStringAsFixed(2))),
+          DoubleCellValue(0),
+        ]);
+      }
+    }
+  }
+
+  void _addCDNURSheet(Excel excel) {
+    final sheet = excel['CDNUR'];
+
+    sheet.appendRow([
+      TextCellValue('UR Type'),
+      TextCellValue('Note Number'),
+      TextCellValue('Note Date'),
+      TextCellValue('Type'),
+      TextCellValue('Place Of Supply'),
+      TextCellValue('Rate'),
+      TextCellValue('Taxable Value'),
+      TextCellValue('Cess Amount'),
+    ]);
+
+    for (final sr in fReturns) {
+      for (final item in sr.itemDetails) {
+        final gross = item.qty * item.price;
+        final gst = item.gstRate.toDouble();
+        final taxable = gst == 0 ? gross : gross * 100 / (100 + gst);
+
+        sheet.appendRow([
+          TextCellValue("URP"),
+          TextCellValue("${sr.prefix}${sr.no}"),
+          TextCellValue(DateFormat("dd-MMM-yyyy").format(sr.saleReturnDate)),
+          TextCellValue("C"),
+          TextCellValue(sr.placeOfSupply),
+          DoubleCellValue(gst),
+          DoubleCellValue(double.parse(taxable.toStringAsFixed(2))),
+          DoubleCellValue(0),
+        ]);
+      }
+    }
+  }
+
+  void _addHSNSheet(Excel excel) {
+    final sheet = excel['HSN'];
+
+    sheet.appendRow([
+      TextCellValue('HSN'),
+      TextCellValue('Description'),
+      TextCellValue('UQC'),
+      TextCellValue('Total Quantity'),
+      TextCellValue('Total Value'),
+      TextCellValue('Taxable Value'),
+      TextCellValue('Integrated Tax Amount'),
+      TextCellValue('Central Tax Amount'),
+      TextCellValue('State/UT Tax Amount'),
+      TextCellValue('Cess Amount'),
+    ]);
+
+    for (final inv in fInvoices) {
+      for (final item in inv.itemDetails) {
+        final gross = item.qty * item.price;
+        final gst = item.gstRate.toDouble();
+        final taxable = gst == 0 ? gross : gross * 100 / (100 + gst);
+
+        sheet.appendRow([
+          TextCellValue(item.hsn),
+          TextCellValue(item.name),
+          TextCellValue("NOS"),
+          DoubleCellValue(item.qty),
+          DoubleCellValue(double.parse(gross.toStringAsFixed(2))),
+          DoubleCellValue(double.parse(taxable.toStringAsFixed(2))),
+          DoubleCellValue(0),
+          DoubleCellValue(0),
+          DoubleCellValue(0),
+          DoubleCellValue(0),
+        ]);
+      }
+    }
+  }
+
+  void _addDocsSheet(Excel excel) {
+    final sheet = excel['DOCS'];
+
+    sheet.appendRow([
+      TextCellValue('Nature of Document'),
+      TextCellValue('Sr. No. From'),
+      TextCellValue('Sr. No. To'),
+      TextCellValue('Total Number'),
+      TextCellValue('Cancelled'),
+    ]);
+
+    if (fInvoices.isNotEmpty) {
+      final nums = fInvoices.map((e) => e.no).toList()..sort();
+      sheet.appendRow([
+        TextCellValue("Invoices for outward supply"),
+        DoubleCellValue(nums.first.toDouble()),
+        DoubleCellValue(nums.last.toDouble()),
+        DoubleCellValue(nums.length.toDouble()),
+        DoubleCellValue(0),
+      ]);
+    }
+
+    if (fReturns.isNotEmpty) {
+      final nums = fReturns.map((e) => e.no).toList()..sort();
+      sheet.appendRow([
+        TextCellValue("Credit Notes"),
+        DoubleCellValue(nums.first.toDouble()),
+        DoubleCellValue(nums.last.toDouble()),
+        DoubleCellValue(nums.length.toDouble()),
+        DoubleCellValue(0),
+      ]);
+    }
+
+    if (fNotes.isNotEmpty) {
+      final nums = fNotes.map((e) => e.no).toList()..sort();
+      sheet.appendRow([
+        TextCellValue("Debit Notes"),
+        DoubleCellValue(nums.first.toDouble()),
+        DoubleCellValue(nums.last.toDouble()),
+        DoubleCellValue(nums.length.toDouble()),
+        DoubleCellValue(0),
+      ]);
+    }
   }
 }
 

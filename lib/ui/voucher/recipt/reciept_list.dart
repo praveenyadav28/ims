@@ -1,3 +1,8 @@
+// top of file
+import 'dart:io';
+import 'package:excel/excel.dart' hide Border;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/payment_model.dart';
@@ -144,6 +149,24 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
           ),
         ),
         actions: [
+          Center(
+            child: InkWell(
+              onTap: exportReceiptExcel,
+              child: Container(
+                width: 50,
+                height: 40,
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                  color: AppColor.white,
+                  border: Border.all(width: 1, color: AppColor.borderColor),
+                ),
+                child: Image.asset("assets/images/excel.png"),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+
           Center(
             child: defaultButton(
               onTap: () async {
@@ -417,6 +440,80 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> exportReceiptExcel() async {
+    if (list.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("No data to export")));
+      return;
+    }
+
+    final excel = Excel.createExcel();
+    final sheet = excel['Receipts'];
+
+    CellValue cv(dynamic v) {
+      if (v == null) return TextCellValue('');
+      if (v is num) return DoubleCellValue(v.toDouble());
+      return TextCellValue(v.toString());
+    }
+
+    // 🔹 Header Info
+    sheet.appendRow([
+      cv('From Date'),
+      cv('To Date'),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+    ]);
+
+    sheet.appendRow([
+      cv(fromDateCtrl.text),
+      cv(toDateCtrl.text),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+      cv(''),
+    ]);
+
+    // 🔹 Table Header
+    sheet.appendRow([
+      cv('Date'),
+      cv('Receipt No'),
+      cv('Party Name'),
+      cv('Amount'),
+      cv('Type'),
+      cv('Invoice No'),
+    ]);
+
+    // 🔹 Data Rows (filtered list only)
+    for (final p in list) {
+      sheet.appendRow([
+        cv(DateFormat('yyyy-MM-dd').format(p.date)),
+        cv("${p.prefix} ${p.voucherNo}"),
+        cv(p.supplierName),
+        cv(p.amount), // numeric cell
+        cv(p.type),
+        cv(p.invoiceNo.toString()),
+      ]);
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(
+      "${dir.path}/Receipts_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+    );
+
+    final bytes = excel.encode();
+    await file.writeAsBytes(bytes!);
+    await OpenFilex.open(file.path);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Receipts Excel exported successfully")),
     );
   }
 }

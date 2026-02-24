@@ -1,10 +1,10 @@
+// top of file
 import 'dart:io';
 import 'package:excel/excel.dart' hide Border;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ims/model/cussup_model.dart';
 import 'package:ims/model/ledger_model.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/colors.dart';
@@ -13,17 +13,15 @@ import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 
-class OutstandingReportScreen extends StatefulWidget {
-  const OutstandingReportScreen({super.key});
+class BalanceReportScreen extends StatefulWidget {
+  const BalanceReportScreen({super.key});
 
   @override
-  State<OutstandingReportScreen> createState() =>
-      _OutstandingReportScreenState();
+  State<BalanceReportScreen> createState() => _BalanceReportScreenState();
 }
 
-class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
+class _BalanceReportScreenState extends State<BalanceReportScreen> {
   List<LedgerListModel> ledgerList = [];
-  List<Customer> customerList = [];
   bool loading = false;
 
   DateTime fromDate = DateTime(1900, 1, 1); // 🔥 very old date (fixed)
@@ -40,7 +38,7 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
 
   Future<void> loadAll() async {
     setState(() => loading = true);
-    await Future.wait([ledgerApi(), getCustomerApi()]);
+    await Future.wait([ledgerApi()]);
     setState(() => loading = false);
   }
 
@@ -55,58 +53,7 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
 
     List responseData = response['data'] ?? [];
 
-    ledgerList = responseData
-        .map((e) => LedgerListModel.fromJson(e))
-        .where((e) => e.ledgerGroup == "Sundry Debtor")
-        .toList();
-  }
-
-  // ---------------- CUSTOMER API ----------------
-  Future getCustomerApi() async {
-    var response = await ApiService.fetchData(
-      "get/customer",
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-
-    List responseData = response['data'] ?? [];
-    customerList = responseData.map((e) => Customer.fromJson(e)).toList();
-  }
-
-  Customer _findCustomer(LedgerListModel l) {
-    return customerList.firstWhere(
-      (c) =>
-          c.companyName.trim().toLowerCase() ==
-          (l.ledgerName ?? "").trim().toLowerCase(),
-      orElse: () => Customer(
-        id: '',
-        licenceNo: 0,
-        branchId: '',
-        customerType: '',
-        title: '',
-        firstName: '',
-        lastName: '',
-        related: '',
-        parents: '',
-        parentsLast: '',
-        companyName: '',
-        email: '',
-        mobile: '',
-        pan: '',
-        gstType: '',
-        gstNo: '',
-        address: '',
-        city: '',
-        state: '',
-        openingBalance: 0,
-        closingBalance: 0,
-        address0: '',
-        address1: '',
-        documents: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        v: 0,
-      ),
-    );
+    ledgerList = responseData.map((e) => LedgerListModel.fromJson(e)).toList();
   }
 
   // ---------------- UI ----------------
@@ -118,7 +65,7 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
         elevation: 0,
         backgroundColor: AppColor.primary,
         title: Text(
-          "Outstanding Report",
+          "Ledger Balance Report",
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -163,7 +110,7 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
                 ),
                 const SizedBox(width: 10),
                 InkWell(
-                  onTap: exportOutstandingExcel,
+                  onTap: exportLedgerBalanceExcel,
                   child: Container(
                     width: 50,
                     height: 40,
@@ -241,7 +188,6 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
           _h("Group", 2),
           _h("Mobile", 2),
           _h("State", 2),
-          _h("GST Type", 2),
           _h("Closing Balance", 2),
         ],
       ),
@@ -263,7 +209,6 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
   // ---------------- ROW ----------------
   Widget _tableRow(LedgerListModel l, int index) {
     final bool even = index.isEven;
-    final customer = _findCustomer(l);
 
     return Container(
       color: even ? const Color(0xffF9FAFB) : Colors.white,
@@ -274,8 +219,11 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
           _groupChip(l.ledgerGroup ?? "-", 2),
           _c(l.contactNo?.toString() ?? "-", 2),
           _c(l.state ?? "-", 2),
-          _c(customer.gstType.isEmpty ? "-" : customer.gstType, 2),
-          _c(l.closingBalance?.toString() ?? "0", 2),
+          _c(
+            (l.closingBalance?.abs().toString() ?? "0") +
+                (l.closingBalance! < 0 ? " Cr" : " Dr"),
+            2,
+          ),
         ],
       ),
     );
@@ -317,7 +265,7 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
       ),
     ),
   );
-  Future<void> exportOutstandingExcel() async {
+  Future<void> exportLedgerBalanceExcel() async {
     if (ledgerList.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -326,7 +274,7 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
     }
 
     final excel = Excel.createExcel();
-    final sheet = excel['Outstanding Report'];
+    final sheet = excel['Ledger Balance'];
 
     CellValue cv(dynamic v) {
       if (v == null) return TextCellValue('');
@@ -334,17 +282,10 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
       return TextCellValue(v.toString());
     }
 
-    // 🔹 Header Info
-    sheet.appendRow([
-      cv('Outstanding As On'),
-      cv(''),
-      cv(''),
-      cv(''),
-      cv(''),
-      cv(''),
-    ]);
+    // 🔹 Header Info (like other reports)
+    sheet.appendRow([cv('As On Date'), cv(''), cv(''), cv(''), cv('')]);
 
-    sheet.appendRow([cv(toCtrl.text), cv(''), cv(''), cv(''), cv(''), cv('')]);
+    sheet.appendRow([cv(toCtrl.text), cv(''), cv(''), cv(''), cv('')]);
 
     // 🔹 Table Header
     sheet.appendRow([
@@ -352,13 +293,11 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
       cv('Group'),
       cv('Mobile'),
       cv('State'),
-      cv('GST Type'),
       cv('Closing Balance'),
     ]);
 
     // 🔹 Data Rows
     for (final l in ledgerList) {
-      final customer = _findCustomer(l);
       final bal = l.closingBalance ?? 0;
       final balText = "${bal.abs()} ${bal < 0 ? "Cr" : "Dr"}";
 
@@ -367,14 +306,13 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
         cv(l.ledgerGroup ?? '-'),
         cv(l.contactNo?.toString() ?? '-'),
         cv(l.state ?? '-'),
-        cv(customer.gstType.isEmpty ? '-' : customer.gstType),
-        cv(balText), // formatted with Cr/Dr
+        cv(balText), // keep formatted text for Cr/Dr
       ]);
     }
 
     final dir = await getApplicationDocumentsDirectory();
     final file = File(
-      "${dir.path}/Outstanding_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
+      "${dir.path}/LedgerBalance_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
     );
 
     final bytes = excel.encode();
@@ -382,7 +320,9 @@ class _OutstandingReportScreenState extends State<OutstandingReportScreen> {
     await OpenFilex.open(file.path);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Outstanding Excel exported successfully")),
+      const SnackBar(
+        content: Text("Ledger Balance Excel exported successfully"),
+      ),
     );
   }
 }
