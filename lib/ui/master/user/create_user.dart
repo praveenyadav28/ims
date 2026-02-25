@@ -479,7 +479,7 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
           .toList(),
       "singlr_tight": singleRightsSelected,
     };
-
+    print(payload);
     final res = await ApiService.postData(
       "user",
       payload,

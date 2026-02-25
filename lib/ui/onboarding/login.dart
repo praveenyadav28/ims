@@ -118,22 +118,22 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
 
               SizedBox(height: Sizes.height * 0.04),
-              if (selectedUserType == 0)
-                InkWell(
-                  onTap: () {
-                    pushTo(ForgotPassword());
-                  },
-                  child: Text(
-                    "Forgot Password?",
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppColor.textColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                )
-              else
-                SizedBox(height: 16.5),
+              // if (selectedUserType == 0)
+              //   InkWell(
+              //     onTap: () {
+              //       pushTo(ForgotPassword());
+              //     },
+              //     child: Text(
+              //       "Forgot Password?",
+              //       style: GoogleFonts.inter(
+              //         fontSize: 14,
+              //         color: AppColor.textColor,
+              //         fontWeight: FontWeight.w500,
+              //       ),
+              //     ),
+              //   )
+              // else
+              //   SizedBox(height: 16.5),
             ],
           ),
         ),

@@ -114,33 +114,7 @@ class _JournalEntryState extends State<JournalEntry> {
         ),
 
         actions: [
-          SizedBox(
-            width: 170,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Checkbox(
-                  fillColor: WidgetStatePropertyAll(AppColor.primary),
-                  shape: ContinuousRectangleBorder(
-                    borderRadius: BorderRadiusGeometry.circular(5),
-                  ),
-                  value: printAfterSave,
-                  onChanged: (v) {
-                    onTogglePrint(v ?? true);
-                    setState(() {});
-                  },
-                ),
-                Text(
-                  "Print After Save",
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: AppColor.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
+        
 
           Row(
             children: [
@@ -160,8 +134,26 @@ class _JournalEntryState extends State<JournalEntry> {
                 text: widget.contraModel != null ? "Update" : "Save",
                 height: 40,
                 width: 113,
-              ),
-              const SizedBox(width: 18),
+              ),  const SizedBox(width: 10),
+                Checkbox(
+                  fillColor: WidgetStatePropertyAll(AppColor.primary),
+                  shape: ContinuousRectangleBorder(
+                    borderRadius: BorderRadiusGeometry.circular(5),
+                  ),
+                  value: printAfterSave,
+                  onChanged: (v) {
+                    onTogglePrint(v ?? true);
+                    setState(() {});
+                  },
+                ),
+                Text(
+                  "Print   ",
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: AppColor.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
             ],
           ),
         ],

@@ -255,35 +255,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
             ),
           ),
           actions: [
-            SizedBox(
-              width: 170,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Checkbox(
-                    fillColor: WidgetStatePropertyAll(AppColor.primary),
-                    shape: ContinuousRectangleBorder(
-                      borderRadius: BorderRadiusGeometry.circular(5),
-                    ),
-                    value: printAfterSave,
-                    onChanged: (v) {
-                      onTogglePrint(v ?? true);
-                      setState(() {});
-                    },
-                  ),
-                  Text(
-                    "Print After Save",
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      color: AppColor.black,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Row(
+           Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 defaultButton(
@@ -315,8 +287,26 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                       ),
                     );
                   },
+                ),  const SizedBox(width: 10),
+                Checkbox(
+                  fillColor: WidgetStatePropertyAll(AppColor.primary),
+                  shape: ContinuousRectangleBorder(
+                    borderRadius: BorderRadiusGeometry.circular(5),
+                  ),
+                  value: printAfterSave,
+                  onChanged: (v) {
+                    onTogglePrint(v ?? true);
+                    setState(() {});
+                  },
                 ),
-                const SizedBox(width: 18),
+                Text(
+                  "Print   ",
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: AppColor.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ],

@@ -81,13 +81,14 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
   List<MiscChargeModelList> miscList = [];
-  
+
   bool printAfterSave = false;
   void onTogglePrint(bool value) {
     setState(() {
       printAfterSave = value;
     });
   }
+
   @override
   void initState() {
     super.initState();
@@ -300,34 +301,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
               color: AppColor.blackText,
             ),
           ),
-          actions: [    SizedBox(
-              width: 170,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Checkbox(
-                    fillColor: WidgetStatePropertyAll(AppColor.primary),
-                    shape: ContinuousRectangleBorder(
-                      borderRadius: BorderRadiusGeometry.circular(5),
-                    ),
-                    value: printAfterSave,
-                    onChanged: (v) {
-                      onTogglePrint(v ?? true);
-                      setState(() {});
-                    },
-                  ),
-                  Text(
-                    "Print After Save",
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      color: AppColor.black,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
+          actions: [
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -356,12 +330,31 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                         signatureImage: signatureBytes,
                         updateId: widget.estimateData?.id,
                         stateName: stateController.text,
-                              printAfterSave:printAfterSave
+                        printAfterSave: printAfterSave,
                       ),
                     );
                   },
                 ),
-                const SizedBox(width: 18),
+                const SizedBox(width: 10),
+                Checkbox(
+                  fillColor: WidgetStatePropertyAll(AppColor.primary),
+                  shape: ContinuousRectangleBorder(
+                    borderRadius: BorderRadiusGeometry.circular(5),
+                  ),
+                  value: printAfterSave,
+                  onChanged: (v) {
+                    onTogglePrint(v ?? true);
+                    setState(() {});
+                  },
+                ),
+                Text(
+                  "Print   ",
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: AppColor.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ],
@@ -550,7 +543,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                               ],
                             ),
                             SizedBox(height: 10),
-                           GestureDetector(
+                            GestureDetector(
                               onTap: () => pickImage('signature'),
                               child: SizedBox(
                                 width: double.infinity,
@@ -613,7 +606,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                                 ),
                               ),
                             ),
-                           ],
+                          ],
                         ),
                       ),
                     ],
