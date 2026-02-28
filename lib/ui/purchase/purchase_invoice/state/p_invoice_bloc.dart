@@ -450,7 +450,7 @@ class PurchaseInvoiceBloc
                   discountPercent: 0,
                   hsnOverride: item.hsn,
                   taxPercent: item.gstRate,
-                  gstInclusiveToggle: item.gstIncluded,
+                  gstInclusiveToggle: item.gstIncludedPurchase,
                 )
                 .recalc();
           }
@@ -1083,6 +1083,7 @@ PurchaseInvoiceState _prefillPurchaseInvoiceFromTrans(
       basePurchasePrice: 0,
       gstRate: 0,
       gstIncluded: false,
+      gstIncludedPurchase: false,
       baseUnit: '',
       secondaryUnit: '',
       conversion: 1,
@@ -1235,6 +1236,7 @@ PurchaseInvoiceState _prefillPurchaseInvoice(
       basePurchasePrice: 0,
       gstRate: 0,
       gstIncluded: false,
+      gstIncludedPurchase: false,
       baseUnit: '',
       secondaryUnit: '',
       conversion: 1,

@@ -466,7 +466,7 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
       "password": passwordController.text.trim(),
       "role": "user",
       "is_active": "true",
-      "rights": rightsList
+      "single_right": rightsList
           .map(
             (e) => {
               "module": e.title,
@@ -477,7 +477,7 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
             },
           )
           .toList(),
-      "singlr_tight": singleRightsSelected,
+      "right_list": "${singleRightsSelected}",
     };
     print(payload);
     final res = await ApiService.postData(

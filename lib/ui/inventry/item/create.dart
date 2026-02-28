@@ -30,7 +30,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
   // Item type: 0 = Product, 1 = Service
   int selectedItemType = 0;
   bool productEnabled = false; // show variant section for product
-  bool gstIncluded = false; // global inclusive/exclusive toggle
+  bool gstIncluded = true; // global inclusive/exclusive toggle
 
   // Basic fields
   final TextEditingController itemNameController = TextEditingController();
@@ -64,7 +64,6 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
 
   // With Tax / Without Tax
   List<String> titleList = ["With Tax", "Without Tax"];
-  String selectedTitle = "With Tax";
 
   // Units & Stocks
   String? selectedMeasuringUnit;
@@ -205,8 +204,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         if (!hsnNames.contains(selectedHsn)) selectedHsn = null;
       }
       setState(() {});
-    } catch (e) {
-     }
+    } catch (e) {}
   }
 
   // ----------------- API loaders -----------------
@@ -236,8 +234,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
           ? measuringUnitList.first
           : null;
       setState(() {});
-    } catch (e) {
-     }
+    } catch (e) {}
   }
 
   Future<void> getVariant() async {
@@ -493,7 +490,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
     if (selectedItemType == 1) {
       final entered = double.tryParse(amountController.text.trim()) ?? 0.0;
 
-      if (selectedTitle == "Without Tax") {
+      if (saleTaxMode == "Without Tax") {
         grossController.text = entered.toStringAsFixed(2);
         purchasePriceController.text = entered.toStringAsFixed(2);
         return;
@@ -796,13 +793,13 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
           Expanded(
             flex: 1,
             child: CommonDropdownField<String>(
-              value: selectedTitle,
+              value: saleTaxMode,
               items: titleList
                   .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                   .toList(),
               onChanged: (val) {
                 setState(() {
-                  selectedTitle = val ?? titleList.first;
+                  saleTaxMode = val ?? titleList.first;
                   _computeDerivedPrices();
                 });
               },
@@ -1007,18 +1004,14 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
               if (selectedItemType != 0) Expanded(child: measuringUnitField()),
             ],
           ),
-
-        if (selectedTitle == "With Tax") SizedBox(height: Sizes.height * .03),
-
-        // Row: HSN & GST (shown only when With Tax)
-        if (selectedTitle == "With Tax")
-          Row(
-            children: [
-              Expanded(child: hsnField()),
-              const SizedBox(width: 24),
-              Expanded(child: gstFieldWithToggle()),
-            ],
-          ),
+        SizedBox(height: Sizes.height * .03),
+        Row(
+          children: [
+            Expanded(child: hsnField()),
+            const SizedBox(width: 24),
+            Expanded(child: gstFieldWithToggle()),
+          ],
+        ),
 
         if (selectedItemType == 0) SizedBox(height: Sizes.height * .03),
 
@@ -1115,36 +1108,6 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
       titleText: "GST Tax Rate (%)",
       controller: gstRateController,
       readOnly: true,
-      suffixIcon: GestureDetector(
-        onTap: () {
-          setState(() {
-            gstIncluded = !gstIncluded;
-            _computeDerivedPrices();
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: gstIncluded ? Colors.green.shade50 : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                gstIncluded ? Icons.check_circle : Icons.remove_circle_outline,
-                size: 16,
-                color: gstIncluded ? Colors.green : Colors.grey,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                gstIncluded ? 'Incl GST' : 'Excl GST',
-                style: GoogleFonts.inter(fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -2010,7 +1973,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         "secondryunit": secondaryUnit ?? "",
         "convertion_amount": conversionValue.isNotEmpty ? conversionValue : "1",
         "hsn": selectedHsn ?? "",
-        "gst_include": selectedTitle == "With Tax" ? true : false,
+        "gst_include": saleTaxMode == "With Tax" ? true : false,
         "gst_rate": gstRateController.text.trim().isNotEmpty
             ? gstRateController.text
             : "",
@@ -2023,7 +1986,6 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
             : "",
       };
 
-  
       final response = await ApiService.postData(
         'service',
         payload,
@@ -2060,14 +2022,14 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
       'item_no': itemNoController.text,
       'group': selectedCategory,
       'sales_price': salePriceController.text,
-      'title': selectedTitle,
+      'title': saleTaxMode,
       "purchase_price": priceData["purchase_price"],
       "purchase_price_se": priceData["purchase_price_se"],
       'hsn_code': selectedHsn,
       "baseunit": baseUnit ?? "",
       "secondryunit": secondaryUnit ?? "",
       "convertion_amount": conversionValue.isNotEmpty ? conversionValue : "1",
-      "gst_include": selectedTitle == "With Tax" ? true : false,
+      "gst_include": saleTaxMode == "With Tax" ? true : false,
       "gstinclude_purchase": purchaseTaxMode == "With Tax" ? true : false,
       "gst_tax_rate": gstRateController.text.trim().isNotEmpty
           ? gstRateController.text
@@ -2093,7 +2055,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
           : reorderController.text,
       'variant_list': [],
     };
-
+    print(payload);
     final response = widget.editItem == null
         ? await ApiService.postData(
             'item',
@@ -2227,7 +2189,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         "baseunit": baseUnit ?? "",
         "secondryunit": secondaryUnit ?? "",
         "convertion_amount": conversionValue.isNotEmpty ? conversionValue : "1",
-        "title": selectedTitle,
+        "title": saleTaxMode,
         "m_o_qty": 0,
         "m_s_qty": 0,
         "margin": marginPercent.toStringAsFixed(2),
@@ -2236,7 +2198,6 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         "variant_list": [],
       };
 
-  
       final res = await ApiService.postData(
         'item',
         payload,
@@ -2248,7 +2209,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         setState(() {
           generatedItems.removeWhere((e) => e["item_no"] == item["item_no"]);
         });
-       } else {
+      } else {
         showCustomSnackbarError(
           context,
           "❌ Error saving ${item["item_no"]}: ${res?["message"] ?? "failed"}",

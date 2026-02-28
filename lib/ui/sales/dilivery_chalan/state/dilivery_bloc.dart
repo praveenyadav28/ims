@@ -961,6 +961,7 @@ DiliveryChallanState _prefillDiliveryChallan(
       baseSalePrice: 0,
       gstRate: 0,
       gstIncluded: false,
+      gstIncludedPurchase: false,
       baseUnit: '',
       secondaryUnit: '',
       conversion: 1,

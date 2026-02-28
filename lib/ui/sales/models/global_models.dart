@@ -88,6 +88,7 @@ class ItemServiceModel {
   final double? basePurchasePrice;
   final double gstRate;
   final bool gstIncluded;
+  final bool gstIncludedPurchase;
   final String baseUnit;
   final String secondaryUnit;
   final String? stockQty;
@@ -108,6 +109,7 @@ class ItemServiceModel {
     this.basePurchasePrice,
     required this.gstRate,
     required this.gstIncluded,
+    required this.gstIncludedPurchase,
     this.stockQty,
     required this.baseUnit,
     required this.secondaryUnit,
@@ -145,6 +147,7 @@ class ItemServiceModel {
           ? double.tryParse(m['gst_tax_rate'].toString()) ?? 0
           : 0,
       gstIncluded: m['gst_include'] ?? false,
+      gstIncludedPurchase: m['gstinclude_purchase'] ?? false,
       baseUnit: m['baseunit']?.toString() ?? 'Base',
       secondaryUnit: m['secondryunit']?.toString() ?? 'Unit',
       conversion: (m['convertion_amount'] != null)
@@ -172,6 +175,7 @@ class ItemServiceModel {
           ? double.tryParse(m['gst_rate'].toString()) ?? 0
           : 0,
       gstIncluded: m['gst_include'] ?? false,
+      gstIncludedPurchase: m['gstinclude_purchase'] ?? false,
       baseUnit: m['baseunit']?.toString() ?? '',
       secondaryUnit: '',
       conversion: 1,

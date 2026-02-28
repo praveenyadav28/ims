@@ -415,7 +415,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
                   discountPercent: 0,
                   hsnOverride: item.hsn,
                   taxPercent: item.gstRate,
-                  gstInclusiveToggle: item.gstIncluded,
+                  gstInclusiveToggle: item.gstIncludedPurchase,
                 )
                 .recalc();
           }
@@ -685,7 +685,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           pricePerSelectedUnit:
               item.basePurchasePrice ?? item.baseSalePrice ?? 0,
           taxPercent: item.gstRate,
-          gstInclusiveToggle: item.gstIncluded,
+          gstInclusiveToggle: item.gstIncludedPurchase,
         ).recalc();
 
         newRows.add(row);
@@ -975,6 +975,7 @@ PurchaseOrderState _prefillPurchaseOrder(
       basePurchasePrice: 0,
       gstRate: 0,
       gstIncluded: false,
+      gstIncludedPurchase: false,
       baseUnit: '',
       secondaryUnit: '',
       conversion: 1,

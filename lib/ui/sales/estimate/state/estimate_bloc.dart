@@ -911,6 +911,7 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
       baseSalePrice: 0,
       gstRate: 0,
       gstIncluded: false,
+      gstIncludedPurchase: false,
       baseUnit: '',
       secondaryUnit: '',
       conversion: 1,

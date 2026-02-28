@@ -933,6 +933,7 @@ PerformaState _prefillPerforma(PerformaData data, PerformaState s) {
       baseSalePrice: 0,
       gstRate: 0,
       gstIncluded: false,
+      gstIncludedPurchase: false,
       baseUnit: '',
       secondaryUnit: '',
       conversion: 1,

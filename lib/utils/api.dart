@@ -17,7 +17,7 @@ class ApiException implements Exception {
 }
 
 class ApiService {
-  static String baseurl = "https://ims.dormsync.com/api";
+  static String baseurl = "http://192.168.1.21:4000/api";
   static final Dio dio = Dio(
     BaseOptions(
       baseUrl: baseurl,
@@ -142,7 +142,6 @@ class ApiService {
       throw _formatError(e);
     }
   }
-
 
   static Future<dynamic> uploadMultipart({
     required String endpoint,
