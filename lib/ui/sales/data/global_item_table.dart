@@ -465,7 +465,9 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
     return SearchField<ItemServiceModel>(
       key: ValueKey(r.localId + "_item"),
       itemHeight: 68,
-      suggestions: widget.catalogue.map((i) {
+
+      // 👇 LIMIT SUGGESTIONS
+      suggestions: widget.catalogue.take(30).map((i) {
         return SearchFieldListItem<ItemServiceModel>(
           "${i.name} - ${i.itemNo}",
           item: i,
@@ -491,7 +493,7 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
                 fontWeight: FontWeight.w700,
                 color:
                     (int.parse(
-                          i.stockQty.toString().isEmpty ? "0" : i.stockQty!,
+                          i.stockQty?.isEmpty ?? true ? "0" : i.stockQty!,
                         )) <=
                         0
                     ? AppColor.red
@@ -501,15 +503,19 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
           ),
         );
       }).toList(),
+
       searchInputDecoration: input.copyWith(labelText: "Item / Service"),
+
       suggestionStyle: GoogleFonts.inter(
         color: const Color(0xFF565D6D),
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
+
       selectedValue: r.product != null
           ? SearchFieldListItem("${r.product!.name} - ${r.product!.itemNo}")
           : null,
+
       onSuggestionTap: (s) => widget.onSelectCatalog(s.item!),
     );
   }
