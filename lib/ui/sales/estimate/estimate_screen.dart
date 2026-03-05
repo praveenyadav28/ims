@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:ims/model/employee_model.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/data/global_additionalcharge.dart';
 import 'package:ims/ui/sales/data/global_billto.dart';
@@ -68,6 +69,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
   final validForController = TextEditingController();
+  final salesPersonController = TextEditingController();
   DateTime pickedEstimateDate = DateTime.now();
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
@@ -107,6 +109,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
+      salesPersonController.text = e.other1;
       stateController.text = e.placeOfSupply;
 
       // set estimate dates & validity
@@ -149,6 +152,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
     // fetch misc etc.
     fetchMiscCharges();
+    fetchEmployee();
   }
 
   @override
@@ -234,6 +238,21 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
           .toList();
       setState(() {});
     }
+  }
+
+  List<EmployeeModel> employeeList = [];
+  Future<void> fetchEmployee() async {
+    var response = await ApiService.fetchData(
+      "get/employee",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    List responseData = response['data'] ?? [];
+    setState(() {
+      employeeList = responseData
+          .map((e) => EmployeeModel.fromJson(e))
+          .toList();
+    });
   }
 
   // ---------------- UI ----------------
@@ -424,6 +443,8 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       validForController: validForController,
                       pickedEstimateDate: pickedEstimateDate,
                       pickedValidityDate: pickedValidityDate,
+                      salesPersonController: salesPersonController,
+                      employeeList: employeeList,
                       onTapEstimateDate: () =>
                           _pickEstimateDate(context, context.read<EstBloc>()),
                       onTapValidityDate: () =>
@@ -623,7 +644,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
   void _showCreateCustomerDialog(EstBloc bloc) {
     final nameCtrl = TextEditingController();
-    final mobileCtrl = TextEditingController();
+    final stateCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -636,8 +657,8 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
               decoration: const InputDecoration(labelText: 'Name'),
             ),
             TextField(
-              controller: mobileCtrl,
-              decoration: const InputDecoration(labelText: 'Mobile'),
+              controller: stateCtrl,
+              decoration: const InputDecoration(labelText: 'State'),
             ),
           ],
         ),
@@ -652,7 +673,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
               final res = await ApiService.postData('customer', {
                 "customer_type": "Individual",
                 'company_name': nameCtrl.text.trim(),
-                'mobile': mobileCtrl.text.trim(),
+                'state': stateCtrl.text.trim(),
                 'licence_no': Preference.getint(PrefKeys.licenseNo).toString(),
                 'branch_id': Preference.getString(PrefKeys.locationId),
               }, licenceNo: Preference.getint(PrefKeys.licenseNo));

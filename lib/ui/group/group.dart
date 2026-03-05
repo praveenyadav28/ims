@@ -23,13 +23,38 @@ class AddGroupScreen extends StatefulWidget {
 class _AddGroupScreenState extends State<AddGroupScreen> {
   TextEditingController groupController = TextEditingController();
   TextEditingController _editController = TextEditingController();
-
+  TextEditingController searchController = TextEditingController();
+  List<MiscItem> filteredGroupList = [];
   List<MiscItem> groupList = [];
 
   @override
   void initState() {
     super.initState();
     fetchDataByMiscType();
+
+    searchController.addListener(_filterGroups);
+  }
+
+  @override
+  void dispose() {
+    groupController.dispose();
+    _editController.dispose();
+    searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterGroups() {
+    final query = searchController.text.toLowerCase();
+
+    setState(() {
+      if (query.isEmpty) {
+        filteredGroupList = List.from(groupList);
+      } else {
+        filteredGroupList = groupList.where((item) {
+          return (item.name ?? "").toLowerCase().contains(query);
+        }).toList();
+      }
+    });
   }
 
   @override
@@ -64,36 +89,53 @@ class _AddGroupScreenState extends State<AddGroupScreen> {
         child: Column(
           children: [
             // ✅ Add Group Field
-            CommonTextField(
-              controller: groupController,
-              hintText: "${widget.name} Name",
-              perfixIcon: Icon(Icons.code, color: AppColor.grey),
-            ),
-            SizedBox(height: Sizes.height * 0.05),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      CommonTextField(
+                        controller: groupController,
+                        hintText: "${widget.name} Name",
+                        perfixIcon: Icon(Icons.code, color: AppColor.grey),
+                      ),
+                      SizedBox(height: Sizes.height * 0.05),
 
-            // ✅ Save Button
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColor.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 14,
+                      // ✅ Save Button
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColor.primary,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 30,
+                            vertical: 14,
+                          ),
+                        ),
+                        onPressed: () => postData(),
+                        child: const Text("Save"),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              onPressed: () => postData(),
-              child: const Text("Save"),
+                SizedBox(width: Sizes.width * .04),
+                Expanded(
+                  child: CommonTextField(
+                    controller: searchController,
+                    hintText: "Search ${widget.name}",
+                    perfixIcon: Icon(Icons.search, color: AppColor.grey),
+                  ),
+                ),
+              ],
             ),
-
             SizedBox(height: Sizes.height * 0.02),
-
             // ✅ Group List
             SizedBox(
               width: double.infinity,
               child: Wrap(
                 spacing: Sizes.width * 0.02,
                 runSpacing: Sizes.height * 0.02,
-                children: List.generate(groupList.length, (index) {
-                  final item = groupList[index];
+                children: List.generate(filteredGroupList.length, (index) {
+                  final item = filteredGroupList[index];
                   return SizedBox(
                     width: Sizes.width * 0.293,
                     child: Card(
@@ -107,7 +149,7 @@ class _AddGroupScreenState extends State<AddGroupScreen> {
                           ),
                         ),
                         title: Text(
-                          item.name??"",
+                          item.name ?? "",
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w400,
@@ -121,7 +163,7 @@ class _AddGroupScreenState extends State<AddGroupScreen> {
                             IconButton(
                               icon: Icon(Icons.edit, color: AppColor.primary),
                               onPressed: () {
-                                _editController.text = item.name??"";
+                                _editController.text = item.name ?? "";
                                 showDialog(
                                   context: context,
                                   builder: (BuildContext context) {
@@ -143,7 +185,7 @@ class _AddGroupScreenState extends State<AddGroupScreen> {
                                         TextButton(
                                           onPressed: () {
                                             editMismaster(
-                                              item.id??"",
+                                              item.id ?? "",
                                               _editController.text,
                                             );
                                           },
@@ -176,7 +218,8 @@ class _AddGroupScreenState extends State<AddGroupScreen> {
                                       child: const Text('Cancel'),
                                     ),
                                     TextButton(
-                                      onPressed: () => deleteMismaster(item.id??""),
+                                      onPressed: () =>
+                                          deleteMismaster(item.id ?? ""),
                                       child: Text(
                                         'Delete',
                                         style: TextStyle(color: AppColor.red),
@@ -216,7 +259,10 @@ class _AddGroupScreenState extends State<AddGroupScreen> {
             .where((item) => item.miscId == widget.miscId) // check misc_id
             .toList();
 
-        setState(() => groupList = filteredList);
+        setState(() {
+          groupList = filteredList;
+          filteredGroupList = List.from(filteredList);
+        });
       }
     } catch (e) {
       showCustomSnackbarError(context, "Error fetching data: $e");

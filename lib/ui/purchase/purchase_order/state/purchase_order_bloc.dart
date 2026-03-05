@@ -296,39 +296,42 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     on<PurchaseOrderCalculate>(_onCalculate);
     on<PurchaseOrderAddLowStockItems>(_onAddLowStockItems);
   }
-
   Future<void> _onLoad(
     PurchaseOrderLoadInit e,
     Emitter<PurchaseOrderState> emit,
   ) async {
     try {
+      // ✅ STEP 1: Ledger pehle load karo (UI fast)
       final customers = await repo.fetchLedger(false);
-      final purchaseOrderNo = await repo.fetchPurchaseOrderNo();
-      final catalogue = await repo.fetchOnyItem();
-      final hsnList = await repo.fetchHsnList();
-
-      // fetch misc master list
-      List<MiscChargeModelList> miscMaster = [];
-      try {
-        miscMaster = await repo.fetchMiscMaster();
-      } catch (_) {
-        miscMaster = [];
-      }
 
       emit(
         state.copyWith(
           customers: customers,
-          purchaseOrderNo: purchaseOrderNo,
-          catalogue: catalogue,
-          hsnMaster: hsnList,
-          miscMasterList: miscMaster,
-          // ensure UI has at least one empty row to start
           rows: [GlobalItemRow(localId: UniqueKey().toString())],
         ),
       );
 
+      // ✅ STEP 2: Baaki data parallel me load karo
+      final results = await Future.wait([
+        repo.fetchPurchaseOrderNo(),
+        repo.fetchOnyItem(),
+        repo.fetchHsnList(),
+        repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
+      ]);
+
+      emit(
+        state.copyWith(
+          purchaseOrderNo: results[0] as String,
+          catalogue: results[1] as List<ItemServiceModel>,
+          hsnMaster: results[2] as List<HsnModel>,
+          miscMasterList: results[3] as List<MiscChargeModelList>,
+        ),
+      );
+
       add(PurchaseOrderCalculate());
-    } catch (err) {}
+    } catch (err) {
+      debugPrint(err.toString());
+    }
   }
 
   void _onSelectCustomer(
@@ -783,8 +786,8 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-        "place_of_supply": e.stateName,
-        "prefix": state.prefix,
+       
+        "place_of_supply": e.stateName.isNotEmpty ? e.stateName : Preference.getString(PrefKeys.state), "prefix": state.prefix,
         "no": int.tryParse(state.purchaseOrderNo),
         "purchaseoder_date": DateFormat(
           'yyyy-MM-dd',

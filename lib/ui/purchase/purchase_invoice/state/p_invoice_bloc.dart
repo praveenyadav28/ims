@@ -331,39 +331,42 @@ class PurchaseInvoiceBloc
 
     on<PurchaseInvoiceSavePayment>(_onSavePaymentVoucher);
   }
-
   Future<void> _onLoad(
     PurchaseInvoiceLoadInit e,
     Emitter<PurchaseInvoiceState> emit,
   ) async {
     try {
+      // ✅ STEP 1: Ledger pehle load karo (fast UI)
       final customers = await repo.fetchLedger(false);
-      final purchaseInvoiceNo = await repo.fetchPurchaseInvoiceNo();
-      final catalogue = await repo.fetchOnyItem();
-      final hsnList = await repo.fetchHsnList();
-
-      // fetch misc master list
-      List<MiscChargeModelList> miscMaster = [];
-      try {
-        miscMaster = await repo.fetchMiscMaster();
-      } catch (_) {
-        miscMaster = [];
-      }
 
       emit(
         state.copyWith(
           customers: customers,
-          purchaseInvoiceNo: purchaseInvoiceNo,
-          catalogue: catalogue,
-          hsnMaster: hsnList,
-          miscMasterList: miscMaster,
-          // ensure UI has at least one empty row to start
           rows: [GlobalItemRow(localId: UniqueKey().toString())],
         ),
       );
 
+      // ✅ STEP 2: Baaki sab parallel me load karo
+      final results = await Future.wait([
+        repo.fetchPurchaseInvoiceNo(),
+        repo.fetchOnyItem(),
+        repo.fetchHsnList(),
+        repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
+      ]);
+
+      emit(
+        state.copyWith(
+          purchaseInvoiceNo: results[0] as String,
+          catalogue: results[1] as List<ItemServiceModel>,
+          hsnMaster: results[2] as List<HsnModel>,
+          miscMasterList: results[3] as List<MiscChargeModelList>,
+        ),
+      );
+
       add(PurchaseInvoiceCalculate());
-    } catch (err) {}
+    } catch (err) {
+      debugPrint(err.toString());
+    }
   }
 
   void _onSelectCustomer(
@@ -892,8 +895,8 @@ class PurchaseInvoiceBloc
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-        "place_of_supply": e.stateName,
-        "prefix": state.prefix,
+       
+        "place_of_supply": e.stateName.isNotEmpty ? e.stateName : Preference.getString(PrefKeys.state), "prefix": state.prefix,
         "no": int.tryParse(state.purchaseInvoiceNo),
         "purchaseinvoice_date": DateFormat(
           'yyyy-MM-dd',

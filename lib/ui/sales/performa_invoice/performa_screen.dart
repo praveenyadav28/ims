@@ -561,7 +561,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
 
   void _showCreateCustomerDialog(PerformaBloc bloc) {
     final nameCtrl = TextEditingController();
-    final mobileCtrl = TextEditingController();
+    final stateCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -574,8 +574,8 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
               decoration: const InputDecoration(labelText: 'Name'),
             ),
             TextField(
-              controller: mobileCtrl,
-              decoration: const InputDecoration(labelText: 'Mobile'),
+              controller: stateCtrl,
+              decoration: const InputDecoration(labelText: 'State'),
             ),
           ],
         ),
@@ -590,7 +590,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
               final res = await ApiService.postData('customer', {
                 "customer_type": "Individual",
                 'company_name': nameCtrl.text.trim(),
-                'mobile': mobileCtrl.text.trim(),
+                'state': stateCtrl.text.trim(),
                 'licence_no': Preference.getint(PrefKeys.licenseNo).toString(),
                 'branch_id': Preference.getString(PrefKeys.locationId),
               }, licenceNo: Preference.getint(PrefKeys.licenseNo));

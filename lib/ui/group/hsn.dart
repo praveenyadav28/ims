@@ -20,13 +20,43 @@ class _AddHsnScreenState extends State<AddHsnScreen> {
   TextEditingController cgstController = TextEditingController();
   TextEditingController sgstController = TextEditingController();
   TextEditingController _editController = TextEditingController();
-
+  TextEditingController searchController = TextEditingController();
+  List<Map<String, dynamic>> filteredHsnList = [];
   List<Map<String, dynamic>> hsnList = [];
 
   @override
   void initState() {
     super.initState();
     fetchHsnList();
+
+    searchController.addListener(_filterHsn);
+  }
+
+  @override
+  void dispose() {
+    hsnCodeController.dispose();
+    igstController.dispose();
+    cgstController.dispose();
+    sgstController.dispose();
+    searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterHsn() {
+    final query = searchController.text.toLowerCase();
+
+    setState(() {
+      if (query.isEmpty) {
+        filteredHsnList = List.from(hsnList);
+      } else {
+        filteredHsnList = hsnList.where((item) {
+          final name = item["name"]?.toString().toLowerCase() ?? "";
+          final igst = item["igst"]?.toString().toLowerCase() ?? "";
+
+          return name.contains(query) || igst.contains(query);
+        }).toList();
+      }
+    });
   }
 
   @override
@@ -115,18 +145,27 @@ class _AddHsnScreenState extends State<AddHsnScreen> {
               onPressed: () => postHsn(),
               child: const Text("Save"),
             ),
+            SizedBox(height: Sizes.height * 0.02),
+
+            // 🔍 SEARCH FIELD
+            CommonTextField(
+              controller: searchController,
+              hintText: "Search HSN Code or IGST %",
+              perfixIcon: Icon(Icons.search, color: AppColor.grey),
+            ),
+
             SizedBox(height: Sizes.height * 0.03),
 
             // HSN List
-            hsnList.isEmpty
+            filteredHsnList.isEmpty
                 ? const Center(child: Text("No HSN found"))
                 : SizedBox(
                     width: double.infinity,
                     child: Wrap(
                       spacing: Sizes.width * 0.02,
                       runSpacing: Sizes.height * 0.02,
-                      children: List.generate(hsnList.length, (index) {
-                        final item = hsnList[index];
+                      children: List.generate(filteredHsnList.length, (index) {
+                        final item = filteredHsnList[index];
                         return SizedBox(
                           width: Sizes.width * 0.293,
                           child: Card(
@@ -340,6 +379,7 @@ class _AddHsnScreenState extends State<AddHsnScreen> {
         final List<dynamic> data = response["data"] ?? [];
         setState(() {
           hsnList = List<Map<String, dynamic>>.from(data);
+          filteredHsnList = List.from(hsnList);
         });
       } else {
         setState(() => hsnList = []);

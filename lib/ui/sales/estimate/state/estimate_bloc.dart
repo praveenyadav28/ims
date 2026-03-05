@@ -119,6 +119,11 @@ class EstToggleRoundOff extends EstEvent {
   EstToggleRoundOff(this.value);
 }
 
+class EstSelectSalesPerson extends EstEvent {
+  final String name;
+  EstSelectSalesPerson(this.name);
+}
+
 /// ------------------- STATE -------------------
 class EstState {
   final List<LedgerModelDrop> customers;
@@ -141,6 +146,7 @@ class EstState {
   final double cgst;
   final double totalAmount;
   final bool autoRound;
+  final String? salesPerson;
 
   // master list from get/misccharge (for lookup)
   final List<MiscChargeModelList> miscMasterList;
@@ -173,6 +179,7 @@ class EstState {
     this.miscMasterList = const [],
     this.notes = const [],
     this.terms = const [],
+    this.salesPerson,
   });
 
   EstState copyWith({
@@ -199,6 +206,7 @@ class EstState {
     List<MiscChargeModelList>? miscMasterList,
     List<String>? notes,
     List<String>? terms,
+    String? salesPerson,
   }) {
     return EstState(
       customers: customers ?? this.customers,
@@ -224,6 +232,7 @@ class EstState {
       miscMasterList: miscMasterList ?? this.miscMasterList,
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
+      salesPerson: salesPerson ?? this.salesPerson,
     );
   }
 }
@@ -293,37 +302,43 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
     on<EstToggleRoundOff>(_onToggleRoundOff);
     on<EstCalculate>(_onCalculate);
+    on<EstSelectSalesPerson>((event, emit) {
+      emit(state.copyWith(salesPerson: event.name));
+    });
   }
-
   Future<void> _onLoad(EstLoadInit e, Emitter<EstState> emit) async {
     try {
+      // ✅ STEP 1: Load ledger first (fast UI)
       final customers = await repo.fetchLedger(true);
-      final estimateNo = await repo.fetchEstimateNo();
-      final catalogue = await repo.fetchCatalogue();
-      final hsnList = await repo.fetchHsnList();
-
-      // fetch misc master list
-      List<MiscChargeModelList> miscMaster = [];
-      try {
-        miscMaster = await repo.fetchMiscMaster();
-      } catch (_) {
-        miscMaster = [];
-      }
 
       emit(
         state.copyWith(
           customers: customers,
-          estimateNo: estimateNo,
-          catalogue: catalogue,
-          hsnMaster: hsnList,
-          miscMasterList: miscMaster,
-          // ensure UI has at least one empty row to start
           rows: [GlobalItemRow(localId: UniqueKey().toString())],
         ),
       );
 
+      // ✅ STEP 2: Baaki sab parallel me
+      final results = await Future.wait([
+        repo.fetchEstimateNo(),
+        repo.fetchCatalogue(),
+        repo.fetchHsnList(),
+        repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
+      ]);
+
+      emit(
+        state.copyWith(
+          estimateNo: results[0] as String,
+          catalogue: results[1] as List<ItemServiceModel>,
+          hsnMaster: results[2] as List<HsnModel>,
+          miscMasterList: results[3] as List<MiscChargeModelList>,
+        ),
+      );
+
       add(EstCalculate());
-    } catch (err) {}
+    } catch (err) {
+      debugPrint(err.toString());
+    }
   }
 
   void _onSelectCustomer(EstSelectCustomer e, Emitter<EstState> emit) =>
@@ -720,10 +735,14 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         "branch_id": Preference.getString(PrefKeys.locationId),
         "customer_id": customerId,
         "customer_name": customerName,
+        "other1": state.salesPerson,
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-        "place_of_supply": e.stateName,
+
+        "place_of_supply": e.stateName.isNotEmpty
+            ? e.stateName
+            : Preference.getString(PrefKeys.state),
         "prefix": state.prefix,
         "no": int.tryParse(state.estimateNo),
         "estimate_date": DateFormat(

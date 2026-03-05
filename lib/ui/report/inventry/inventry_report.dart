@@ -36,7 +36,19 @@ class _InventoryAdvancedReportScreenState
 
   DateTime? fromDate;
   DateTime? toDate;
+  int currentPage = 1;
+  final int rowsPerPage = 100;
 
+  List<ItemModel> get paginatedData {
+    final start = (currentPage - 1) * rowsPerPage;
+    final end = start + rowsPerPage;
+    return filtered.sublist(
+      start,
+      end > filtered.length ? filtered.length : end,
+    );
+  }
+
+  int get totalPages => (filtered.length / rowsPerPage).ceil();
   @override
   void initState() {
     super.initState();
@@ -77,15 +89,11 @@ class _InventoryAdvancedReportScreenState
 
   String _fmt(DateTime? d) =>
       d == null ? "" : DateFormat("yyyy-MM-dd").format(d);
-
-  // ================= FILTER =================
   void applyFilters() {
     List<ItemModel> temp = List.from(allItems);
 
-    // 🔍 Search filter
     if (searchCtrl.text.isNotEmpty) {
       final q = searchCtrl.text.toLowerCase();
-
       temp = temp.where((e) {
         return e.itemName.toLowerCase().contains(q) ||
             e.varientName.toLowerCase().contains(q) ||
@@ -93,12 +101,12 @@ class _InventoryAdvancedReportScreenState
       }).toList();
     }
 
-    // 📦 Category filter
     if (selectedCategoryFilter != null && selectedCategoryFilter!.isNotEmpty) {
       temp = temp.where((e) => e.group == selectedCategoryFilter).toList();
     }
 
     filtered = temp;
+    currentPage = 1; // 🔥 important
     setState(() {});
   }
 
@@ -116,7 +124,14 @@ class _InventoryAdvancedReportScreenState
           : Column(
               children: [
                 _filterBar(),
-                Expanded(child: _table()),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Expanded(child: _table()),
+                      _paginationControls(),
+                    ],
+                  ),
+                ),
               ],
             ),
     );
@@ -224,13 +239,13 @@ class _InventoryAdvancedReportScreenState
 
   // ================= TABLE =================
   Widget _table() {
-    if (filtered.isEmpty) {
+    if (paginatedData.isEmpty) {
       return const Center(child: Text("No data found"));
     }
 
     return ListView(
       padding: const EdgeInsets.all(12),
-      children: [_header(), ...filtered.map(_row)],
+      children: [_header(), ...paginatedData.map(_row)],
     );
   }
 
@@ -382,6 +397,30 @@ class _InventoryAdvancedReportScreenState
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Excel exported successfully")),
+    );
+  }
+
+  Widget _paginationControls() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: currentPage > 1
+                ? () => setState(() => currentPage--)
+                : null,
+            icon: const Icon(Icons.arrow_back),
+          ),
+          Text("Page $currentPage of $totalPages"),
+          IconButton(
+            onPressed: currentPage < totalPages
+                ? () => setState(() => currentPage++)
+                : null,
+            icon: const Icon(Icons.arrow_forward),
+          ),
+        ],
+      ),
     );
   }
 }

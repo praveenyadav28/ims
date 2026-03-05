@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'dart:convert';
@@ -17,12 +16,12 @@ class ApiException implements Exception {
 }
 
 class ApiService {
-  static String baseurl = "http://192.168.1.21:4000/api";
+  static String baseurl = "https://ims.dormsync.com/api";
   static final Dio dio = Dio(
     BaseOptions(
       baseUrl: baseurl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      connectTimeout: const Duration(seconds: 100),
+      receiveTimeout: const Duration(seconds: 100),
     ),
   );
 
@@ -225,59 +224,60 @@ class GlowLoader extends StatefulWidget {
 
 class _GlowLoaderState extends State<GlowLoader>
     with SingleTickerProviderStateMixin {
-  late AnimationController controller;
+  // late AnimationController controller;
 
-  @override
-  void initState() {
-    super.initState();
-    controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..repeat();
-  }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   controller = AnimationController(
+  //     vsync: this,
+  //     duration: const Duration(seconds: 1),
+  //   )..repeat();
+  // }
 
   @override
   Widget build(BuildContext context) {
-    return RotationTransition(
-      turns: controller,
-      child: CustomPaint(size: const Size(50, 50), painter: GlowPainter()),
-    );
+    // return RotationTransition(
+    //   turns: controller,
+    //   child: CustomPaint(size: const Size(50, 50), painter: GlowPainter()),
+    // );
+    return Text("Loading...", style: TextStyle(color: AppColor.primary));
   }
 
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   controller.dispose();
+  //   super.dispose();
+  // }
 }
 
-class GlowPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = size.width / 2;
+// class GlowPainter extends CustomPainter {
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     final center = size.center(Offset.zero);
+//     final radius = size.width / 2;
 
-    final paint = Paint()
-      ..shader = SweepGradient(
-        colors: [
-          Colors.transparent,
-          AppColor.primary.withValues(alpha: .4),
-          AppColor.primary,
-        ],
-      ).createShader(Rect.fromCircle(center: center, radius: radius))
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 8
-      ..strokeCap = StrokeCap.round;
+//     final paint = Paint()
+//       ..shader = SweepGradient(
+//         colors: [
+//           Colors.transparent,
+//           AppColor.primary.withValues(alpha: .4),
+//           AppColor.primary,
+//         ],
+//       ).createShader(Rect.fromCircle(center: center, radius: radius))
+//       ..style = PaintingStyle.stroke
+//       ..strokeWidth = 8
+//       ..strokeCap = StrokeCap.round;
 
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      0,
-      2 * pi,
-      false,
-      paint,
-    );
-  }
+//     canvas.drawArc(
+//       Rect.fromCircle(center: center, radius: radius),
+//       0,
+//       2 * pi,
+//       false,
+//       paint,
+//     );
+//   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
+//   @override
+//   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+// }

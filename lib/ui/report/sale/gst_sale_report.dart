@@ -126,7 +126,9 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
         children: [
           _filterBar(),
           const Divider(),
-          Expanded(child: _tableView()),
+          Expanded(
+            child: SizedBox(width: double.infinity, child: _tableView()),
+          ),
         ],
       ),
     );

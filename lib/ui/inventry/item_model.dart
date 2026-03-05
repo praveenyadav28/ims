@@ -27,6 +27,8 @@ class ItemModel {
   final String margin;
   final String marginAmt;
   final String reorderLevel;
+  final String other1;
+  final String other2;
 
   ItemModel({
     required this.id,
@@ -57,6 +59,8 @@ class ItemModel {
     required this.margin,
     required this.marginAmt,
     required this.reorderLevel,
+    required this.other1,
+    required this.other2,
   });
 
   factory ItemModel.fromJson(Map<String, dynamic> json) {
@@ -89,6 +93,8 @@ class ItemModel {
       margin: json['margin']?.toString() ?? '0',
       marginAmt: json['margin_amt']?.toString() ?? '0',
       reorderLevel: json['re_o_level']?.toString() ?? '0',
+      other1: json['other1']?.toString() ?? '',
+      other2: json['other2']?.toString() ?? '',
     );
   }
 }

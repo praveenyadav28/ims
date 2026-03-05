@@ -36,7 +36,6 @@ class _CreateLedgerState extends State<CreateLedger> {
     'Fixed Asset',
     'Capital',
     'Loans (Liability)',
-    'Misc Charges',
   ];
 
   // // LedgerList? ledgerData;

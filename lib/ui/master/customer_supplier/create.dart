@@ -809,7 +809,8 @@ class _CreateCusSupState extends State<CreateCusSup>
         MapEntry("company_name", companyNameController.text.trim()),
         MapEntry("email", emailController.text.trim()),
         MapEntry("phone", workPhoneController.text.trim()),
-        MapEntry("mobile", mobileController.text.trim()),
+        if (mobileController.text.isNotEmpty)
+          MapEntry("mobile", mobileController.text.trim()),
         MapEntry("pan", panController.text.trim()),
         MapEntry("gst_type", selectedGstType ?? ""),
         MapEntry("gst_no", gstNumberController.text.trim()),

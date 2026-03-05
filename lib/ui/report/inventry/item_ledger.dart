@@ -30,7 +30,19 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
   final TextEditingController itemCtrl = TextEditingController();
   final TextEditingController fromCtrl = TextEditingController();
   final TextEditingController toCtrl = TextEditingController();
+  int currentPage = 1;
+  final int rowsPerPage = 100;
 
+  List<ItemLedgerRow> get paginatedLedger {
+    final start = (currentPage - 1) * rowsPerPage;
+    final end = start + rowsPerPage;
+
+    if (start >= ledger.length) return [];
+
+    return ledger.sublist(start, end > ledger.length ? ledger.length : end);
+  }
+
+  int get totalPages => (ledger.length / rowsPerPage).ceil();
   List<ItemServiceModel> items = [];
   ItemServiceModel? selectedItem;
 
@@ -193,8 +205,9 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
         );
       }
     }
-
-    setState(() {});
+    setState(() {
+      currentPage = 1; // 🔥 important
+    });
   }
 
   // ================= UI =================
@@ -310,6 +323,7 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
           children: [
             _tableHeader(),
             Expanded(child: _tableBody()),
+            _paginationControls(), // 👈 add this
             _summary(balance),
           ],
         ),
@@ -341,15 +355,15 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
   }
 
   Widget _tableBody() {
-    if (ledger.isEmpty) {
+    if (paginatedLedger.isEmpty) {
       return const Center(child: Text("No Data Found"));
     }
 
     return ListView.separated(
-      itemCount: ledger.length,
+      itemCount: paginatedLedger.length,
       separatorBuilder: (_, __) => Divider(height: 1),
       itemBuilder: (_, i) {
-        final e = ledger[i];
+        final e = paginatedLedger[i];
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
@@ -366,6 +380,35 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _paginationControls() {
+    if (totalPages <= 1) return SizedBox();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: currentPage > 1
+                ? () => setState(() => currentPage--)
+                : null,
+            icon: const Icon(Icons.arrow_back),
+          ),
+          Text(
+            "Page $currentPage of $totalPages",
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
+          IconButton(
+            onPressed: currentPage < totalPages
+                ? () => setState(() => currentPage++)
+                : null,
+            icon: const Icon(Icons.arrow_forward),
+          ),
+        ],
+      ),
     );
   }
 

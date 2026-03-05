@@ -1,5 +1,5 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -13,9 +13,9 @@ import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
-import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
-
+import 'package:file_picker/file_picker.dart';
+import 'package:ims/ui/inventry/excel_download_web.dart'
+    if (dart.library.io) 'package:ims/ui/inventry/excel_download_mobile.dart';
 import 'item_model.dart';
 
 class InventoryScreen extends StatefulWidget {
@@ -28,7 +28,6 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   bool loading = false;
   List<ItemModel> list = [];
-
   // ---------------- FILTER STATES ----------------
   String searchText = '';
   String? selectedCategoryFilter;
@@ -41,8 +40,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    await fetchItems(); // pehle items
-    await fetchDeadStockItems(); // phir dead stock
+    await fetchItems();
+    await fetchDeadStockItems();
     await fetchStockValueNDP();
   }
 
@@ -226,10 +225,44 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }
   }
 
+  int currentPage = 1;
+  int itemsPerPage = 100;
+
+  int get totalPages => (filteredFullList.length / itemsPerPage).ceil();
+
+  List<ItemModel> get filteredFullList {
+    return list.where((item) {
+      final name = item.itemName.toLowerCase();
+      final code = item.itemNo.toLowerCase();
+      final query = searchText.toLowerCase();
+
+      bool matchesSearch =
+          query.isEmpty || name.contains(query) || code.contains(query);
+
+      bool matchesCategory =
+          selectedCategoryFilter == null ||
+          selectedCategoryFilter == item.group;
+
+      return matchesSearch && matchesCategory;
+    }).toList();
+  }
+
+  List<ItemModel> get paginatedList {
+    final start = (currentPage - 1) * itemsPerPage;
+    final end = start + itemsPerPage;
+
+    if (start >= filteredFullList.length) return [];
+
+    return filteredFullList.sublist(
+      start,
+      end > filteredFullList.length ? filteredFullList.length : end,
+    );
+  }
+
   // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
-    final data = filteredList;
+    final data = paginatedList;
 
     return Scaffold(
       backgroundColor: const Color(0xffF8FAFC),
@@ -296,7 +329,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   child: CommonTextField(
                     perfixIcon: const Icon(Icons.search),
                     hintText: "Search Item",
-                    onChanged: (val) => setState(() => searchText = val),
+                    onChanged: (val) {
+                      setState(() {
+                        searchText = val;
+                        currentPage = 1;
+                      });
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -419,6 +457,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   },
                   text: "Create Item",
                 ),
+                SizedBox(width: 10),
+                defaultButton(
+                  buttonColor: AppColor.blue,
+                  height: 40,
+                  width: 100,
+                  onTap: uploadExcelFile,
+                  text: "Upload Item",
+                ),
               ],
             ),
 
@@ -446,6 +492,27 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                         _tableRowModel(data[i]),
                                   ),
                           ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text("Page $currentPage of $totalPages"),
+                              SizedBox(width: 10),
+
+                              IconButton(
+                                icon: Icon(Icons.arrow_back),
+                                onPressed: currentPage > 1
+                                    ? () => setState(() => currentPage--)
+                                    : null,
+                              ),
+
+                              IconButton(
+                                icon: Icon(Icons.arrow_forward),
+                                onPressed: currentPage < totalPages
+                                    ? () => setState(() => currentPage++)
+                                    : null,
+                              ),
+                            ],
+                          ),
                         ],
                       ),
               ),
@@ -460,53 +527,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final excel = Excel.createExcel();
     final sheet = excel['Items'];
 
-    sheet.appendRow([
-      TextCellValue('Item Name'),
-      TextCellValue('Item Code'),
-      TextCellValue('Category'),
-      TextCellValue('Stock Qty'),
-      TextCellValue('Unit'),
-      TextCellValue('Selling Price'),
-      TextCellValue('Purchase Price'),
-      TextCellValue('HSN Code'),
-      TextCellValue('Low Stock'),
-      TextCellValue('Dead Stock'),
-    ]);
+    sheet.appendRow([TextCellValue('Item Name'), TextCellValue('Item Code')]);
 
-    final data = filteredList; // ✅ now accessible
-
-    for (final item in data) {
-      final qty = double.tryParse(item.stockQty) ?? 0;
-      final reorder = double.tryParse(item.reorderLevel) ?? 0;
-
-      final isLowStock = reorder > 0 && qty <= reorder;
-      final isDeadStock = deadStockItemIds.contains(item.id);
-
+    for (final item in filteredList) {
       sheet.appendRow([
         TextCellValue(item.itemName),
         TextCellValue(item.itemNo),
-        TextCellValue(item.group),
-        DoubleCellValue(qty),
-        TextCellValue(item.baseUnit),
-        DoubleCellValue(double.tryParse(item.salesPrice) ?? 0),
-        DoubleCellValue(double.tryParse(item.purchasePriceSe) ?? 0),
-        TextCellValue(item.hsnCode),
-        TextCellValue(isLowStock ? 'Yes' : 'No'),
-        TextCellValue(isDeadStock ? 'Yes' : 'No'),
       ]);
     }
 
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File(
-      "${dir.path}/Inventory_${DateFormat('ddMMyyyy_HHmm').format(DateTime.now())}.xlsx",
-    );
-
     final bytes = excel.encode();
-    await file.writeAsBytes(bytes!);
+    if (bytes == null) return;
 
-    await OpenFilex.open(file.path);
+    downloadExcel(bytes);
 
-    showCustomSnackbarSuccess(context, "Excel exported successfully");
+    showCustomSnackbarSuccess(context, "Excel Exported Successfully");
   }
 
   /// ================== WIDGETS ==================
@@ -607,5 +642,59 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> uploadExcelFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+        withData: true, // 🔥 IMPORTANT for web
+      );
+
+      if (result == null) return;
+
+      final bytes = result.files.single.bytes!;
+      final fileName = result.files.single.name;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      FormData formData = FormData.fromMap({
+        "excel": MultipartFile.fromBytes(bytes, filename: fileName),
+      });
+
+      final dio = Dio();
+
+      final response = await dio.post(
+        "${ApiService.baseurl}/excel/uplode",
+        data: formData,
+        options: Options(
+          headers: {
+            "licence_no": Preference.getint(PrefKeys.licenseNo),
+            "Accept": "application/json",
+            "Authorization": "Bearer ${Preference.getString(PrefKeys.token)}",
+          },
+        ),
+      );
+
+      Navigator.pop(context);
+
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        showCustomSnackbarSuccess(context, "Excel Uploaded Successfully");
+        fetchItems();
+      } else {
+        showCustomSnackbarError(
+          context,
+          response.data["message"] ?? "Upload Failed",
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      showCustomSnackbarError(context, "Upload Error: $e");
+    }
   }
 }

@@ -36,7 +36,22 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
   final TextEditingController itemSearchCtrl = TextEditingController();
   final TextEditingController fromCtrl = TextEditingController();
   final TextEditingController toCtrl = TextEditingController();
+  int currentPage = 1;
+  final int rowsPerPage = 100;
 
+  List<PartyLedgerRow> get paginatedData {
+    final start = (currentPage - 1) * rowsPerPage;
+    final end = start + rowsPerPage;
+
+    if (start >= filtered.length) return [];
+
+    return filtered.sublist(
+      start,
+      end > filtered.length ? filtered.length : end,
+    );
+  }
+
+  int get totalPages => (filtered.length / rowsPerPage).ceil();
   DateTime fromDate = DateTime.now();
   DateTime toDate = DateTime.now();
 
@@ -101,8 +116,10 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
     await _loadSalesReturn();
     await _loadPurchase();
     await _loadPurchaseReturn();
-
-    setState(() {});
+    setState(() {
+      filtered = List.from(ledger);
+      currentPage = 1; // 🔥 important
+    });
   }
 
   bool _inRange(DateTime d) => !d.isBefore(fromDate) && !d.isAfter(toDate);
@@ -293,6 +310,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
                             )
                             .toList();
                       }
+                      currentPage = 1;
                     });
                   },
                 ),
@@ -374,6 +392,7 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
           children: [
             _tableHeader(),
             Expanded(child: _ledgerList()),
+            _paginationControls(), // 👈 add this
             _totalBar(),
           ],
         ),
@@ -404,14 +423,14 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
   }
 
   Widget _ledgerList() {
-    if (filtered.isEmpty) {
+    if (paginatedData.isEmpty) {
       return const Center(child: Text("No Records Found"));
     }
 
     return ListView.builder(
-      itemCount: filtered.length,
+      itemCount: paginatedData.length,
       itemBuilder: (_, i) {
-        final e = filtered[i];
+        final e = paginatedData[i];
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
@@ -474,6 +493,35 @@ class _PartyLedgerScreenState extends State<PartyLedgerScreen> {
           color: color ?? Colors.black87,
           fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
         ),
+      ),
+    );
+  }
+
+  Widget _paginationControls() {
+    if (totalPages <= 1) return SizedBox();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: currentPage > 1
+                ? () => setState(() => currentPage--)
+                : null,
+            icon: const Icon(Icons.arrow_back),
+          ),
+          Text(
+            "Page $currentPage of $totalPages",
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          IconButton(
+            onPressed: currentPage < totalPages
+                ? () => setState(() => currentPage++)
+                : null,
+            icon: const Icon(Icons.arrow_forward),
+          ),
+        ],
       ),
     );
   }

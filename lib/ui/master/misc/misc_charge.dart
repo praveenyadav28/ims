@@ -22,8 +22,8 @@ class _CreateMiscChargeState extends State<CreateMiscCharge> {
 
   // ========= POSTING ACCOUNT ==========
   List<Map<String, dynamic>> ledgerList = [];
-  List<String> postingAccountNames = [];
-  Map<String, String> postingAccountIdMap = {}; // name -> id
+  // List<String> postingAccountNames = [];
+  // Map<String, String> postingAccountIdMap = {}; // name -> id
 
   String? selectedPostingName;
   String? selectedPostingId;
@@ -76,8 +76,8 @@ class _CreateMiscChargeState extends State<CreateMiscCharge> {
       if (resp != null && resp['status'] == true) {
         ledgerList = List<Map<String, dynamic>>.from(resp['data']);
 
-        postingAccountNames.clear();
-        postingAccountIdMap.clear();
+        // postingAccountNames.clear();
+        // postingAccountIdMap.clear();
 
         // Filter only ledgers with group = Misc Charges
         for (var e in ledgerList) {
@@ -85,22 +85,21 @@ class _CreateMiscChargeState extends State<CreateMiscCharge> {
             final name = e["ledger_name"].toString();
             final id = e["_id"].toString();
 
-            postingAccountNames.add(name);
-            postingAccountIdMap[name] = id;
+            // postingAccountNames.add(name);
+            // postingAccountIdMap[name] = id;
           }
         }
       }
 
       setState(() {
-        if (_pendingLedgerName != null &&
-            postingAccountNames.contains(_pendingLedgerName)) {
-          selectedPostingName = _pendingLedgerName;
-          selectedPostingId = postingAccountIdMap[_pendingLedgerName];
-          _pendingLedgerName = null;
-        }
+        // if (_pendingLedgerName != null &&
+        //     postingAccountNames.contains(_pendingLedgerName)) {
+        //   selectedPostingName = _pendingLedgerName;
+        //   selectedPostingId = postingAccountIdMap[_pendingLedgerName];
+        //   _pendingLedgerName = null;
+        // }
       });
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   // ======================= LOAD HSN CODES =======================
@@ -121,8 +120,7 @@ class _CreateMiscChargeState extends State<CreateMiscCharge> {
           _pendingHsn = null;
         }
       });
-    } catch (e) {
-     }
+    } catch (e) {}
   }
 
   // ===================== ON HSN SELECT =====================
@@ -231,24 +229,24 @@ class _CreateMiscChargeState extends State<CreateMiscCharge> {
               const SizedBox(height: 20),
 
               // Posting Account (with ID mapping)
-              nameField(
-                text: "Posting Account",
-                child: CommonDropdownField<String>(
-                  value: selectedPostingName,
-                  items: postingAccountNames
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (v) {
-                    setState(() {
-                      selectedPostingName = v;
-                      selectedPostingId = postingAccountIdMap[v]; // get _id
-                    });
-                  },
+              // nameField(
+              //   text: "Posting Account",
+              //   child: CommonDropdownField<String>(
+              //     value: selectedPostingName,
+              //     items: postingAccountNames
+              //         .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              //         .toList(),
+              //     onChanged: (v) {
+              //       setState(() {
+              //         selectedPostingName = v;
+              //         selectedPostingId = postingAccountIdMap[v]; // get _id
+              //       });
+              //     },
 
-                  hintText: "Select Posting Account",
-                ),
-              ),
-              const SizedBox(height: 20),
+              //     hintText: "Select Posting Account",
+              //   ),
+              // ),
+              // const SizedBox(height: 20),
 
               // HSN SECTION
               if (applyTax)

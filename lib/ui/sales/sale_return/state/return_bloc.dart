@@ -828,7 +828,9 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
         "address_0": billing,
         "address_1": shipping,
 
-        "place_of_supply": e.stateName,
+        "place_of_supply": e.stateName.isNotEmpty
+            ? e.stateName
+            : Preference.getString(PrefKeys.state),
         "prefix": state.prefix,
         "no": int.tryParse(state.saleReturnNo),
         "returnsale_date": DateFormat(

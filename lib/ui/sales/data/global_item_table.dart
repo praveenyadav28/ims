@@ -62,27 +62,22 @@ class GlobalItemsTableSection extends StatelessWidget {
           const SizedBox(height: 10),
           _buildHeader(),
           const Divider(),
-          SizedBox(
-            height: rows.length <= 3 ? rows.length * 70 : 200,
-            child: SingleChildScrollView(
-              child: Column(
-                children: rows.map((r) {
-                  return _GlobalItemRowWidget(
-                    key: ValueKey(r.localId),
-                    row: r,
-                    catalogue: catalogue,
-                    hsnList: hsnList,
-                    onUpdate: onUpdateRow,
-                    onRemove: () => onRemoveRow(r.localId),
-                    onSelectCatalog: (item) => onSelectCatalog(r.localId, item),
-                    onSelectHsn: (hsn) => onSelectHsn(r.localId, hsn),
-                    onToggleUnit: (v) => onToggleUnit(r.localId, v),
-                    isReturn: isReturn,
-                    ledgerType: ledgerType,
-                  );
-                }).toList(),
-              ),
-            ),
+          Column(
+            children: rows.map((r) {
+              return _GlobalItemRowWidget(
+                key: ValueKey(r.localId),
+                row: r,
+                catalogue: catalogue,
+                hsnList: hsnList,
+                onUpdate: onUpdateRow,
+                onRemove: () => onRemoveRow(r.localId),
+                onSelectCatalog: (item) => onSelectCatalog(r.localId, item),
+                onSelectHsn: (hsn) => onSelectHsn(r.localId, hsn),
+                onToggleUnit: (v) => onToggleUnit(r.localId, v),
+                isReturn: isReturn,
+                ledgerType: ledgerType,
+              );
+            }).toList(),
           ),
           const SizedBox(height: 12),
           if (isReturn ?? true == true)

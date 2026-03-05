@@ -269,7 +269,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
             ),
           ),
           actions: [
-           Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 defaultButton(
@@ -301,7 +301,8 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                       ),
                     );
                   },
-                ),  const SizedBox(width: 10),
+                ),
+                const SizedBox(width: 10),
                 Checkbox(
                   fillColor: WidgetStatePropertyAll(AppColor.primary),
                   shape: ContinuousRectangleBorder(
@@ -580,7 +581,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
 
   void _showCreateCustomerDialog(PurchaseReturnBloc bloc) {
     final nameCtrl = TextEditingController();
-    final mobileCtrl = TextEditingController();
+    final state = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -593,8 +594,8 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
               decoration: const InputDecoration(labelText: 'Name'),
             ),
             TextField(
-              controller: mobileCtrl,
-              decoration: const InputDecoration(labelText: 'Mobile'),
+              controller: state,
+              decoration: const InputDecoration(labelText: 'State'),
             ),
           ],
         ),
@@ -609,7 +610,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
               final res = await ApiService.postData('supplier', {
                 "customer_type": "Individual",
                 'company_name': nameCtrl.text.trim(),
-                'mobile': mobileCtrl.text.trim(),
+                'state': state.text.trim(),
                 'licence_no': Preference.getint(PrefKeys.licenseNo).toString(),
                 'branch_id': Preference.getString(PrefKeys.locationId),
               }, licenceNo: Preference.getint(PrefKeys.licenseNo));

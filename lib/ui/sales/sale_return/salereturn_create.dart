@@ -255,7 +255,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
             ),
           ),
           actions: [
-           Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 defaultButton(
@@ -287,7 +287,8 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                       ),
                     );
                   },
-                ),  const SizedBox(width: 10),
+                ),
+                const SizedBox(width: 10),
                 Checkbox(
                   fillColor: WidgetStatePropertyAll(AppColor.primary),
                   shape: ContinuousRectangleBorder(
@@ -572,7 +573,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
 
   void _showCreateCustomerDialog(SaleReturnBloc bloc) {
     final nameCtrl = TextEditingController();
-    final mobileCtrl = TextEditingController();
+    final stateCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -585,8 +586,8 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
               decoration: const InputDecoration(labelText: 'Name'),
             ),
             TextField(
-              controller: mobileCtrl,
-              decoration: const InputDecoration(labelText: 'Mobile'),
+              controller: stateCtrl,
+              decoration: const InputDecoration(labelText: 'State'),
             ),
           ],
         ),
@@ -601,7 +602,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
               final res = await ApiService.postData('customer', {
                 "customer_type": "Individual",
                 'company_name': nameCtrl.text.trim(),
-                'mobile': mobileCtrl.text.trim(),
+                'state': stateCtrl.text.trim(),
                 'licence_no': Preference.getint(PrefKeys.licenseNo).toString(),
                 'branch_id': Preference.getString(PrefKeys.locationId),
               }, licenceNo: Preference.getint(PrefKeys.licenseNo));

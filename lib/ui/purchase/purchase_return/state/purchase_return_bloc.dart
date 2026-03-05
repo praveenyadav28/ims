@@ -814,8 +814,8 @@ class PurchaseReturnBloc
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-        "place_of_supply": e.stateName,
-        "prefix": state.prefix,
+      
+        "place_of_supply": e.stateName.isNotEmpty ? e.stateName : Preference.getString(PrefKeys.state),  "prefix": state.prefix,
         "no": int.tryParse(state.purchaseReturnNo),
         "purchasereturn_date": DateFormat(
           'yyyy-MM-dd',

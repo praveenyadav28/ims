@@ -1,4 +1,6 @@
 // sale_invoice_bloc.dart
+// ignore_for_file: invalid_return_type_for_catch_error
+
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -347,39 +349,42 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
     on<SaleInvoiceSearchTransaction>(_onSearchTransaction);
     on<SaleInvoiceSavePayment>(_onSaveRecieptVoucher);
   }
-
   Future<void> _onLoad(
     SaleInvoiceLoadInit e,
     Emitter<SaleInvoiceState> emit,
   ) async {
     try {
+      // ✅ STEP 1: Load ledger first
       final customers = await repo.fetchLedger(true);
-      final saleInvoiceNo = await repo.fetchSaleInvoiceNo();
-      final catalogue = await repo.fetchCatalogue();
-      final hsnList = await repo.fetchHsnList();
-
-      // fetch misc master list
-      List<MiscChargeModelList> miscMaster = [];
-      try {
-        miscMaster = await repo.fetchMiscMaster();
-      } catch (_) {
-        miscMaster = [];
-      }
 
       emit(
         state.copyWith(
           customers: customers,
-          saleInvoiceNo: saleInvoiceNo,
-          catalogue: catalogue,
-          hsnMaster: hsnList,
-          miscMasterList: miscMaster,
-          // ensure UI has at least one empty row to start
           rows: [GlobalItemRow(localId: UniqueKey().toString())],
         ),
       );
 
+      // ✅ STEP 2: Load remaining data in parallel
+      final results = await Future.wait([
+        repo.fetchSaleInvoiceNo(),
+        repo.fetchCatalogue(),
+        repo.fetchHsnList(),
+        repo.fetchMiscMaster().catchError((_) => []),
+      ]);
+
+      emit(
+        state.copyWith(
+          saleInvoiceNo: results[0] as String,
+          catalogue: results[1] as List<ItemServiceModel>,
+          hsnMaster: results[2] as List<HsnModel>,
+          miscMasterList: results[3] as List<MiscChargeModelList>,
+        ),
+      );
+
       add(SaleInvoiceCalculate());
-    } catch (err) {}
+    } catch (err) {
+      debugPrint(err.toString());
+    }
   }
 
   void _onSelectCustomer(
@@ -913,8 +918,8 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-        "place_of_supply": e.stateName,
-        "prefix": state.prefix,
+       
+        "place_of_supply": e.stateName.isNotEmpty ? e.stateName : Preference.getString(PrefKeys.state), "prefix": state.prefix,
         "no": int.tryParse(state.saleInvoiceNo),
         "invoice_date": DateFormat(
           'yyyy-MM-dd',

@@ -561,7 +561,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
 
   void _showCreateCustomerDialog(CreditNoteBloc bloc) {
     final nameCtrl = TextEditingController();
-    final mobileCtrl = TextEditingController();
+    final stateCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -574,8 +574,8 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
               decoration: const InputDecoration(labelText: 'Name'),
             ),
             TextField(
-              controller: mobileCtrl,
-              decoration: const InputDecoration(labelText: 'Mobile'),
+              controller: stateCtrl,
+              decoration: const InputDecoration(labelText: 'State'),
             ),
           ],
         ),
@@ -590,7 +590,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
               final res = await ApiService.postData('supplier', {
                 "customer_type": "Individual",
                 'company_name': nameCtrl.text.trim(),
-                'mobile': mobileCtrl.text.trim(),
+                'state': stateCtrl.text.trim(),
                 'licence_no': Preference.getint(PrefKeys.licenseNo).toString(),
                 'branch_id': Preference.getString(PrefKeys.locationId),
               }, licenceNo: Preference.getint(PrefKeys.licenseNo));

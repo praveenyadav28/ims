@@ -71,6 +71,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
   final payingAmtController = TextEditingController();
   final cashShippingController = TextEditingController();
   final voucherNoController = TextEditingController();
+  final salesPersonController = TextEditingController();
   DateTime pickedInvoiceDate = DateTime.now();
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
@@ -831,7 +832,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
 
   void _showCreateCustomerDialog(SaleInvoiceBloc bloc) {
     final nameCtrl = TextEditingController();
-    final mobileCtrl = TextEditingController();
+    final stateCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -844,8 +845,8 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
               decoration: const InputDecoration(labelText: 'Name'),
             ),
             TextField(
-              controller: mobileCtrl,
-              decoration: const InputDecoration(labelText: 'Mobile'),
+              controller: stateCtrl,
+              decoration: const InputDecoration(labelText: 'State'),
             ),
           ],
         ),
@@ -860,7 +861,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
               final res = await ApiService.postData('customer', {
                 "customer_type": "Individual",
                 'company_name': nameCtrl.text.trim(),
-                'mobile': mobileCtrl.text.trim(),
+                'state': stateCtrl.text.trim(),
                 'licence_no': Preference.getint(PrefKeys.licenseNo).toString(),
                 'branch_id': Preference.getString(PrefKeys.locationId),
               }, licenceNo: Preference.getint(PrefKeys.licenseNo));

@@ -322,7 +322,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _graphCard() {
     return Container(
-      height: 280,
+      height: 240,
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -362,8 +362,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final sale = saleMonthly[m] ?? 0;
         final purchase = purchaseMonthly[m] ?? 0;
 
-        final saleH = (sale / maxVal) * 160;
-        final purH = (purchase / maxVal) * 160;
+        final saleH = (sale / maxVal) * 140;
+        final purH = (purchase / maxVal) * 140;
 
         return Expanded(
           child: Column(
@@ -412,60 +412,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _expenseList() {
     return Expanded(
-      child: Column(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xff111827),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Big Expenses List",
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          // Chip(
-                          //   backgroundColor: const Color(0xff7C3AED),
-                          //   label: Text(
-                          //     "Weekly",
-                          //     style: GoogleFonts.inter(color: Colors.white),
-                          //   ),
-                          // ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      if (expenses.isEmpty)
-                        const Text(
-                          "No Expenses",
-                          style: TextStyle(color: Colors.white54),
-                        ),
-                      ...expenses
-                          .take(5)
-                          .map(
-                            (e) => _expense(
-                              e.supplierName,
-                              "₹ ${e.amount.toStringAsFixed(0)}",
-                            ),
-                          ),
-                    ],
+      child: Container(
+        height: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xff111827),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Big Expenses List",
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
+                  // Chip(
+                  //   backgroundColor: const Color(0xff7C3AED),
+                  //   label: Text(
+                  //     "Weekly",
+                  //     style: GoogleFonts.inter(color: Colors.white),
+                  //   ),
+                  // ),
+                ],
               ),
-            ),
+              const SizedBox(height: 12),
+              if (expenses.isEmpty)
+                const Text(
+                  "No Expenses",
+                  style: TextStyle(color: Colors.white54),
+                ),
+              ...expenses
+                  .take(5)
+                  .map(
+                    (e) => _expense(
+                      e.supplierName,
+                      "₹ ${e.amount.toStringAsFixed(0)}",
+                    ),
+                  ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -570,53 +563,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _reminderList() {
     return Expanded(
       child: Container(
+        height: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xff111827),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Outstanding",
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Outstanding",
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(height: 12),
+              ),
+              const SizedBox(height: 12),
 
-                if (ledgerList.isEmpty)
-                  const Text(
-                    "No Pending Reminders",
-                    style: TextStyle(color: Colors.white54),
-                  ),
-                ...ledgerList
-                    .take(5)
-                    .map(
-                      (r) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              r.ledgerName ?? "",
-                              style: GoogleFonts.inter(color: Colors.red),
-                            ),
+              if (ledgerList.isEmpty)
+                const Text(
+                  "No Pending Reminders",
+                  style: TextStyle(color: Colors.white54),
+                ),
+              ...ledgerList
+                  .take(5)
+                  .map(
+                    (r) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            r.ledgerName ?? "",
+                            style: GoogleFonts.inter(color: Colors.red),
+                          ),
 
-                            Text(
-                              "₹ ${r.closingBalance!.abs()}",
-                              style: GoogleFonts.inter(color: Colors.red),
-                            ),
-                          ],
-                        ),
+                          Text(
+                            "₹ ${r.closingBalance!.abs()}",
+                            style: GoogleFonts.inter(color: Colors.red),
+                          ),
+                        ],
                       ),
                     ),
-              ],
-            ),
+                  ),
+            ],
           ),
         ),
       ),

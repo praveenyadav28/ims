@@ -60,7 +60,6 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
   List<T> filtered = [];
 
   bool loading = true;
-  T? activeRow;
   T? expandedRow;
 
   final searchCtrl = TextEditingController();
@@ -342,6 +341,15 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
               textAlign: TextAlign.center,
             ),
           ),
+          Container(height: 40, width: 2, color: AppColor.borderColor),
+          Expanded(
+            flex: 2,
+            child: Text(
+              "Action",
+              style: headerStyle,
+              textAlign: TextAlign.center,
+            ),
+          ),
         ],
       ),
     );
@@ -371,14 +379,10 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
     final String placeOfSupply = widget.placeOfSupply(item);
     final String baseId = widget.idGetter(item);
 
-    bool selected = activeRow == item;
     bool selectedForItem = expandedRow == item;
 
     return InkWell(
       onDoubleTap: () {
-        setState(() => activeRow = selected ? null : item);
-      },
-      onTap: () {
         setState(() {
           expandedRow = expandedRow == item ? null : item;
         });
@@ -392,10 +396,7 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
               color: selectedForItem
                   ? AppColor.green.withValues(alpha: .1)
                   : AppColor.white,
-              border: Border.all(
-                color: selected ? AppColor.primary : Colors.grey.shade300,
-                width: selected ? 2 : 1,
-              ),
+              border: Border.all(color: Colors.grey.shade300, width: 1),
             ),
             child: Row(
               children: [
@@ -469,47 +470,58 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-                if (selected) ...[
-                  const SizedBox(width: 10),
-                  _action(
-                    Icons.picture_as_pdf,
-                    AppColor.primary,
-                    () => widget.onView(item),
-                  ),
-                  _action(Icons.edit, Colors.orange, () => widget.onEdit(item)),
-                  _action(Icons.delete, Colors.red, () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) {
-                        return AlertDialog(
-                          title: const Text("Delete Confirmation"),
-                          content: Text(
-                            "Are you sure you want to delete this record?",
-                            style: GoogleFonts.inter(),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text("Cancel"),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text(
-                                "Delete",
-                                style: TextStyle(color: Colors.red),
+                Container(height: 54, width: 2, color: AppColor.borderColor),
+                Expanded(
+                  flex: 2,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _action(
+                        Icons.picture_as_pdf,
+                        AppColor.primary,
+                        () => widget.onView(item),
+                      ),
+                      _action(
+                        Icons.edit,
+                        Colors.orange,
+                        () => widget.onEdit(item),
+                      ),
+                      _action(Icons.delete, Colors.red, () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: const Text("Delete Confirmation"),
+                              content: Text(
+                                "Are you sure you want to delete this record?",
+                                style: GoogleFonts.inter(),
                               ),
-                            ),
-                          ],
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: const Text("Cancel"),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  child: const Text(
+                                    "Delete",
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         );
-                      },
-                    );
 
-                    if (confirm == true) {
-                      bool ok = await widget.onDelete(baseId);
-                      if (ok) load();
-                    }
-                  }),
-                ],
+                        if (confirm == true) {
+                          bool ok = await widget.onDelete(baseId);
+                          if (ok) load();
+                        }
+                      }),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

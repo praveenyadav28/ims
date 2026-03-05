@@ -15,6 +15,7 @@ import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
+import 'package:searchfield/searchfield.dart';
 
 class CreateNewItemScreen extends StatefulWidget {
   CreateNewItemScreen({super.key, this.editItem});
@@ -39,7 +40,14 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
   final TextEditingController remarksController = TextEditingController();
   final TextEditingController mfgDateController = TextEditingController();
   final TextEditingController expDateController = TextEditingController();
+  final TextEditingController hsnSearchController = TextEditingController();
+  final TextEditingController groupSearchController = TextEditingController();
+  final TextEditingController binController = TextEditingController();
 
+  List<String> manufacturerList = [];
+  String? selectedManufacturer;
+  final TextEditingController manufacturerSearchController =
+      TextEditingController();
   // Category list (from misc)
   List<String> categoryList = [];
   String? selectedCategory;
@@ -119,9 +127,15 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
 
   void _fillEditData(ItemModel item) {
     // Basic
+    selectedHsn = item.hsnCode;
+    hsnSearchController.text = item.hsnCode;
+    selectedCategory = item.group;
+    groupSearchController.text = item.group;
     itemNameController.text = item.itemName;
     itemNoController.text = item.itemNo;
+    binController.text = item.other1;
     selectedCategory = item.group;
+    selectedManufacturer = item.other2;
 
     // Stock
     openingStockController.text = item.openingStock;
@@ -170,13 +184,17 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
     itemNoController.dispose();
     descriptionController.dispose();
     remarksController.dispose();
+    binController.dispose();
+    manufacturerSearchController.dispose();
     salePriceController.dispose();
     amountController.dispose();
+    groupSearchController.dispose();
     grossController.dispose();
     purchasePriceController.dispose();
     gstRateController.dispose();
     openingStockController.dispose();
     minOrderController.dispose();
+    hsnSearchController.dispose();
     minStockController.dispose();
     wholeSalePriceController.dispose();
     reorderController.dispose();
@@ -217,6 +235,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
 
       categoryList.clear();
       measuringUnitList.clear();
+      manufacturerList.clear();
       if (response != null && response['status'] == true) {
         final List<dynamic> data = response['data'] ?? [];
         for (var item in data) {
@@ -226,6 +245,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
 
           if (id == '1') categoryList.add(name); // category group
           if (id == '2') measuringUnitList.add(name); // measuring unit group
+          if (id == '3') manufacturerList.add(name); // manufacturer group
         }
       }
 
@@ -1200,34 +1220,29 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
           ),
         ),
         const SizedBox(height: 8),
+
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: CommonDropdownField(
-                value: (categoryList.contains(selectedCategory))
-                    ? selectedCategory
-                    : null,
-                items: categoryList
-                    .map(
-                      (v) => DropdownMenuItem(
-                        value: v,
-                        child: Text(
-                          v,
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF565D6D),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    )
+              child: CommonSearchableDropdownField<String>(
+                controller: groupSearchController,
+                hintText: "Search Group",
+                suggestions: categoryList
+                    .map((e) => SearchFieldListItem<String>(e, item: e))
                     .toList(),
-                onChanged: (val) => setState(() => selectedCategory = val),
-                hintText: "Enter group",
+                onSuggestionTap: (item) {
+                  final selectedName = item.searchKey;
+                  setState(() {
+                    selectedCategory = selectedName;
+                    groupSearchController.text = selectedName;
+                  });
+                },
               ),
             ),
+
             const SizedBox(width: 12),
+
             addDefaultButton(() async {
               await showDialog(
                 barrierDismissible: false,
@@ -1274,25 +1289,23 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              CommonDropdownField<String>(
-                value: selectedHsn,
-                items: hsnNames
+              CommonSearchableDropdownField<String>(
+                controller: hsnSearchController,
+                hintText: "Search HSN Code",
+                suggestions: hsnList
                     .map(
-                      (v) => DropdownMenuItem(
-                        value: v,
-                        child: Text(
-                          v,
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF565D6D),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                      (e) => SearchFieldListItem<String>(
+                        e["name"]?.toString() ?? "",
+                        item: e["name"]?.toString(),
                       ),
                     )
                     .toList(),
-                onChanged: (val) => _onHsnSelected(val),
-                hintText: "Select HSN Code",
+
+                onSuggestionTap: (item) {
+                  final selectedName = item.searchKey;
+                  _onHsnSelected(selectedName);
+                  hsnSearchController.text = selectedName;
+                },
               ),
             ],
           ),
@@ -1716,6 +1729,94 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
   Widget otherDetailsCard() {
     return Column(
       children: [
+        const SizedBox(height: 20),
+
+        Row(
+          children: [
+            // 🔹 Bin No (Normal TextField)
+            Expanded(
+              child: TitleTextFeild(
+                titleText: "Bin No.",
+                hintText: "Enter Bin Number",
+                controller: binController,
+              ),
+            ),
+
+            const SizedBox(width: 24),
+
+            // 🔹 Manufacturer (Search Dropdown)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Manufacturer",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColor.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: CommonSearchableDropdownField<String>(
+                          controller: manufacturerSearchController,
+                          hintText: "Search Manufacturer",
+                          suggestions: manufacturerList
+                              .map(
+                                (e) => SearchFieldListItem<String>(e, item: e),
+                              )
+                              .toList(),
+                          onSuggestionTap: (item) {
+                            setState(() {
+                              selectedManufacturer = item.searchKey;
+                              manufacturerSearchController.text =
+                                  item.searchKey;
+                            });
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      addDefaultButton(() async {
+                        await showDialog(
+                          barrierDismissible: false,
+                          context: context,
+                          builder: (context) {
+                            return Dialog(
+                              insetPadding: const EdgeInsets.all(16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: SizedBox(
+                                width: Sizes.width * 0.9,
+                                height: Sizes.height * 0.8,
+                                child: AddGroupScreen(
+                                  miscId: "3",
+                                  name: 'Manufacturer',
+                                ),
+                              ),
+                            );
+                          },
+                        ).then((updateData) {
+                          if (updateData != null) {
+                            _loadMiscDropdowns().then((_) => setState(() {}));
+                          }
+                        });
+                      }),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
         Row(
           children: [
             Expanded(
@@ -1984,6 +2085,8 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         "gross_amount": grossController.text.trim().isNotEmpty
             ? grossController.text
             : "",
+        "other1": binController.text.trim(),
+        "other2": selectedManufacturer ?? "",
       };
 
       final response = await ApiService.postData(
@@ -2054,8 +2157,9 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
           ? 0
           : reorderController.text,
       'variant_list': [],
+      "other1": binController.text.trim(),
+      "other2": selectedManufacturer ?? "",
     };
-    print(payload);
     final response = widget.editItem == null
         ? await ApiService.postData(
             'item',
@@ -2196,6 +2300,8 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         "margin_amt": marginAmt.toStringAsFixed(2),
         "re_o_level": 0,
         "variant_list": [],
+        "other1": binController.text.trim(),
+        "other2": selectedManufacturer ?? "",
       };
 
       final res = await ApiService.postData(

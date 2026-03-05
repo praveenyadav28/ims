@@ -64,6 +64,7 @@ class EstimateData {
   final String signature;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String other1;
 
   EstimateData({
     required this.id,
@@ -94,6 +95,7 @@ class EstimateData {
     required this.signature,
     required this.createdAt,
     required this.updatedAt,
+    required this.other1,
   });
 
   factory EstimateData.fromJson(Map<String, dynamic> j) => EstimateData(
@@ -143,6 +145,7 @@ class EstimateData {
         .toList(),
 
     signature: j["signature"] ?? "",
+    other1: j["other1"] ?? "",
     createdAt: DateTime.parse(j["createdAt"]),
     updatedAt: DateTime.parse(j["updatedAt"]),
   );

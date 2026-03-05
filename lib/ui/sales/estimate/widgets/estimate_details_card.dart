@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/model/employee_model.dart';
 import 'package:ims/ui/sales/estimate/state/estimate_bloc.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
+import 'package:searchfield/searchfield.dart';
 
 class EstimateDetailsCard extends StatelessWidget {
   const EstimateDetailsCard({
@@ -17,16 +19,20 @@ class EstimateDetailsCard extends StatelessWidget {
     required this.onTapEstimateDate,
     required this.onTapValidityDate,
     required this.onValidForChanged,
+    required this.salesPersonController,
+    required this.employeeList,
   });
 
   final TextEditingController prefixController;
   final TextEditingController estimateNoController;
   final TextEditingController validForController;
+  final TextEditingController salesPersonController;
   final DateTime? pickedEstimateDate;
   final DateTime? pickedValidityDate;
   final VoidCallback onTapEstimateDate;
   final VoidCallback onTapValidityDate;
   final ValueChanged<String> onValidForChanged;
+  final List<EmployeeModel> employeeList;
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +101,7 @@ class EstimateDetailsCard extends StatelessWidget {
 
         SizedBox(height: Sizes.height * .03),
         nameField(
-          text: "Vaild For",
+          text: "Valid For Days",
           child: Row(
             children: [
               Expanded(
@@ -105,23 +111,7 @@ class EstimateDetailsCard extends StatelessWidget {
                   onChanged: onValidForChanged,
                 ),
               ),
-              Text(
-                "     days",
-                style: GoogleFonts.inter(
-                  color: Color(0xFF565D6D),
-                  fontSize: 14,
-                ),
-              ),
-              Spacer(flex: 2),
-            ],
-          ),
-          flix: 30,
-        ),
-        SizedBox(height: Sizes.height * .03),
-        nameField(
-          text: "Vailidity Date",
-          child: Row(
-            children: [
+              SizedBox(width: 20),
               Expanded(
                 flex: 3,
                 child: CommonTextField(
@@ -133,11 +123,37 @@ class EstimateDetailsCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Spacer(flex: 2),
             ],
           ),
           flix: 30,
         ),
+        SizedBox(height: Sizes.height * .03),
+        nameField(
+          text: "Sales Person",
+          child: Row(
+            children: [
+              Expanded(
+                child: CommonSearchableDropdownField<String>(
+                  controller: salesPersonController,
+                  hintText: "Select Sales Person",
+                  suggestions: employeeList
+                      .map((e) => SearchFieldListItem<String>(e.firstName))
+                      .toList(),
+
+                  onSuggestionTap: (value) {
+                    salesPersonController.text = value.searchKey; // 👈 ADD THIS
+
+                    context.read<EstBloc>().add(
+                      EstSelectSalesPerson(value.searchKey),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          flix: 30,
+        ),
+        SizedBox(height: Sizes.height * .03),
       ],
     );
   }

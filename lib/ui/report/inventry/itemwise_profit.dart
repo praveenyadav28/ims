@@ -30,7 +30,20 @@ class _FifoReportScreenState extends State<FifoReportScreen> {
   TextEditingController toDateCtrl = TextEditingController(
     text: DateFormat("dd-MM-yyyy").format(DateTime.now()),
   );
+  int currentPage = 1;
+  final int rowsPerPage = 100;
 
+  List<FifoReportModel> get paginatedData {
+    final data = filteredList;
+    final start = (currentPage - 1) * rowsPerPage;
+    final end = start + rowsPerPage;
+
+    if (start >= data.length) return [];
+
+    return data.sublist(start, end > data.length ? data.length : end);
+  }
+
+  int get totalPages => (filteredList.length / rowsPerPage).ceil();
   DateTime? fromDate;
   DateTime? toDate;
   TextEditingController searchCtrl = TextEditingController();
@@ -81,8 +94,10 @@ class _FifoReportScreenState extends State<FifoReportScreen> {
     list = (res['data'] as List)
         .map((e) => FifoReportModel.fromJson(e))
         .toList();
-
-    setState(() => loading = false);
+    setState(() {
+      currentPage = 1;
+      loading = false;
+    });
   }
 
   // ================= UI =================
@@ -97,7 +112,14 @@ class _FifoReportScreenState extends State<FifoReportScreen> {
       body: Column(
         children: [
           _filterBar(),
-          Expanded(child: _table()),
+          Expanded(
+            child: Column(
+              children: [
+                Expanded(child: _table()),
+                _paginationControls(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -123,6 +145,7 @@ class _FifoReportScreenState extends State<FifoReportScreen> {
               onChanged: (v) {
                 setState(() {
                   searchText = v;
+                  currentPage = 1; // 🔥 important
                 });
               },
             ),
@@ -165,13 +188,42 @@ class _FifoReportScreenState extends State<FifoReportScreen> {
       return Center(child: GlowLoader());
     }
 
-    if (list.isEmpty) {
+    if (paginatedData.isEmpty) {
       return const Center(child: Text("No data found"));
     }
 
     return ListView(
       padding: const EdgeInsets.all(12),
-      children: [_header(), ...filteredList.map(_row)],
+      children: [_header(), ...paginatedData.map(_row)],
+    );
+  }
+
+  Widget _paginationControls() {
+    if (totalPages <= 1) return SizedBox();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: currentPage > 1
+                ? () => setState(() => currentPage--)
+                : null,
+            icon: const Icon(Icons.arrow_back),
+          ),
+          Text(
+            "Page $currentPage of $totalPages",
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
+          IconButton(
+            onPressed: currentPage < totalPages
+                ? () => setState(() => currentPage++)
+                : null,
+            icon: const Icon(Icons.arrow_forward),
+          ),
+        ],
+      ),
     );
   }
 
