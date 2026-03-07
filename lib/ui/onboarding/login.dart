@@ -27,7 +27,6 @@ class _LoginScreenState extends State<LoginScreen> {
   TextEditingController userIdController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
 
-  int selectedUserType = 0;
   BranchList? _selectedBranch;
   List<BranchList> branchList = [];
 
@@ -65,7 +64,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              _buildUserSwitch(),
               SizedBox(height: Sizes.height * 0.02),
               TitleTextFeild(
                 titleText: "LICENSE NO.",
@@ -114,61 +112,24 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
 
               SizedBox(height: Sizes.height * 0.04),
-              // if (selectedUserType == 0)
-              //   InkWell(
-              //     onTap: () {
-              //       pushTo(ForgotPassword());
-              //     },
-              //     child: Text(
-              //       "Forgot Password?",
-              //       style: GoogleFonts.inter(
-              //         fontSize: 14,
-              //         color: AppColor.textColor,
-              //         fontWeight: FontWeight.w500,
-              //       ),
-              //     ),
-              //   )
-              // else
-              //   SizedBox(height: 16.5),
+
+              InkWell(
+                onTap: () {
+                  pushTo(ForgotPassword());
+                },
+                child: Text(
+                  "Forgot Password?",
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppColor.textColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildUserSwitch() {
-    return Row(
-      mainAxisSize: MainAxisSize.max,
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: List.generate(2, (index) {
-        final isSelected = selectedUserType == index;
-        return GestureDetector(
-          onTap: () => setState(() => selectedUserType = index),
-          child: Container(
-            height: 40,
-            margin: EdgeInsets.only(
-              top: Sizes.height * .02,
-              bottom: Sizes.height * .02,
-              right: index == 0 ? 16 : 0,
-            ),
-            width: Sizes.width < 600 ? Sizes.width * 0.3 : 167,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: selectedUserType == index ? AppColor.blue : AppColor.white,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              index == 0 ? "Admin" : "Employee",
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? AppColor.white : AppColor.black,
-              ),
-            ),
-          ),
-        );
-      }),
     );
   }
 

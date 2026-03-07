@@ -161,18 +161,18 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     );
   }
 
-  Future sendOtp(String otpMobileNo, BuildContext context) async {
-    final response = await ApiService.postData('otp/send-otp', {
-      "mobile": otpMobileNo,
-    });
-    if (response['status'] == true) {
-      otpvarify = true;
-      showCustomSnackbarSuccess(context, response['message']);
-    } else {
-      otpvarify = false;
-      showCustomSnackbarError(context, response['message']);
-    }
-  }
+  // Future sendOtp(String otpMobileNo, BuildContext context) async {
+  //   final response = await ApiService.postData('otp/send-otp', {
+  //     "mobile": otpMobileNo,
+  //   });
+  //   if (response['status'] == true) {
+  //     otpvarify = true;
+  //     showCustomSnackbarSuccess(context, response['message']);
+  //   } else {
+  //     otpvarify = false;
+  //     showCustomSnackbarError(context, response['message']);
+  //   }
+  // }
 
   Future verifyOtp(String otpMobileNo, BuildContext context) async {
     // Make the GET request
@@ -190,21 +190,16 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
   Future<void> getSignupUsersDetails() async {
     try {
-      final response = await ApiService.postData(
-        "getlicencebycontect",
-        {
-          "licence_no": licenceNoController.text.toString(),
-          "contact_no": mobileNumberController.text.toString(),
-        },
+      final response = await ApiService.fetchData(
+        "get/otp-send/${mobileNumberController.text.toString()}",
         licenceNo: int.parse(licenceNoController.text.toString()),
       );
+      print(response);
       if (response != null && response['status'] == true) {
-        sendOtp(mobileNumberController.text, context);
         _startResendTimer(); // Start the timer after sending OTP
       } else {
         showCustomSnackbarError(context, response['message']);
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 }

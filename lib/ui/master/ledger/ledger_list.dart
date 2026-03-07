@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/ledger_model.dart';
@@ -85,6 +87,17 @@ class _LedgerListScreenState extends State<LedgerListScreen> {
               buttonColor: AppColor.blue,
             ),
           ),
+          const SizedBox(width: 12),
+          Center(
+            child: defaultButton(
+              height: 40,
+              width: 150,
+              onTap: uploadExcelFile,
+              text: "Upload Ledger",
+              buttonColor: AppColor.primary,
+            ),
+          ),
+
           const SizedBox(width: 12),
         ],
       ),
@@ -317,5 +330,59 @@ class _LedgerListScreenState extends State<LedgerListScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> uploadExcelFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+        withData: true, // 🔥 IMPORTANT for web
+      );
+
+      if (result == null) return;
+
+      final bytes = result.files.single.bytes!;
+      final fileName = result.files.single.name;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      FormData formData = FormData.fromMap({
+        "ledgerexcel": MultipartFile.fromBytes(bytes, filename: fileName),
+      });
+
+      final dio = Dio();
+
+      final response = await dio.post(
+        "${ApiService.baseurl}/excel-import-in-ledger",
+        data: formData,
+        options: Options(
+          headers: {
+            "licence_no": Preference.getint(PrefKeys.licenseNo),
+            "Accept": "application/json",
+            "Authorization": "Bearer ${Preference.getString(PrefKeys.token)}",
+          },
+        ),
+      );
+
+      Navigator.pop(context);
+
+      if (response.statusCode == 200 && response.data["status"] == true) {
+        showCustomSnackbarSuccess(context, "Excel Uploaded Successfully");
+        ledgerApi();
+      } else {
+        showCustomSnackbarError(
+          context,
+          response.data["message"] ?? "Upload Failed",
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      showCustomSnackbarError(context, "Upload Error: $e");
+    }
   }
 }

@@ -67,6 +67,7 @@ class GlobalItemsTableSection extends StatelessWidget {
               return _GlobalItemRowWidget(
                 key: ValueKey(r.localId),
                 row: r,
+                rows: rows, // 👈 add
                 catalogue: catalogue,
                 hsnList: hsnList,
                 onUpdate: onUpdateRow,
@@ -142,6 +143,7 @@ class _GlobalItemRowWidget extends StatefulWidget {
   _GlobalItemRowWidget({
     super.key,
     required this.row,
+    required this.rows, // 👈 add
     required this.catalogue,
     required this.hsnList,
     required this.onUpdate,
@@ -154,6 +156,7 @@ class _GlobalItemRowWidget extends StatefulWidget {
   });
 
   final GlobalItemRow row;
+  final List<GlobalItemRow> rows;
   final List<ItemServiceModel> catalogue;
   final List<HsnModel> hsnList;
 
@@ -462,47 +465,55 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
   }
 
   Widget _searchableItemField(GlobalItemRow r, SearchInputDecoration input) {
+    final selectedIds = widget.rows
+        .where((e) => e.product != null)
+        .map((e) => e.product!.id)
+        .toSet();
     return SearchField<ItemServiceModel>(
       key: ValueKey(r.localId + "_item"),
       itemHeight: 68,
 
       // 👇 LIMIT SUGGESTIONS
-      suggestions: widget.catalogue.take(30).map((i) {
-        return SearchFieldListItem<ItemServiceModel>(
-          "${i.name} - ${i.itemNo}",
-          item: i,
-          child: ListTile(
-            dense: true,
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(8),
+      suggestions: widget.catalogue
+          .where((i) => !selectedIds.contains(i.id) || r.product?.id == i.id)
+          .take(100)
+          .map((i) {
+            return SearchFieldListItem<ItemServiceModel>(
+              "${i.name} - ${i.itemNo}",
+              item: i,
+              child: ListTile(
+                dense: true,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.shopping_bag_outlined, size: 20),
+                ),
+                title: Text(
+                  "${i.name}  •  ${i.itemNo}",
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: i.variantValue.isEmpty ? null : Text(i.variantValue),
+                trailing: Text(
+                  i.stockQty.toString(),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color:
+                        (int.parse(
+                              i.stockQty?.isEmpty ?? true ? "0" : i.stockQty!,
+                            )) <=
+                            0
+                        ? AppColor.red
+                        : AppColor.darkGreen,
+                  ),
+                ),
               ),
-              child: const Icon(Icons.shopping_bag_outlined, size: 20),
-            ),
-            title: Text(
-              "${i.name}  •  ${i.itemNo}",
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: i.variantValue.isEmpty ? null : Text(i.variantValue),
-            trailing: Text(
-              i.stockQty.toString(),
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color:
-                    (int.parse(
-                          i.stockQty?.isEmpty ?? true ? "0" : i.stockQty!,
-                        )) <=
-                        0
-                    ? AppColor.red
-                    : AppColor.darkGreen,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
+            );
+          })
+          .toList(),
 
       searchInputDecoration: input.copyWith(labelText: "Item / Service"),
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:excel/excel.dart' hide Border;
@@ -46,7 +48,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   double stockValueNDP = 0;
-
+  Timer? _debounce;
   Future<void> fetchStockValueNDP() async {
     final res = await ApiService.fetchData(
       "get/fiforeports?from_date=${DateFormat("yyyy-MM-dd").format(DateTime.now())}&to_date=${DateFormat("yyyy-MM-dd").format(DateTime.now())}",
@@ -66,7 +68,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
   }
 
-  // ---------------- API ----------------
   Future<void> fetchItems() async {
     setState(() => loading = true);
 
@@ -74,10 +75,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
       'get/item',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
+
     if (res['status'] == true) {
-      list = ((res?['data'] ?? []) as List)
-          .map((e) => ItemModel.fromJson(e))
-          .toList();
+      list = await compute(parseItems, res['data'] as List<dynamic>);
     }
 
     setState(() => loading = false);
@@ -330,9 +330,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     perfixIcon: const Icon(Icons.search),
                     hintText: "Search Item",
                     onChanged: (val) {
-                      setState(() {
-                        searchText = val;
-                        currentPage = 1;
+                      if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+                      _debounce = Timer(const Duration(milliseconds: 400), () {
+                        setState(() {
+                          searchText = val;
+                          currentPage = 1;
+                        });
                       });
                     },
                   ),
@@ -488,6 +492,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 ? const Center(child: Text("No items found"))
                                 : ListView.builder(
                                     itemCount: data.length,
+                                    itemExtent: 60,
                                     itemBuilder: (context, i) =>
                                         _tableRowModel(data[i]),
                                   ),
@@ -697,4 +702,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
       showCustomSnackbarError(context, "Upload Error: $e");
     }
   }
+}
+
+List<ItemModel> parseItems(List<dynamic> data) {
+  return data.map((e) => ItemModel.fromJson(e)).toList();
 }
