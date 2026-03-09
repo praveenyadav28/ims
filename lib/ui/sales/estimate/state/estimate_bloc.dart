@@ -308,7 +308,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
   }
   Future<void> _onLoad(EstLoadInit e, Emitter<EstState> emit) async {
     try {
-      // ✅ STEP 1: Load ledger first (fast UI)
+      // STEP 1: ledger first → fast UI
       final customers = await repo.fetchLedger(true);
 
       emit(
@@ -318,10 +318,9 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         ),
       );
 
-      // ✅ STEP 2: Baaki sab parallel me
+      // STEP 2: remaining data parallel
       final results = await Future.wait([
         repo.fetchEstimateNo(),
-        repo.fetchCatalogue(),
         repo.fetchHsnList(),
         repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
       ]);
@@ -329,9 +328,9 @@ class EstBloc extends Bloc<EstEvent, EstState> {
       emit(
         state.copyWith(
           estimateNo: results[0] as String,
-          catalogue: results[1] as List<ItemServiceModel>,
-          hsnMaster: results[2] as List<HsnModel>,
-          miscMasterList: results[3] as List<MiscChargeModelList>,
+          hsnMaster: results[1] as List<HsnModel>,
+          miscMasterList: results[2] as List<MiscChargeModelList>,
+          catalogue: const [], // server search use ho raha hai
         ),
       );
 

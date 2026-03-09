@@ -66,6 +66,9 @@ class CreatePurchaseInvoiceView extends StatefulWidget {
 }
 
 class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
+  final GLobalRepository repo;
+  _CreatePurchaseInvoiceViewState({GLobalRepository? repo})
+    : repo = repo ?? GLobalRepository();
   final prefixController = TextEditingController(text: "");
   final purchaseInvoiceNoController = TextEditingController();
   final cusNameController = TextEditingController();
@@ -75,6 +78,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
   final payingAmtController = TextEditingController();
   final voucherNoController = TextEditingController();
   DateTime pickedPurchaseInvoiceDate = DateTime.now();
+  final ScrollController _scrollController = ScrollController();
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
@@ -169,6 +173,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     prefixController.dispose();
     purchaseInvoiceNoController.dispose();
     cusNameController.dispose();
@@ -367,6 +372,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                 .toString();
 
             return SingleChildScrollView(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,12 +444,25 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                         state.selectedCustomer?.ledgerType ?? 'Individual',
                     catalogue: state.catalogue,
                     hsnList: state.hsnMaster,
-                    onAddRow: () => bloc.add(PurchaseInvoiceAddRow()),
+                    onAddRow: () {
+                      bloc.add(PurchaseInvoiceAddRow());
+
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        _scrollController.animateTo(
+                          _scrollController.position.maxScrollExtent,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                        );
+                      });
+                    },
                     onRemoveRow: (id) => bloc.add(PurchaseInvoiceRemoveRow(id)),
+                    onAddNextRow: () =>
+                        bloc.add(PurchaseInvoiceAddRow()), // ✅ ADD THIS
                     onUpdateRow: (row) =>
                         bloc.add(PurchaseInvoiceUpdateRow(row)),
                     onSelectCatalog: (id, item) =>
                         bloc.add(PurchaseInvoiceSelectCatalogForRow(id, item)),
+                    onSearchItem: (text) => repo.searchItems(text),
                     onSelectHsn: (id, hsn) =>
                         bloc.add(PurchaseInvoiceApplyHsnToRow(id, hsn)),
                     onToggleUnit: (id, value) =>

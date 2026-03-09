@@ -23,6 +23,8 @@ class GlobalItemsTableSection extends StatelessWidget {
     required this.onSelectHsn,
     required this.onToggleUnit,
     required this.ledgerType, // 👈
+    required this.onSearchItem,
+    required this.onAddNextRow,
     this.isReturn,
   });
 
@@ -36,8 +38,9 @@ class GlobalItemsTableSection extends StatelessWidget {
   final Function(String rowId, ItemServiceModel item) onSelectCatalog;
   final Function(String rowId, HsnModel hsn) onSelectHsn;
   final Function(String rowId, bool value) onToggleUnit;
+  final Future<List<ItemServiceModel>> Function(String)? onSearchItem;
   final bool? isReturn;
-
+  final Function()? onAddNextRow;
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -52,7 +55,7 @@ class GlobalItemsTableSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Items / Services',
+            'Items',
             style: GoogleFonts.roboto(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -77,6 +80,8 @@ class GlobalItemsTableSection extends StatelessWidget {
                 onToggleUnit: (v) => onToggleUnit(r.localId, v),
                 isReturn: isReturn,
                 ledgerType: ledgerType,
+                onSearchItem: onSearchItem,
+                onAddNextRow: onAddNextRow, // ✅ add this
               );
             }).toList(),
           ),
@@ -94,7 +99,7 @@ class GlobalItemsTableSection extends StatelessWidget {
                   height: 46,
                   alignment: Alignment.center,
                   child: const Text(
-                    '+ Add Item or Service',
+                    '+ Add Items',
                     style: TextStyle(color: Colors.purple),
                   ),
                 ),
@@ -113,10 +118,7 @@ class GlobalItemsTableSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Expanded(
-            flex: 2,
-            child: Text('Item/Service', textAlign: TextAlign.center),
-          ),
+          Expanded(flex: 2, child: Text('Item', textAlign: TextAlign.center)),
           _gap(),
           Expanded(child: Text('HSN/SAC', textAlign: TextAlign.center)),
           _gap(),
@@ -147,25 +149,28 @@ class _GlobalItemRowWidget extends StatefulWidget {
     required this.catalogue,
     required this.hsnList,
     required this.onUpdate,
+    required this.onAddNextRow,
     required this.onRemove,
     required this.onSelectCatalog,
     required this.onSelectHsn,
     required this.onToggleUnit,
     required this.isReturn,
     required this.ledgerType,
+    required this.onSearchItem,
   });
 
   final GlobalItemRow row;
   final List<GlobalItemRow> rows;
   final List<ItemServiceModel> catalogue;
   final List<HsnModel> hsnList;
-
+  final VoidCallback? onAddNextRow;
   final Function(GlobalItemRow) onUpdate;
   final VoidCallback onRemove;
   final Function(ItemServiceModel) onSelectCatalog;
   final Function(HsnModel) onSelectHsn;
   final Function(bool) onToggleUnit;
-  late bool? isReturn;
+  final Future<List<ItemServiceModel>> Function(String)? onSearchItem;
+  final bool? isReturn;
 
   @override
   State<_GlobalItemRowWidget> createState() => _GlobalItemRowWidgetState();
@@ -181,10 +186,66 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
   late FocusNode qtyF;
   late FocusNode priceF;
   late FocusNode discF;
+  final FocusNode itemFocus = FocusNode();
+  List<SearchFieldListItem<ItemServiceModel>> initialSuggestions = [];
 
   @override
   void initState() {
     super.initState();
+    itemFocus.addListener(() async {
+      if (itemFocus.hasFocus) {
+        final items = await widget.onSearchItem?.call("") ?? [];
+
+        final selectedIds = widget.rows
+            .where((e) => e.product != null)
+            .map((e) => e.product!.id)
+            .toSet();
+
+        setState(() {
+          initialSuggestions = items
+              .where(
+                (i) =>
+                    !selectedIds.contains(i.id) ||
+                    widget.row.product?.id == i.id,
+              )
+              .map((i) {
+                return SearchFieldListItem<ItemServiceModel>(
+                  "${i.name} - ${i.itemNo}",
+                  item: i,
+                  child: ListTile(
+                    dense: true,
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.shopping_bag_outlined, size: 20),
+                    ),
+                    title: Text(
+                      "${i.name} • ${i.itemNo}",
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: i.variantValue.isEmpty
+                        ? null
+                        : Text(i.variantValue),
+                    trailing: Text(
+                      i.stockQty ?? "0",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: (int.tryParse(i.stockQty ?? "0") ?? 0) <= 0
+                            ? AppColor.red
+                            : AppColor.darkGreen,
+                      ),
+                    ),
+                  ),
+                );
+              })
+              .toList();
+        });
+      }
+    });
     qtyF = FocusNode();
     priceF = FocusNode();
     discF = FocusNode();
@@ -262,6 +323,7 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
     final input = SearchInputDecoration(
       isDense: true,
       filled: true,
+
       fillColor: AppColor.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       labelStyle: GoogleFonts.inter(
@@ -469,51 +531,55 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
         .where((e) => e.product != null)
         .map((e) => e.product!.id)
         .toSet();
+
     return SearchField<ItemServiceModel>(
       key: ValueKey(r.localId + "_item"),
       itemHeight: 68,
+      suggestions: initialSuggestions,
+      focusNode: itemFocus,
+      autofocus: r.product == null,
+      onSearchTextChanged: (text) async {
+        final items =
+            await (widget.onSearchItem?.call(text.trim()) ?? Future.value([]));
 
-      // 👇 LIMIT SUGGESTIONS
-      suggestions: widget.catalogue
-          .where((i) => !selectedIds.contains(i.id) || r.product?.id == i.id)
-          .take(100)
-          .map((i) {
-            return SearchFieldListItem<ItemServiceModel>(
-              "${i.name} - ${i.itemNo}",
-              item: i,
-              child: ListTile(
-                dense: true,
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
-                    borderRadius: BorderRadius.circular(8),
+        return items
+            .where((i) => !selectedIds.contains(i.id) || r.product?.id == i.id)
+            .map((i) {
+              return SearchFieldListItem<ItemServiceModel>(
+                "${i.name} - ${i.itemNo}",
+                item: i,
+                child: ListTile(
+                  dense: true,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.shopping_bag_outlined, size: 20),
                   ),
-                  child: const Icon(Icons.shopping_bag_outlined, size: 20),
-                ),
-                title: Text(
-                  "${i.name}  •  ${i.itemNo}",
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: i.variantValue.isEmpty ? null : Text(i.variantValue),
-                trailing: Text(
-                  i.stockQty.toString(),
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color:
-                        (int.parse(
-                              i.stockQty?.isEmpty ?? true ? "0" : i.stockQty!,
-                            )) <=
-                            0
-                        ? AppColor.red
-                        : AppColor.darkGreen,
+                  title: Text(
+                    "${i.name} • ${i.itemNo}",
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: i.variantValue.isEmpty
+                      ? null
+                      : Text(i.variantValue),
+                  trailing: Text(
+                    i.stockQty ?? "0",
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: (int.tryParse(i.stockQty ?? "0") ?? 0) <= 0
+                          ? AppColor.red
+                          : AppColor.darkGreen,
+                    ),
                   ),
                 ),
-              ),
-            );
-          })
-          .toList(),
+              );
+            })
+            .toList();
+      },
 
       searchInputDecoration: input.copyWith(labelText: "Item / Service"),
 
@@ -522,12 +588,25 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
+      selectedValue: null,
 
-      selectedValue: r.product != null
-          ? SearchFieldListItem("${r.product!.name} - ${r.product!.itemNo}")
-          : null,
+      controller: TextEditingController(
+        text: r.product != null
+            ? "${r.product!.name} - ${r.product!.itemNo}"
+            : "",
+      ),
 
-      onSuggestionTap: (s) => widget.onSelectCatalog(s.item!),
+      onSuggestionTap: (s) {
+        widget.onSelectCatalog(s.item!);
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final index = widget.rows.indexOf(widget.row);
+
+          if (index == widget.rows.length - 1) {
+            widget.onAddNextRow?.call(); // ✅ correct
+          }
+        });
+      },
     );
   }
 }

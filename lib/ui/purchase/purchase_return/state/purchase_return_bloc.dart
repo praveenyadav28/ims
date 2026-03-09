@@ -312,39 +312,41 @@ class PurchaseReturnBloc
 
     on<PurchaseReturnSearchTransaction>(_onSearchTransaction);
   }
-
   Future<void> _onLoad(
     PurchaseReturnLoadInit e,
     Emitter<PurchaseReturnState> emit,
   ) async {
     try {
+      // STEP 1: ledger first (fast UI)
       final customers = await repo.fetchLedger(false);
-      final purchaseReturnNo = await repo.fetchPurchaseReturnNo();
-      final catalogue = await repo.fetchOnyItem();
-      final hsnList = await repo.fetchHsnList();
-
-      // fetch misc master list
-      List<MiscChargeModelList> miscMaster = [];
-      try {
-        miscMaster = await repo.fetchMiscMaster();
-      } catch (_) {
-        miscMaster = [];
-      }
 
       emit(
         state.copyWith(
           customers: customers,
-          purchaseReturnNo: purchaseReturnNo,
-          catalogue: catalogue,
-          hsnMaster: hsnList,
-          miscMasterList: miscMaster,
-          // ensure UI has at least one empty row to start
           rows: [GlobalItemRow(localId: UniqueKey().toString())],
         ),
       );
 
+      // STEP 2: remaining APIs parallel
+      final results = await Future.wait([
+        repo.fetchPurchaseReturnNo(),
+        repo.fetchHsnList(),
+        repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
+      ]);
+
+      emit(
+        state.copyWith(
+          purchaseReturnNo: results[0] as String,
+          hsnMaster: results[1] as List<HsnModel>,
+          miscMasterList: results[2] as List<MiscChargeModelList>,
+          catalogue: const [], // item server search use ho raha hai
+        ),
+      );
+
       add(PurchaseReturnCalculate());
-    } catch (err) {}
+    } catch (err) {
+      debugPrint(err.toString());
+    }
   }
 
   void _onSelectCustomer(
@@ -814,8 +816,11 @@ class PurchaseReturnBloc
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-      
-        "place_of_supply": e.stateName.isNotEmpty ? e.stateName : Preference.getString(PrefKeys.state),  "prefix": state.prefix,
+
+        "place_of_supply": e.stateName.isNotEmpty
+            ? e.stateName
+            : Preference.getString(PrefKeys.state),
+        "prefix": state.prefix,
         "no": int.tryParse(state.purchaseReturnNo),
         "purchasereturn_date": DateFormat(
           'yyyy-MM-dd',

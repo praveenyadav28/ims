@@ -60,6 +60,9 @@ class CreateSaleReturnView extends StatefulWidget {
 }
 
 class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
+  final GLobalRepository repo;
+  _CreateSaleReturnViewState({GLobalRepository? repo})
+    : repo = repo ?? GLobalRepository();
   final prefixController = TextEditingController();
   final invoiceNoController = TextEditingController();
   final cusNameController = TextEditingController();
@@ -396,6 +399,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                     catalogue: state.catalogue, // list of ItemServiceModel
                     hsnList: state.hsnMaster, // list of HsnModel
 
+  onAddNextRow: () => bloc.add(SaleReturnAddRow()), // ✅ ADD THIS
                     onAddRow: () => bloc.add(SaleReturnAddRow()),
 
                     onRemoveRow: (id) => bloc.add(SaleReturnRemoveRow(id)),
@@ -410,6 +414,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
 
                     onToggleUnit: (rowId, value) =>
                         bloc.add(SaleReturnToggleUnitForRow(rowId, value)),
+                    onSearchItem: (text) => repo.searchItems(text),
                     isReturn: false,
                   ),
                   SizedBox(height: Sizes.height * .02),

@@ -63,6 +63,10 @@ class CreateSaleInvoiceView extends StatefulWidget {
 }
 
 class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
+  final GLobalRepository repo;
+
+  _CreateSaleInvoiceViewState({GLobalRepository? repo})
+    : repo = repo ?? GLobalRepository();
   final prefixController = TextEditingController();
   final invoiceNoController = TextEditingController();
   final cusNameController = TextEditingController();
@@ -72,6 +76,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
   final cashShippingController = TextEditingController();
   final voucherNoController = TextEditingController();
   final salesPersonController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   DateTime pickedInvoiceDate = DateTime.now();
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
@@ -109,7 +114,6 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
   void initState() {
     super.initState();
     statesSuggestions = stateCities.keys.toList();
-
     getAutoVoucherApi();
     ledgerApi();
     if (widget.saleInvoiceData != null) {
@@ -354,6 +358,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
             invoiceNoController.text = state.saleInvoiceNo.toString();
 
             return SingleChildScrollView(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,14 +434,22 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                   GlobalItemsTableSection(
                     ledgerType:
                         state.selectedCustomer?.ledgerType ?? 'Individual',
-                    rows: state.rows, // list of GlobalItemRow
-                    catalogue: state.catalogue, // list of ItemServiceModel
-                    hsnList: state.hsnMaster, // list of HsnModel
+                    rows: state.rows,
+                    catalogue: state.catalogue,
+                    hsnList: state.hsnMaster,
+                    onAddNextRow: () =>
+                        bloc.add(SaleInvoiceAddRow()), // ✅ ADD THIS
+                    onAddRow: () {
+                      bloc.add(SaleInvoiceAddRow());
 
-                    onAddRow: () => bloc.add(SaleInvoiceAddRow()),
-
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (_scrollController.hasClients) {
+                          _scrollController.jumpTo(100
+                          );
+                        }
+                      });
+                    },
                     onRemoveRow: (id) => bloc.add(SaleInvoiceRemoveRow(id)),
-
                     onUpdateRow: (row) => bloc.add(SaleInvoiceUpdateRow(row)),
 
                     onSelectCatalog: (rowId, item) =>
@@ -447,6 +460,8 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
 
                     onToggleUnit: (rowId, value) =>
                         bloc.add(SaleInvoiceToggleUnitForRow(rowId, value)),
+
+                    onSearchItem: (text) => repo.searchItems(text),
                   ),
                   SizedBox(height: Sizes.height * .02),
 

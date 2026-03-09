@@ -301,7 +301,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     Emitter<PurchaseOrderState> emit,
   ) async {
     try {
-      // ✅ STEP 1: Ledger pehle load karo (UI fast)
+      // STEP 1: Ledger first → fast UI
       final customers = await repo.fetchLedger(false);
 
       emit(
@@ -311,10 +311,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         ),
       );
 
-      // ✅ STEP 2: Baaki data parallel me load karo
+      // STEP 2: Remaining APIs parallel
       final results = await Future.wait([
         repo.fetchPurchaseOrderNo(),
-        repo.fetchOnyItem(),
         repo.fetchHsnList(),
         repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
       ]);
@@ -322,9 +321,9 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
       emit(
         state.copyWith(
           purchaseOrderNo: results[0] as String,
-          catalogue: results[1] as List<ItemServiceModel>,
-          hsnMaster: results[2] as List<HsnModel>,
-          miscMasterList: results[3] as List<MiscChargeModelList>,
+          hsnMaster: results[1] as List<HsnModel>,
+          miscMasterList: results[2] as List<MiscChargeModelList>,
+          catalogue: const [], // items server search se aayenge
         ),
       );
 
@@ -786,8 +785,11 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-       
-        "place_of_supply": e.stateName.isNotEmpty ? e.stateName : Preference.getString(PrefKeys.state), "prefix": state.prefix,
+
+        "place_of_supply": e.stateName.isNotEmpty
+            ? e.stateName
+            : Preference.getString(PrefKeys.state),
+        "prefix": state.prefix,
         "no": int.tryParse(state.purchaseOrderNo),
         "purchaseoder_date": DateFormat(
           'yyyy-MM-dd',

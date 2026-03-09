@@ -295,36 +295,31 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
     on<PerfromaToggleRoundOff>(_onToggleRoundOff);
     on<PerfromaCalculate>(_onCalculate);
   }
-
   Future<void> _onLoad(PerformaLoadInit e, Emitter<PerformaState> emit) async {
     try {
       final customers = await repo.fetchLedger(true);
-      final performaNo = await repo.fetchPerformaNo();
-      final catalogue = await repo.fetchCatalogue();
-      final hsnList = await repo.fetchHsnList();
 
-      // fetch misc master list
-      List<MiscChargeModelList> miscMaster = [];
-      try {
-        miscMaster = await repo.fetchMiscMaster();
-      } catch (_) {
-        miscMaster = [];
-      }
+      final results = await Future.wait([
+        repo.fetchPerformaNo(),
+        repo.fetchHsnList(),
+        repo.fetchMiscMaster().catchError((_) => []),
+      ]);
 
       emit(
         state.copyWith(
           customers: customers,
-          performaNo: performaNo,
-          catalogue: catalogue,
-          hsnMaster: hsnList,
-          miscMasterList: miscMaster,
-          // ensure UI has at least one empty row to start
+          performaNo: results[0] as String,
+          hsnMaster: results[1] as List<HsnModel>,
+          miscMasterList: results[2] as List<MiscChargeModelList>,
+          catalogue: const [], // server search use ho raha hai
           rows: [GlobalItemRow(localId: UniqueKey().toString())],
         ),
       );
 
       add(PerfromaCalculate());
-    } catch (err) {}
+    } catch (err) {
+      debugPrint(err.toString());
+    }
   }
 
   void _onSelectCustomer(
@@ -745,8 +740,10 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
         "address_0": billing,
         "address_1": shipping,
 
-      
-        "place_of_supply": e.stateName.isNotEmpty ? e.stateName : Preference.getString(PrefKeys.state),  "prefix": state.prefix,
+        "place_of_supply": e.stateName.isNotEmpty
+            ? e.stateName
+            : Preference.getString(PrefKeys.state),
+        "prefix": state.prefix,
         "no": int.tryParse(state.performaNo),
         "proforma_date": DateFormat(
           'yyyy-MM-dd',

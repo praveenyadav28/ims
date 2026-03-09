@@ -67,7 +67,7 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-    
+
     return data;
   }
 
@@ -77,7 +77,7 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-   
+
     return data;
   }
 
@@ -87,7 +87,7 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-   
+
     return data;
   }
 
@@ -97,7 +97,7 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-  
+
     return data;
   }
 
@@ -125,7 +125,7 @@ class GLobalRepository {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     final data = (res?['next_no'].toString()) ?? '';
-     return data;
+    return data;
   }
 
   //
@@ -149,6 +149,23 @@ class GLobalRepository {
       combined.add(ItemServiceModel.fromService(Map<String, dynamic>.from(s)));
     }
     return combined;
+  }
+
+  Future<List<ItemServiceModel>> searchItems(String text) async {
+    final res = await ApiService.fetchData(
+      text.isEmpty ? "get/item/search" : "get/item/search?search=$text",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    final data = (res?['data'] as List?) ?? [];
+
+    return data
+        .map((e) => ItemServiceModel.fromItem(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<List<ItemServiceModel>> fetchTopItems() async {
+    return searchItems("");
   }
 
   Future<List<ItemServiceModel>> fetchOnyItem() async {

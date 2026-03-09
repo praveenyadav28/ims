@@ -63,6 +63,9 @@ class CreatePurchaseOrderView extends StatefulWidget {
 }
 
 class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
+  final GLobalRepository repo;
+  _CreatePurchaseOrderViewState({GLobalRepository? repo})
+    : repo = repo ?? GLobalRepository();
   final prefixController = TextEditingController(text: "");
   final purchaseOrderNoController = TextEditingController();
   final cusNameController = TextEditingController();
@@ -495,11 +498,14 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                         state.selectedCustomer?.ledgerType ?? 'Individual',
                     catalogue: state.catalogue,
                     hsnList: state.hsnMaster,
+                    onAddNextRow: () =>
+                        bloc.add(PurchaseOrderAddRow()), // ✅ ADD THIS
                     onAddRow: () => bloc.add(PurchaseOrderAddRow()),
                     onRemoveRow: (id) => bloc.add(PurchaseOrderRemoveRow(id)),
                     onUpdateRow: (row) => bloc.add(PurchaseOrderUpdateRow(row)),
                     onSelectCatalog: (id, item) =>
                         bloc.add(PurchaseOrderSelectCatalogForRow(id, item)),
+                    onSearchItem: (text) => repo.searchItems(text),
                     onSelectHsn: (id, hsn) =>
                         bloc.add(PurchaseOrderApplyHsnToRow(id, hsn)),
                     onToggleUnit: (id, value) =>

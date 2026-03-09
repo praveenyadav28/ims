@@ -63,6 +63,9 @@ class CreatePurchaseReturnView extends StatefulWidget {
 }
 
 class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
+  final GLobalRepository repo;
+  _CreatePurchaseReturnViewState({GLobalRepository? repo})
+    : repo = repo ?? GLobalRepository();
   final prefixController = TextEditingController(text: "");
   final purchaseReturnNoController = TextEditingController();
   final cusNameController = TextEditingController();
@@ -408,8 +411,10 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                     hsnList: state.hsnMaster,
                     onAddRow: () => bloc.add(PurchaseReturnAddRow()),
                     onRemoveRow: (id) => bloc.add(PurchaseReturnRemoveRow(id)),
+  onAddNextRow: () => bloc.add(PurchaseReturnAddRow()), // ✅ ADD THIS
                     onUpdateRow: (row) =>
                         bloc.add(PurchaseReturnUpdateRow(row)),
+                    onSearchItem: (text) => repo.searchItems(text),
                     onSelectCatalog: (id, item) =>
                         bloc.add(PurchaseReturnSelectCatalogForRow(id, item)),
                     onSelectHsn: (id, hsn) =>

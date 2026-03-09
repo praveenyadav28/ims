@@ -62,6 +62,10 @@ class CreateEstimateView extends StatefulWidget {
 }
 
 class _CreateEstimateViewState extends State<CreateEstimateView> {
+  final GLobalRepository repo;
+  _CreateEstimateViewState({GLobalRepository? repo})
+    : repo = repo ?? GLobalRepository();
+
   final prefixController = TextEditingController(text: "");
   final estimateNoController = TextEditingController();
   final cusNameController = TextEditingController();
@@ -474,9 +478,11 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                         state.selectedCustomer?.ledgerType ?? 'Individual',
                     catalogue: state.catalogue,
                     hsnList: state.hsnMaster,
+                    onAddNextRow: () => bloc.add(EstAddRow()), // ✅ ADD THIS
                     onAddRow: () => bloc.add(EstAddRow()),
                     onRemoveRow: (id) => bloc.add(EstRemoveRow(id)),
                     onUpdateRow: (row) => bloc.add(EstUpdateRow(row)),
+                    onSearchItem: (text) => repo.searchItems(text),
                     onSelectCatalog: (id, item) =>
                         bloc.add(EstSelectCatalogForRow(id, item)),
                     onSelectHsn: (id, hsn) =>

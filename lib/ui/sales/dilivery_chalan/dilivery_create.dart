@@ -65,6 +65,9 @@ class CreateDiliveryChallanView extends StatefulWidget {
 }
 
 class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
+  final GLobalRepository repo;
+  _CreateDiliveryChallanViewState({GLobalRepository? repo})
+    : repo = repo ?? GLobalRepository();
   final prefixController = TextEditingController();
   final invoiceNoController = TextEditingController();
   final cusNameController = TextEditingController();
@@ -401,10 +404,12 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
                     catalogue: state.catalogue, // list of ItemServiceModel
                     hsnList: state.hsnMaster, // list of HsnModel
 
+                    onAddNextRow: () =>
+                        bloc.add(DiliveryChallanAddRow()), // ✅ ADD THIS
                     onAddRow: () => bloc.add(DiliveryChallanAddRow()),
 
                     onRemoveRow: (id) => bloc.add(DiliveryChallanRemoveRow(id)),
-
+                    onSearchItem: (text) => repo.searchItems(text),
                     onUpdateRow: (row) =>
                         bloc.add(DiliveryChallanUpdateRow(row)),
 

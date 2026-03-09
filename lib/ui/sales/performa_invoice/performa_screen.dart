@@ -60,6 +60,9 @@ class CreatePerformaView extends StatefulWidget {
 }
 
 class _CreatePerformaViewState extends State<CreatePerformaView> {
+  final GLobalRepository repo;
+  _CreatePerformaViewState({GLobalRepository? repo})
+    : repo = repo ?? GLobalRepository();
   final prefixController = TextEditingController();
   final perfromaNoController = TextEditingController();
   final cusNameController = TextEditingController();
@@ -387,10 +390,12 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
 
                     onAddRow: () => bloc.add(PerformaAddRow()),
 
+  onAddNextRow: () => bloc.add(PerformaAddRow()), // ✅ ADD THIS
                     onRemoveRow: (id) => bloc.add(PerfromaRemoveRow(id)),
 
                     onUpdateRow: (row) => bloc.add(PerformaUpdateRow(row)),
 
+                    onSearchItem: (text) => repo.searchItems(text),
                     onSelectCatalog: (rowId, item) =>
                         bloc.add(PerfromaSelectCatalogForRow(rowId, item)),
 

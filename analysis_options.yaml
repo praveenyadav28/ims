@@ -11,6 +11,7 @@ analyzer:
   errors:
     invalid_use_of_visible_for_testing_member: ignore
     empty_catches: ignore
+    invalid_return_type_for_catch_error: ignore
 include: package:flutter_lints/flutter.yaml
 
 linter:

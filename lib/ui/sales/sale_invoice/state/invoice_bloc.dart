@@ -367,7 +367,7 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
       // ✅ STEP 2: Load remaining data in parallel
       final results = await Future.wait([
         repo.fetchSaleInvoiceNo(),
-        repo.fetchCatalogue(),
+        // repo.fetchCatalogue(),
         repo.fetchHsnList(),
         repo.fetchMiscMaster().catchError((_) => []),
       ]);
@@ -375,9 +375,9 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
       emit(
         state.copyWith(
           saleInvoiceNo: results[0] as String,
-          catalogue: results[1] as List<ItemServiceModel>,
-          hsnMaster: results[2] as List<HsnModel>,
-          miscMasterList: results[3] as List<MiscChargeModelList>,
+          hsnMaster: results[1] as List<HsnModel>,
+          miscMasterList: results[2] as List<MiscChargeModelList>,
+          // catalogue: results[1] as List<ItemServiceModel>,
         ),
       );
 
@@ -918,8 +918,11 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-       
-        "place_of_supply": e.stateName.isNotEmpty ? e.stateName : Preference.getString(PrefKeys.state), "prefix": state.prefix,
+
+        "place_of_supply": e.stateName.isNotEmpty
+            ? e.stateName
+            : Preference.getString(PrefKeys.state),
+        "prefix": state.prefix,
         "no": int.tryParse(state.saleInvoiceNo),
         "invoice_date": DateFormat(
           'yyyy-MM-dd',

@@ -1,4 +1,6 @@
 // SaleReturn_bloc.dart
+// ignore_for_file: invalid_return_type_for_catch_error
+
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -321,34 +323,27 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
 
     on<SaleReturnSearchTransaction>(_onSearchTransaction);
   }
-
   Future<void> _onLoad(
     SaleReturnLoadInit e,
     Emitter<SaleReturnState> emit,
   ) async {
     try {
       final customers = await repo.fetchLedger(true);
-      final saleReturnNo = await repo.fetchSaleReturnNo();
-      final catalogue = await repo.fetchCatalogue();
-      final hsnList = await repo.fetchHsnList();
 
-      // fetch misc master list
-      List<MiscChargeModelList> miscMaster = [];
-      try {
-        miscMaster = await repo.fetchMiscMaster();
-      } catch (_) {
-        miscMaster = [];
-      }
+      final results = await Future.wait([
+        repo.fetchSaleReturnNo(),
+        repo.fetchHsnList(),
+        repo.fetchMiscMaster().catchError((_) => []),
+      ]);
 
       emit(
         state.copyWith(
           customers: customers,
-          saleReturnNo: saleReturnNo,
-          catalogue: catalogue,
-          hsnMaster: hsnList,
-          miscMasterList: miscMaster,
-          // ensure UI has at least one empty row to start
+          saleReturnNo: results[0] as String,
+          hsnMaster: results[1] as List<HsnModel>,
+          miscMasterList: results[2] as List<MiscChargeModelList>,
           rows: [GlobalItemRow(localId: UniqueKey().toString())],
+          catalogue: const [],
         ),
       );
 

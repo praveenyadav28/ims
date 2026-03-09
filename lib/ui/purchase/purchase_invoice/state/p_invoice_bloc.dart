@@ -336,7 +336,7 @@ class PurchaseInvoiceBloc
     Emitter<PurchaseInvoiceState> emit,
   ) async {
     try {
-      // ✅ STEP 1: Ledger pehle load karo (fast UI)
+      // STEP 1: Ledger first → fast UI
       final customers = await repo.fetchLedger(false);
 
       emit(
@@ -346,10 +346,9 @@ class PurchaseInvoiceBloc
         ),
       );
 
-      // ✅ STEP 2: Baaki sab parallel me load karo
+      // STEP 2: Remaining APIs parallel
       final results = await Future.wait([
         repo.fetchPurchaseInvoiceNo(),
-        repo.fetchOnyItem(),
         repo.fetchHsnList(),
         repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
       ]);
@@ -357,9 +356,9 @@ class PurchaseInvoiceBloc
       emit(
         state.copyWith(
           purchaseInvoiceNo: results[0] as String,
-          catalogue: results[1] as List<ItemServiceModel>,
-          hsnMaster: results[2] as List<HsnModel>,
-          miscMasterList: results[3] as List<MiscChargeModelList>,
+          hsnMaster: results[1] as List<HsnModel>,
+          miscMasterList: results[2] as List<MiscChargeModelList>,
+          catalogue: const [], // items server search se aayenge
         ),
       );
 
@@ -895,8 +894,11 @@ class PurchaseInvoiceBloc
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-       
-        "place_of_supply": e.stateName.isNotEmpty ? e.stateName : Preference.getString(PrefKeys.state), "prefix": state.prefix,
+
+        "place_of_supply": e.stateName.isNotEmpty
+            ? e.stateName
+            : Preference.getString(PrefKeys.state),
+        "prefix": state.prefix,
         "no": int.tryParse(state.purchaseInvoiceNo),
         "purchaseinvoice_date": DateFormat(
           'yyyy-MM-dd',

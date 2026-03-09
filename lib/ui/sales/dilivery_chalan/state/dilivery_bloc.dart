@@ -295,39 +295,41 @@ class DiliveryChallanBloc
     on<DiliveryChallanToggleRoundOff>(_onToggleRoundOff);
     on<DiliveryChallanCalculate>(_onCalculate);
   }
-
   Future<void> _onLoad(
     DiliveryChallanLoadInit e,
     Emitter<DiliveryChallanState> emit,
   ) async {
     try {
+      // STEP 1: ledger first → fast UI
       final customers = await repo.fetchLedger(true);
-      final diliveryChallanNo = await repo.fetchDiliveryChallanNo();
-      final catalogue = await repo.fetchCatalogue();
-      final hsnList = await repo.fetchHsnList();
-
-      // fetch misc master list
-      List<MiscChargeModelList> miscMaster = [];
-      try {
-        miscMaster = await repo.fetchMiscMaster();
-      } catch (_) {
-        miscMaster = [];
-      }
 
       emit(
         state.copyWith(
           customers: customers,
-          diliveryChallanNo: diliveryChallanNo,
-          catalogue: catalogue,
-          hsnMaster: hsnList,
-          miscMasterList: miscMaster,
-          // ensure UI has at least one empty row to start
           rows: [GlobalItemRow(localId: UniqueKey().toString())],
         ),
       );
 
+      // STEP 2: remaining data parallel
+      final results = await Future.wait([
+        repo.fetchDiliveryChallanNo(),
+        repo.fetchHsnList(),
+        repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
+      ]);
+
+      emit(
+        state.copyWith(
+          diliveryChallanNo: results[0] as String,
+          hsnMaster: results[1] as List<HsnModel>,
+          miscMasterList: results[2] as List<MiscChargeModelList>,
+          catalogue: const [], // item search API use ho rahi hai
+        ),
+      );
+
       add(DiliveryChallanCalculate());
-    } catch (err) {}
+    } catch (err) {
+      debugPrint(err.toString());
+    }
   }
 
   void _onSelectCustomer(
@@ -774,8 +776,11 @@ class DiliveryChallanBloc
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-        
-        "place_of_supply": e.stateName.isNotEmpty ? e.stateName : Preference.getString(PrefKeys.state),"prefix": state.prefix,
+
+        "place_of_supply": e.stateName.isNotEmpty
+            ? e.stateName
+            : Preference.getString(PrefKeys.state),
+        "prefix": state.prefix,
         "no": int.tryParse(state.diliveryChallanNo),
         "dilvery_date": DateFormat(
           'yyyy-MM-dd',
