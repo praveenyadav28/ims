@@ -9,8 +9,11 @@ import 'package:ims/ui/report/report_screen.dart';
 
 import 'package:ims/ui/sales/models/sale_invoice_data.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
+import 'package:ims/ui/sales/sale_invoice/sale_invoice_list.dart';
 import 'package:ims/utils/api.dart';
+import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
+import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 
@@ -247,6 +250,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ],
                                 ),
                               ),
+                              SizedBox(height: 15),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () {
+                                  pushTo(SaleInvoiceInvoiceListScreen());
+                                },
+                                child: Container(
+                                  height: 45,
+                                  width: 210,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xff1AB39B),
+                                        Color(0xff22CCB2),
+                                        Color(0xff5FE0CD),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.purple.withOpacity(0.5),
+                                        blurRadius: 12,
+                                        spreadRadius: 1,
+                                        offset: const Offset(0, 6),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.receipt_long,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        "Sale Invoice",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColor.white,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -322,7 +377,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _graphCard() {
     return Container(
-      height: 240,
+      height: 180,
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -340,7 +395,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           Expanded(child: _cashFlowBars()),
         ],
       ),
@@ -362,8 +417,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final sale = saleMonthly[m] ?? 0;
         final purchase = purchaseMonthly[m] ?? 0;
 
-        final saleH = (sale / maxVal) * 140;
-        final purH = (purchase / maxVal) * 140;
+        final saleH = (sale / maxVal) * 100;
+        final purH = (purchase / maxVal) * 100;
 
         return Expanded(
           child: Column(
@@ -561,54 +616,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _reminderList() {
+    ScrollController _scrollController = ScrollController();
     return Expanded(
       child: Container(
         height: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
         decoration: BoxDecoration(
           color: const Color(0xff111827),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Outstanding",
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+        child: Scrollbar(
+          controller: _scrollController,
+          trackVisibility: true,
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Outstanding",
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              if (ledgerList.isEmpty)
-                const Text(
-                  "No Pending Reminders",
-                  style: TextStyle(color: Colors.white54),
-                ),
-              ...ledgerList
-                  .take(5)
-                  .map(
-                    (r) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            r.ledgerName ?? "",
-                            style: GoogleFonts.inter(color: Colors.red),
-                          ),
+                if (ledgerList.isEmpty)
+                  const Text(
+                    "No Pending Reminders",
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                ...ledgerList
+                    .take(5)
+                    .map(
+                      (r) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              r.ledgerName ?? "",
+                              style: GoogleFonts.inter(
+                                color: Colors.red,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
 
-                          Text(
-                            "₹ ${r.closingBalance!.abs()}",
-                            style: GoogleFonts.inter(color: Colors.red),
-                          ),
-                        ],
+                            Text(
+                              "₹ ${r.closingBalance!.abs()}",
+                              style: GoogleFonts.inter(
+                                color: Colors.red,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

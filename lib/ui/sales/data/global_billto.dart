@@ -21,9 +21,11 @@ class GlobalBillToCard extends StatefulWidget {
     required this.shippingController,
     required this.stateController,
     required this.onToggleCashSale,
+    required this.onSearchLedger,
     required this.onCustomerSelected,
     required this.onCreateCustomer,
     required this.ispurchase,
+    required this.focusNode,
     this.isReturn,
   });
 
@@ -41,9 +43,11 @@ class GlobalBillToCard extends StatefulWidget {
 
   /// CALLBACKS
   final VoidCallback onToggleCashSale;
+  final Future<List<LedgerModelDrop>> Function(String text)? onSearchLedger;
   final Function(LedgerModelDrop customer) onCustomerSelected;
   final VoidCallback onCreateCustomer;
   final bool ispurchase;
+  final FocusNode? focusNode;
   final bool? isReturn;
 
   @override
@@ -133,6 +137,8 @@ class _GlobalBillToCardState extends State<GlobalBillToCard> {
             customers: widget.customers,
             selectedCustomer: widget.selectedCustomer,
             onCreateCustomer: widget.onCreateCustomer,
+            onSearchLedger: widget.onSearchLedger,
+            focusNode: widget.focusNode,
             onSelectCustomer: (customer) {
               widget.mobileController.text = customer.mobile;
               widget.billingController.text = customer.billingAddress;
@@ -239,13 +245,18 @@ class _CustomerDropdown extends StatelessWidget {
     required this.onCreateCustomer,
     required this.onSelectCustomer,
     required this.isReturn,
+    required this.onSearchLedger,
+
+    required this.focusNode,
   });
 
   final List<LedgerModelDrop> customers;
   final LedgerModelDrop? selectedCustomer;
 
   final VoidCallback onCreateCustomer;
+  final Future<List<LedgerModelDrop>> Function(String text)? onSearchLedger;
   final Function(LedgerModelDrop customer) onSelectCustomer;
+  final FocusNode? focusNode;
   bool isReturn;
 
   @override
@@ -255,7 +266,9 @@ class _CustomerDropdown extends StatelessWidget {
         AbsorbPointer(
           absorbing: !(isReturn), // 👈 disable touch only
           child: SearchField<LedgerModelDrop>(
-            key: ValueKey(selectedCustomer?.id),
+            focusNode: FocusNode(),
+            suggestionState: Suggestion.expand,
+            key: ValueKey(selectedCustomer?.id ?? "customer_search"),
             readOnly: !(isReturn),
 
             selectedValue: selectedCustomer != null
@@ -273,6 +286,18 @@ class _CustomerDropdown extends StatelessWidget {
                 child: _customerTile(c),
               );
             }).toList(),
+
+            onSearchTextChanged: (text) async {
+              final list = await onSearchLedger?.call(text.trim()) ?? [];
+
+              return list.map((c) {
+                return SearchFieldListItem(
+                  c.name,
+                  item: c,
+                  child: _customerTile(c),
+                );
+              }).toList();
+            },
 
             hint: 'Select Party',
 

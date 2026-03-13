@@ -120,6 +120,8 @@ class PurchaseOrderToggleRoundOff extends PurchaseOrderEvent {
 
 class PurchaseOrderAddLowStockItems extends PurchaseOrderEvent {}
 
+class PurchaseOrderLoadCustomers extends PurchaseOrderEvent {}
+
 /// ------------------- STATE -------------------
 class PurchaseOrderState {
   final List<LedgerModelDrop> customers;
@@ -295,6 +297,11 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     on<PurchaseOrderToggleRoundOff>(_onToggleRoundOff);
     on<PurchaseOrderCalculate>(_onCalculate);
     on<PurchaseOrderAddLowStockItems>(_onAddLowStockItems);
+    on<PurchaseOrderLoadCustomers>((event, emit) async {
+      final customers = await repo.searchLedger("", false);
+
+      emit(state.copyWith(customers: customers));
+    });
   }
   Future<void> _onLoad(
     PurchaseOrderLoadInit e,
@@ -302,7 +309,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
   ) async {
     try {
       // STEP 1: Ledger first → fast UI
-      final customers = await repo.fetchLedger(false);
+      final customers = await repo.searchLedger('', false);
 
       emit(
         state.copyWith(
@@ -969,32 +976,24 @@ PurchaseOrderState _prefillPurchaseOrder(
     );
   }
 
-  // empty fallback item (if catalogue doesn't contain item/service)
-  ItemServiceModel emptyItem() {
-    return ItemServiceModel(
-      id: "",
-      type: ItemServiceType.item,
-      name: "",
-      hsn: "",
-      variantValue: '',
-      basePurchasePrice: 0,
-      gstRate: 0,
-      gstIncluded: false,
-      gstIncludedPurchase: false,
-      baseUnit: '',
-      secondaryUnit: '',
-      conversion: 1,
-      variants: [],
-      itemNo: '',
-      group: '',
-    );
-  }
-
   // Convert itemDetails -> GlobalItemRow
   final itemRows = (data.itemDetails).map((i) {
-    final catalogItem = s.catalogue.firstWhere(
-      (c) => c.id == (i.itemId),
-      orElse: () => emptyItem(),
+    final catalogItem = ItemServiceModel(
+      id: i.itemId,
+      name: i.name,
+      itemNo: i.itemNo,
+      type: ItemServiceType.item,
+      hsn: i.hsn,
+      baseSalePrice: i.price,
+      gstRate: i.gstRate,
+      gstIncluded: i.inclusive,
+      gstIncludedPurchase: false,
+      baseUnit: i.unit,
+      secondaryUnit: i.unit,
+      conversion: 1,
+      variants: [],
+      variantValue: '',
+      group: '',
     );
 
     return GlobalItemRow(

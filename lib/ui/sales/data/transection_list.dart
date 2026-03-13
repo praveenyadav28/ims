@@ -146,7 +146,7 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
       backgroundColor: AppColor.white,
       appBar: AppBar(
         elevation: 0.4,
-        iconTheme: IconThemeData(color: AppColor.black),
+        iconTheme: IconThemeData(color: AppColor.white),
         backgroundColor: AppColor.black,
         title: Text(
           widget.title,

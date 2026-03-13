@@ -328,7 +328,7 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
     Emitter<SaleReturnState> emit,
   ) async {
     try {
-      final customers = await repo.fetchLedger(true);
+      // final customers = await repo.fetchLedger(true);
 
       final results = await Future.wait([
         repo.fetchSaleReturnNo(),
@@ -338,7 +338,7 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
 
       emit(
         state.copyWith(
-          customers: customers,
+          // customers: customers,
           saleReturnNo: results[0] as String,
           hsnMaster: results[1] as List<HsnModel>,
           miscMasterList: results[2] as List<MiscChargeModelList>,
@@ -1033,9 +1033,22 @@ SaleReturnState _prefillSaleReturnFromTrans(
 
   // Convert itemDetails -> GlobalItemRow
   final itemRows = (data.itemDetails).map((i) {
-    final catalogItem = s.catalogue.firstWhere(
-      (c) => c.id == (i.itemId),
-      orElse: () => emptyItem(),
+    final catalogItem = ItemServiceModel(
+      id: i.itemId,
+      name: i.name,
+      itemNo: i.itemNo,
+      type: ItemServiceType.item,
+      hsn: i.hsn,
+      baseSalePrice: i.price,
+      gstRate: i.gstRate,
+      gstIncluded: i.inclusive,
+      gstIncludedPurchase: false,
+      baseUnit: i.unit,
+      secondaryUnit: i.unit,
+      conversion: 1,
+      variants: [],
+      variantValue: '',
+      group: '',
     );
 
     return GlobalItemRow(
@@ -1205,9 +1218,22 @@ SaleReturnState _prefillSaleReturn(SaleReturnData data, SaleReturnState s) {
 
   // Convert itemDetails -> GlobalItemRow
   final itemRows = (data.itemDetails).map((i) {
-    final catalogItem = s.catalogue.firstWhere(
-      (c) => c.id == (i.itemId),
-      orElse: () => emptyItem(),
+    final catalogItem = ItemServiceModel(
+      id: i.itemId,
+      name: i.name,
+      itemNo: i.itemNo,
+      type: ItemServiceType.item,
+      hsn: i.hsn,
+      baseSalePrice: i.price,
+      gstRate: i.gstRate,
+      gstIncluded: i.inclusive,
+      gstIncludedPurchase: false,
+      baseUnit: i.unit,
+      secondaryUnit: i.unit,
+      conversion: 1,
+      variants: [],
+      variantValue: '',
+      group: '',
     );
 
     return GlobalItemRow(

@@ -138,6 +138,8 @@ class SaleInvoiceSetTransNo extends SaleInvoiceEvent {
 
 class SaleInvoiceSearchTransaction extends SaleInvoiceEvent {}
 
+class SaleInvoiceLoadCustomers extends SaleInvoiceEvent {}
+
 class SaleInvoiceSavePayment extends SaleInvoiceEvent {
   final String amount;
   final String voucherNo;
@@ -348,6 +350,13 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
 
     on<SaleInvoiceSearchTransaction>(_onSearchTransaction);
     on<SaleInvoiceSavePayment>(_onSaveRecieptVoucher);
+    on<SaleInvoiceLoadCustomers>((event, emit) async {
+
+  final customers = await repo.searchLedger("", true);
+
+  emit(state.copyWith(customers: customers));
+
+});
   }
   Future<void> _onLoad(
     SaleInvoiceLoadInit e,
@@ -355,7 +364,7 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
   ) async {
     try {
       // ✅ STEP 1: Load ledger first
-      final customers = await repo.fetchLedger(true);
+      final customers = await repo.searchLedger('', true);
 
       emit(
         state.copyWith(
@@ -1134,11 +1143,23 @@ SaleInvoiceState _prefillSaleInvoiceFromTrans(
 
   // Convert itemDetails -> GlobalItemRow
   final itemRows = (data.itemDetails).map((i) {
-    final catalogItem = s.catalogue.firstWhere(
-      (c) => c.id == (i.itemId),
-      orElse: () => emptyItem(),
+    final catalogItem = ItemServiceModel(
+      id: i.itemId,
+      name: i.name,
+      itemNo: i.itemNo,
+      type: ItemServiceType.item,
+      hsn: i.hsn,
+      baseSalePrice: i.price,
+      gstRate: i.gstRate,
+      gstIncluded: i.inclusive,
+      gstIncludedPurchase: false,
+      baseUnit: i.unit,
+      secondaryUnit: i.unit,
+      conversion: 1,
+      variants: [],
+      variantValue: '',
+      group: '',
     );
-
     return GlobalItemRow(
       localId: UniqueKey().toString(),
       product: catalogItem,
@@ -1309,9 +1330,22 @@ SaleInvoiceState _prefillSaleInvoice(SaleInvoiceData data, SaleInvoiceState s) {
 
   // Convert itemDetails -> GlobalItemRow
   final itemRows = (data.itemDetails).map((i) {
-    final catalogItem = s.catalogue.firstWhere(
-      (c) => c.id == (i.itemId),
-      orElse: () => emptyItem(),
+    final catalogItem = ItemServiceModel(
+      id: i.itemId,
+      name: i.name,
+      itemNo: i.itemNo,
+      type: ItemServiceType.item,
+      hsn: i.hsn,
+      baseSalePrice: i.price,
+      gstRate: i.gstRate,
+      gstIncluded: i.inclusive,
+      gstIncludedPurchase: false,
+      baseUnit: i.unit,
+      secondaryUnit: i.unit,
+      conversion: 1,
+      variants: [],
+      variantValue: '',
+      group: '',
     );
 
     return GlobalItemRow(

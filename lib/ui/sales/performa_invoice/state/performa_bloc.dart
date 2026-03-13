@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ims/ui/master/company/company_api.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/data/reuse_print.dart';
+import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/models/performa_data.dart';
@@ -113,12 +114,21 @@ class PerformaUpdateMiscCharge extends PerformaEvent {
 /// ----------------------------------------------
 class PerfromaCalculate extends PerformaEvent {}
 
+class PerformaSetTransNo extends PerformaEvent {
+  final String number;
+  PerformaSetTransNo(this.number);
+}
+
+class PerformaSearchTransaction extends PerformaEvent {}
+
 class PerfromaSave extends PerformaEvent {}
 
 class PerfromaToggleRoundOff extends PerformaEvent {
   final bool value;
   PerfromaToggleRoundOff(this.value);
 }
+
+class PerformaLoadCustomers extends PerformaEvent {}
 
 /// ------------------- STATE -------------------
 class PerformaState {
@@ -149,6 +159,9 @@ class PerformaState {
   // notes & terms (so UI can display when editing)
   final List<String> notes;
   final List<String> terms;
+  final String transNo;
+  final String? transId;
+  final String? transPlaceOfSupply;
 
   PerformaState({
     this.customers = const [],
@@ -174,6 +187,9 @@ class PerformaState {
     this.miscMasterList = const [],
     this.notes = const [],
     this.terms = const [],
+    this.transNo = "",
+    this.transId,
+    this.transPlaceOfSupply,
   });
 
   PerformaState copyWith({
@@ -200,6 +216,9 @@ class PerformaState {
     List<MiscChargeModelList>? miscMasterList,
     List<String>? notes,
     List<String>? terms,
+    String? transNo,
+    String? transId,
+    String? transPlaceOfSupply,
   }) {
     return PerformaState(
       customers: customers ?? this.customers,
@@ -225,6 +244,9 @@ class PerformaState {
       miscMasterList: miscMasterList ?? this.miscMasterList,
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
+      transNo: transNo ?? this.transNo,
+      transId: transId ?? this.transId,
+      transPlaceOfSupply: transPlaceOfSupply ?? this.transPlaceOfSupply,
     );
   }
 }
@@ -291,13 +313,22 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
     on<PerformaAddMiscCharge>(_onAddMiscCharge);
     on<PerfromaRemoveMiscCharge>(_onRemoveMiscCharge);
     on<PerformaUpdateMiscCharge>(_onUpdateMiscCharge);
+    on<PerformaSetTransNo>((e, emit) {
+      emit(state.copyWith(transNo: e.number));
+    });
 
+    on<PerformaSearchTransaction>(_onSearchTransaction);
     on<PerfromaToggleRoundOff>(_onToggleRoundOff);
     on<PerfromaCalculate>(_onCalculate);
+    on<PerformaLoadCustomers>((event, emit) async {
+      final customers = await repo.searchLedger("", true);
+
+      emit(state.copyWith(customers: customers));
+    });
   }
   Future<void> _onLoad(PerformaLoadInit e, Emitter<PerformaState> emit) async {
     try {
-      final customers = await repo.fetchLedger(true);
+      final customers = await repo.searchLedger("", true);
 
       final results = await Future.wait([
         repo.fetchPerformaNo(),
@@ -634,6 +665,48 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
     );
   }
 
+  // ------------------- SEARCH TRANSACTION -------------------
+  Future<void> _onSearchTransaction(
+    PerformaSearchTransaction e,
+    Emitter<PerformaState> emit,
+  ) async {
+    try {
+      final transNoInt = int.tryParse(state.transNo) ?? 0;
+      if (transNoInt == 0) {
+        showCustomSnackbarError(
+          perfromaNavigatorKey.currentContext!,
+          "Enter a valid number",
+        );
+        return;
+      }
+
+      // call repo method provided by you
+      final GlobalDataAll estimate = await repo.getTransByNumber(
+        transNo: transNoInt,
+        transType: 'Estimate',
+      );
+
+      // map estimate -> saleReturn state (without touching prefix, saleReturnNo, saleReturnDate)
+      final newState = _prefillPerformaFromTrans(estimate, state).copyWith(
+        transId: estimate.id,
+        transNo: state.transNo,
+        transPlaceOfSupply: estimate.placeOFSupply,
+      );
+
+      emit(newState);
+      add(PerfromaCalculate());
+      showCustomSnackbarSuccess(
+        perfromaNavigatorKey.currentContext!,
+        "Transaction loaded",
+      );
+    } catch (err) {
+      showCustomSnackbarError(
+        perfromaNavigatorKey.currentContext!,
+        "Transaction not found",
+      );
+    }
+  }
+
   // ------------------- SAVE -------------------
   Future<void> _onSaveWithUIData(
     PerfromaSaveWithUIData e,
@@ -833,6 +906,190 @@ extension GlobalItemRowCalc on GlobalItemRow {
   }
 }
 
+PerformaState _prefillPerformaFromTrans(GlobalDataAll data, PerformaState s) {
+  // find customer from loaded list (or create fallback)
+  final selectedCustomer = s.customers.firstWhere(
+    (c) => c.id == data.customerId,
+    orElse: () => LedgerModelDrop(
+      id: data.customerId ?? "",
+      name: data.customerName,
+      mobile: data.mobile,
+      billingAddress: data.address0,
+      shippingAddress: data.address1,
+    ),
+  );
+
+  // ---------------- ADDITIONAL CHARGES ----------------
+  final mappedCharges = (data.additionalCharges)
+      .map(
+        (c) => AdditionalCharge(
+          id: c.id,
+          name: c.name,
+          amount: (c.amount).toDouble(),
+          taxPercent: 0,
+          taxIncluded: false,
+        ),
+      )
+      .toList();
+
+  // ---------------- DISCOUNTS ----------------
+  final mappedDiscounts = (data.discountLines)
+      .map(
+        (d) => DiscountLine(
+          id: d.id,
+          name: d.name,
+          amount: (d.amount).toDouble(),
+          isPercent: (d.type).toString().toLowerCase() == "percent",
+        ),
+      )
+      .toList();
+
+  // ---------------- MISC CHARGES (match by name with master) ----------------
+  final mappedMisc = <GlobalMiscChargeEntry>[];
+  for (final m in data.miscCharges) {
+    final nameFromSaleReturn = (m.name).trim().toLowerCase();
+    if (nameFromSaleReturn.isEmpty) continue;
+
+    // try to find in misc master list safely
+    MiscChargeModelList? match;
+    try {
+      match = s.miscMasterList.firstWhere(
+        (mx) => (mx.name).trim().toLowerCase() == nameFromSaleReturn,
+      );
+    } catch (_) {
+      match = null;
+    }
+
+    if (match == null) {
+      // skip if master not found
+      continue;
+    }
+
+    double gst = 0;
+    try {
+      gst = match.gst != null ? double.tryParse(match.gst.toString()) ?? 0 : 0;
+    } catch (_) {
+      gst = 0;
+    }
+    final ledgerId = match.ledgerId;
+    final hsn = match.hsn;
+
+    final taxIncluded =
+        (m.type == true) || (m.type.toString().toLowerCase() == "true");
+
+    mappedMisc.add(
+      GlobalMiscChargeEntry(
+        id: UniqueKey().toString(),
+        miscId: match.id,
+        ledgerId: ledgerId,
+        name: m.name,
+        hsn: hsn,
+        gst: gst,
+        amount: (m.amount).toDouble(),
+        taxIncluded: taxIncluded,
+      ),
+    );
+  }
+
+  // empty fallback item (if catalogue doesn't contain item/service)
+  ItemServiceModel emptyItem() {
+    return ItemServiceModel(
+      id: "",
+      type: ItemServiceType.item,
+      name: "",
+      hsn: "",
+      variantValue: '',
+      baseSalePrice: 0,
+      gstRate: 0,
+      gstIncluded: false,
+      gstIncludedPurchase: false,
+      baseUnit: '',
+      secondaryUnit: '',
+      conversion: 1,
+      variants: [],
+      itemNo: '',
+      group: '',
+    );
+  }
+
+  // Convert itemDetails -> GlobalItemRow
+  final itemRows = (data.itemDetails).map((i) {
+    final catalogItem = ItemServiceModel(
+      id: i.itemId,
+      name: i.name,
+      itemNo: i.itemNo,
+      type: ItemServiceType.item,
+      hsn: i.hsn,
+      baseSalePrice: i.price,
+      gstRate: i.gstRate,
+      gstIncluded: i.inclusive,
+      gstIncludedPurchase: false,
+      baseUnit: i.unit,
+      secondaryUnit: i.unit,
+      conversion: 1,
+      variants: [],
+      variantValue: '',
+      group: '',
+    );
+
+    return GlobalItemRow(
+      localId: UniqueKey().toString(),
+      product: catalogItem,
+      selectedVariant: null,
+      qty: (i.qty).toInt(),
+      pricePerSelectedUnit: (i.price).toDouble(),
+      discountPercent: (i.discount).toDouble(),
+      hsnOverride: (i.hsn),
+      taxPercent: (i.gstRate).toDouble(),
+      gstInclusiveToggle: i.inclusive,
+      sellInBaseUnit: false,
+    ).recalc();
+  }).toList();
+
+  // Convert serviceDetails -> GlobalItemRow
+  final serviceRows = (data.serviceDetails).map((i) {
+    final catalogService = s.catalogue.firstWhere(
+      (c) => c.id == (i.serviceId),
+      orElse: () => emptyItem(),
+    );
+
+    return GlobalItemRow(
+      localId: UniqueKey().toString(),
+      product: catalogService,
+      selectedVariant: null,
+      qty: (i.qty).toInt(),
+      pricePerSelectedUnit: (i.price).toDouble(),
+      discountPercent: (i.discount).toDouble(),
+      hsnOverride: (i.hsn),
+      taxPercent: (i.gstRate).toDouble(),
+      gstInclusiveToggle: i.inclusive,
+      sellInBaseUnit: false,
+    ).recalc();
+  }).toList();
+
+  final rows = <GlobalItemRow>[
+    ...itemRows,
+    ...serviceRows,
+    if (itemRows.isEmpty && serviceRows.isEmpty)
+      GlobalItemRow(localId: UniqueKey().toString()),
+  ];
+
+  return s.copyWith(
+    customers: s.customers,
+    selectedCustomer: data.caseSale ? null : selectedCustomer,
+    // NOTE: Intentionally NOT overwriting prefix, saleReturnNo, saleReturnDate
+    rows: rows,
+    charges: mappedCharges,
+    discounts: mappedDiscounts,
+    miscCharges: mappedMisc,
+    subtotal: (data.subTotal).toDouble(),
+    totalGst: (data.subGst).toDouble(),
+    totalAmount: (data.totalAmount).toDouble(),
+    autoRound: data.autoRound,
+    cashSaleDefault: data.caseSale,
+  );
+}
+
 PerformaState _prefillPerforma(PerformaData data, PerformaState s) {
   // find customer from loaded list (or create fallback)
   final selectedCustomer = s.customers.firstWhere(
@@ -942,9 +1199,22 @@ PerformaState _prefillPerforma(PerformaData data, PerformaState s) {
 
   // Convert itemDetails -> GlobalItemRow
   final itemRows = (data.itemDetails).map((i) {
-    final catalogItem = s.catalogue.firstWhere(
-      (c) => c.id == (i.itemId),
-      orElse: () => emptyItem(),
+    final catalogItem = ItemServiceModel(
+      id: i.itemId,
+      name: i.name,
+      itemNo: i.itemNo,
+      type: ItemServiceType.item,
+      hsn: i.hsn,
+      baseSalePrice: i.price,
+      gstRate: i.gstRate,
+      gstIncluded: i.inclusive,
+      gstIncludedPurchase: false,
+      baseUnit: i.unit,
+      secondaryUnit: i.unit,
+      conversion: 1,
+      variants: [],
+      variantValue: '',
+      group: '',
     );
 
     return GlobalItemRow(

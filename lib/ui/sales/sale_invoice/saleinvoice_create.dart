@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/model/ledger_model.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
+import 'package:ims/ui/sales/data/create_cust_dialogue.dart';
 import 'package:ims/ui/sales/data/global_additionalcharge.dart';
 import 'package:ims/ui/sales/data/global_billto.dart';
 import 'package:ims/ui/sales/data/global_discount.dart';
@@ -25,7 +26,6 @@ import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
-import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/state_cities.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:searchfield/searchfield.dart';
@@ -110,12 +110,12 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
     });
   }
 
+  final FocusNode _customerFocus = FocusNode();
   @override
   void initState() {
     super.initState();
     statesSuggestions = stateCities.keys.toList();
-    getAutoVoucherApi();
-    ledgerApi();
+
     if (widget.saleInvoiceData != null) {
       final e = widget.saleInvoiceData!;
       cusNameController.text = e.customerName;
@@ -156,14 +156,22 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
         });
       }
     }
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _customerFocus.requestFocus();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SaleInvoiceBloc>().add(SaleInvoiceLoadCustomers());
+    });
     // fetch misc etc.
     fetchMiscCharges();
+    getAutoVoucherApi();
+    ledgerApi();
   }
 
   @override
   void dispose() {
     prefixController.dispose();
+    _customerFocus.dispose();
     invoiceNoController.dispose();
     cusNameController.dispose();
     cashMobileController.dispose();
@@ -357,542 +365,504 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
           builder: (context, state) {
             invoiceNoController.text = state.saleInvoiceNo.toString();
 
-            return SingleChildScrollView(
+            return Scrollbar(
               controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GlobalHeaderCard(
-                    billTo: GlobalBillToCard(
-                      ispurchase: false,
-                      // --------- STATE VALUES ---------
-                      isCashSale: state.cashSaleDefault,
-                      customers: state.customers,
-                      selectedCustomer: state.selectedCustomer,
+              thumbVisibility: true,
+              trackVisibility: true,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GlobalHeaderCard(
+                      billTo: GlobalBillToCard(
+                        focusNode: _customerFocus,
+                        ispurchase: false,
+                        // --------- STATE VALUES ---------
+                        isCashSale: state.cashSaleDefault,
+                        customers: state.customers,
+                        onSearchLedger: (text) => repo.searchLedger(text, true),
+                        selectedCustomer: state.selectedCustomer,
 
-                      // --------- CONTROLLERS ---------
-                      cusNameController: cusNameController,
-                      mobileController: cashMobileController,
-                      billingController: cashBillingController,
-                      shippingController: cashShippingController,
-                      stateController: stateController,
+                        // --------- CONTROLLERS ---------
+                        cusNameController: cusNameController,
+                        mobileController: cashMobileController,
+                        billingController: cashBillingController,
+                        shippingController: cashShippingController,
+                        stateController: stateController,
 
-                      // --------- LOGIC CALLBACKS ---------
-                      onToggleCashSale: () {
-                        bloc.add(
-                          SaleInvoiceToggleCashSale(!state.cashSaleDefault),
-                        );
-
-                        if (state.cashSaleDefault) {
-                          // clearing when disabling cash sale
-                          cusNameController.clear();
-                          cashMobileController.clear();
-                          cashBillingController.clear();
-                          cashShippingController.clear();
-                        }
-                      },
-
-                      onCustomerSelected: (customer) {
-                        bloc.add(SaleInvoiceSelectCustomer(customer));
-
-                        cashMobileController.text = customer.mobile;
-                        cashBillingController.text = customer.billingAddress;
-                        cashShippingController.text = customer.shippingAddress;
-                        stateController.text =
-                            customer.state ??
-                            Preference.getString(PrefKeys.state);
-                      },
-
-                      onCreateCustomer: () => _showCreateCustomerDialog(
-                        context.read<SaleInvoiceBloc>(),
-                      ),
-                    ),
-                    shipTo: GlobalShipToCard(
-                      billingController: cashBillingController,
-                      shippingController: cashShippingController,
-                      stateController: stateController,
-                      statesSuggestions: statesSuggestions,
-                      onStateSelected: (state) {
-                        selectedState = SearchFieldListItem(state);
-                      },
-                      onEditAddresses: () => _editAddresses(state, bloc),
-                    ),
-
-                    details: SaleInvoiceDetailsCard(
-                      prefixController: prefixController,
-                      invoiceNoController: invoiceNoController,
-                      pickedInvoiceDate: pickedInvoiceDate,
-                      onTapInvoiceDate: () => _pickSaleInvoiceDate(
-                        context,
-                        context.read<SaleInvoiceBloc>(),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: Sizes.height * .03),
-                  GlobalItemsTableSection(
-                    ledgerType:
-                        state.selectedCustomer?.ledgerType ?? 'Individual',
-                    rows: state.rows,
-                    catalogue: state.catalogue,
-                    hsnList: state.hsnMaster,
-                    onAddNextRow: () =>
-                        bloc.add(SaleInvoiceAddRow()), // ✅ ADD THIS
-                    onAddRow: () {
-                      bloc.add(SaleInvoiceAddRow());
-
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (_scrollController.hasClients) {
-                          _scrollController.jumpTo(100
+                        // --------- LOGIC CALLBACKS ---------
+                        onToggleCashSale: () {
+                          bloc.add(
+                            SaleInvoiceToggleCashSale(!state.cashSaleDefault),
                           );
-                        }
-                      });
-                    },
-                    onRemoveRow: (id) => bloc.add(SaleInvoiceRemoveRow(id)),
-                    onUpdateRow: (row) => bloc.add(SaleInvoiceUpdateRow(row)),
 
-                    onSelectCatalog: (rowId, item) =>
-                        bloc.add(SaleInvoiceSelectCatalogForRow(rowId, item)),
+                          if (state.cashSaleDefault) {
+                            // clearing when disabling cash sale
+                            cusNameController.clear();
+                            cashMobileController.clear();
+                            cashBillingController.clear();
+                            cashShippingController.clear();
+                          }
+                        },
 
-                    onSelectHsn: (rowId, hsn) =>
-                        bloc.add(SaleInvoiceApplyHsnToRow(rowId, hsn)),
+                        onCustomerSelected: (customer) {
+                          bloc.add(SaleInvoiceSelectCustomer(customer));
 
-                    onToggleUnit: (rowId, value) =>
-                        bloc.add(SaleInvoiceToggleUnitForRow(rowId, value)),
+                          cashMobileController.text = customer.mobile;
+                          cashBillingController.text = customer.billingAddress;
+                          cashShippingController.text =
+                              customer.shippingAddress;
+                          stateController.text =
+                              customer.state ??
+                              Preference.getString(PrefKeys.state);
+                        },
 
-                    onSearchItem: (text) => repo.searchItems(text),
-                  ),
-                  SizedBox(height: Sizes.height * .02),
-
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 10,
-                        child: GlobalNotesSection(
-                          initialNotes: selectedNotesList,
-                          initialTerms: selectedTermsList,
-                          onNotesChanged: (list) => selectedNotesList = list,
-                          onTermsChanged: (list) => selectedTermsList = list,
+                        onCreateCustomer: () => showCreateCustomerDialog(
+                          context: context,
+                          onCustomerCreated: () {
+                            bloc.add(SaleInvoiceLoadInit());
+                          },
                         ),
                       ),
+                      shipTo: GlobalShipToCard(
+                        billingController: cashBillingController,
+                        shippingController: cashShippingController,
+                        stateController: stateController,
+                        statesSuggestions: statesSuggestions,
+                        onStateSelected: (state) {
+                          selectedState = SearchFieldListItem(state);
+                        },
+                        onEditAddresses: () => _editAddresses(state, bloc),
+                      ),
 
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 9,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            GlobalSummaryCard(
-                              subtotal: state.subtotal,
-                              totalGst: state.totalGst,
-                              sgst: state.sgst,
-                              cgst: state.cgst,
-                              totalAmount: state.totalAmount,
+                      details: SaleInvoiceDetailsCard(
+                        prefixController: prefixController,
+                        invoiceNoController: invoiceNoController,
+                        pickedInvoiceDate: pickedInvoiceDate,
+                        onTapInvoiceDate: () => _pickSaleInvoiceDate(
+                          context,
+                          context.read<SaleInvoiceBloc>(),
+                        ),
+                      ),
+                    ),
 
-                              autoRound: state.autoRound,
-                              onToggleRound: (v) =>
-                                  bloc.add(SaleInvoiceToggleRoundOff(v)),
+                    SizedBox(height: Sizes.height * .03),
+                    GlobalItemsTableSection(
+                      ledgerType:
+                          state.selectedCustomer?.ledgerType ?? 'Individual',
+                      rows: state.rows,
+                      catalogue: state.catalogue,
+                      hsnList: state.hsnMaster,
+                      onAddNextRow: () =>
+                          bloc.add(SaleInvoiceAddRow()), // ✅ ADD THIS
+                      onAddRow: () {
+                        bloc.add(SaleInvoiceAddRow());
+                      },
+                      onRemoveRow: (id) => bloc.add(SaleInvoiceRemoveRow(id)),
+                      onUpdateRow: (row) => bloc.add(SaleInvoiceUpdateRow(row)),
 
-                              additionalChargesSection:
-                                  GlobalAdditionalChargesSection(
-                                    charges: state.charges,
-                                    onAddCharge: (c) =>
-                                        bloc.add(SaleInvoiceAddCharge(c)),
-                                    onRemoveCharge: (id) =>
-                                        bloc.add(SaleInvoiceRemoveCharge(id)),
-                                  ),
+                      onSelectCatalog: (rowId, item) {
+                        bloc.add(SaleInvoiceSelectCatalogForRow(rowId, item));
 
-                              miscChargesSection: GlobalMiscChargesSection(
-                                miscCharges: state.miscCharges,
-                                miscList: miscList,
-                                onAddMisc: (m) =>
-                                    bloc.add(SaleInvoiceAddMiscCharge(m)),
-                                onRemoveMisc: (id) =>
-                                    bloc.add(SaleInvoiceRemoveMiscCharge(id)),
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (_scrollController.hasClients) {
+                            _scrollController.animateTo(
+                              _scrollController.offset + 75,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.ease,
+                            );
+                          }
+                        });
+                      },
+
+                      onSelectHsn: (rowId, hsn) =>
+                          bloc.add(SaleInvoiceApplyHsnToRow(rowId, hsn)),
+
+                      onToggleUnit: (rowId, value) =>
+                          bloc.add(SaleInvoiceToggleUnitForRow(rowId, value)),
+
+                      onSearchItem: (text) => repo.searchItems(text),
+                    ),
+                    SizedBox(height: Sizes.height * .02),
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 10,
+                          child: GlobalNotesSection(
+                            initialNotes: selectedNotesList,
+                            initialTerms: selectedTermsList,
+                            onNotesChanged: (list) => selectedNotesList = list,
+                            onTermsChanged: (list) => selectedTermsList = list,
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 9,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GlobalSummaryCard(
+                                subtotal: state.subtotal,
+                                totalGst: state.totalGst,
+                                sgst: state.sgst,
+                                cgst: state.cgst,
+                                totalAmount: state.totalAmount,
+
+                                autoRound: state.autoRound,
+                                onToggleRound: (v) =>
+                                    bloc.add(SaleInvoiceToggleRoundOff(v)),
+
+                                additionalChargesSection:
+                                    GlobalAdditionalChargesSection(
+                                      charges: state.charges,
+                                      onAddCharge: (c) =>
+                                          bloc.add(SaleInvoiceAddCharge(c)),
+                                      onRemoveCharge: (id) =>
+                                          bloc.add(SaleInvoiceRemoveCharge(id)),
+                                    ),
+
+                                miscChargesSection: GlobalMiscChargesSection(
+                                  miscCharges: state.miscCharges,
+                                  miscList: miscList,
+                                  onAddMisc: (m) =>
+                                      bloc.add(SaleInvoiceAddMiscCharge(m)),
+                                  onRemoveMisc: (id) =>
+                                      bloc.add(SaleInvoiceRemoveMiscCharge(id)),
+                                ),
+
+                                discountSection: GlobalDiscountsSection(
+                                  discounts: state.discounts,
+                                  onAddDiscount: (d) =>
+                                      bloc.add(SaleInvoiceAddDiscount(d)),
+                                  onRemoveDiscount: (id) =>
+                                      bloc.add(SaleInvoiceRemoveDiscount(id)),
+                                ),
                               ),
-
-                              discountSection: GlobalDiscountsSection(
-                                discounts: state.discounts,
-                                onAddDiscount: (d) =>
-                                    bloc.add(SaleInvoiceAddDiscount(d)),
-                                onRemoveDiscount: (id) =>
-                                    bloc.add(SaleInvoiceRemoveDiscount(id)),
-                              ),
-                            ),
-                            if (widget.saleInvoiceData == null)
-                              Column(
-                                children: [
-                                  SizedBox(height: Sizes.height * .02),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        "Mark as fully paid",
-                                        style: GoogleFonts.inter(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
+                              if (widget.saleInvoiceData == null)
+                                Column(
+                                  children: [
+                                    SizedBox(height: Sizes.height * .02),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          "Mark as fully paid",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
-                                      ),
-                                      Checkbox(
-                                        fillColor: WidgetStatePropertyAll(
-                                          AppColor.primary,
-                                        ),
-                                        shape: ContinuousRectangleBorder(
-                                          borderRadius:
-                                              BorderRadiusGeometry.circular(5),
-                                        ),
-                                        value: fullyPaid,
-                                        onChanged: (v) {
-                                          onToggleFPaid(v ?? true);
-                                          setState(() {});
-                                          payingAmtController.text = state
-                                              .totalAmount
-                                              .toString();
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: Sizes.height * .02),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Amount Paid",
-                                        style: GoogleFonts.inter(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      Spacer(flex: 2),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              height: 45,
-                                              width: 30,
-                                              decoration: BoxDecoration(
-                                                color: AppColor.backgroundColor,
-                                                border: Border.all(
-                                                  color: AppColor.borderColor,
+                                        Checkbox(
+                                          fillColor: WidgetStatePropertyAll(
+                                            AppColor.primary,
+                                          ),
+                                          shape: ContinuousRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  5,
                                                 ),
-                                              ),
-                                              child: Icon(
-                                                Icons.currency_rupee_sharp,
-                                                color: Color(0xff565D6D),
-                                                size: 18,
-                                              ),
-                                            ),
-                                            Expanded(
-                                              child: Container(
+                                          ),
+                                          value: fullyPaid,
+                                          onChanged: (v) {
+                                            onToggleFPaid(v ?? true);
+                                            setState(() {});
+                                            payingAmtController.text = state
+                                                .totalAmount
+                                                .toString();
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: Sizes.height * .02),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "Amount Paid",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        Spacer(flex: 2),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Row(
+                                            children: [
+                                              Container(
                                                 height: 45,
+                                                width: 30,
                                                 decoration: BoxDecoration(
+                                                  color:
+                                                      AppColor.backgroundColor,
                                                   border: Border.all(
                                                     color: AppColor.borderColor,
                                                   ),
                                                 ),
-                                                alignment: Alignment.center,
-                                                child: TextField(
-                                                  controller:
-                                                      payingAmtController,
-                                                  readOnly: fullyPaid,
-                                                  onChanged: (v) {
-                                                    setState(() {
-                                                      balanceAmt =
-                                                          "${state.totalAmount - double.parse(v)}";
-                                                    });
-                                                  },
-                                                  style: GoogleFonts.inter(
-                                                    color: AppColor.text,
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                  decoration: InputDecoration(
-                                                    hintText: "0",
-                                                    contentPadding:
-                                                        EdgeInsets.symmetric(
-                                                          vertical: 4,
-                                                          horizontal: 10,
-                                                        ),
-                                                    border: OutlineInputBorder(
-                                                      borderSide:
-                                                          BorderSide.none,
+                                                child: Icon(
+                                                  Icons.currency_rupee_sharp,
+                                                  color: Color(0xff565D6D),
+                                                  size: 18,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: Container(
+                                                  height: 45,
+                                                  decoration: BoxDecoration(
+                                                    border: Border.all(
+                                                      color:
+                                                          AppColor.borderColor,
                                                     ),
                                                   ),
-                                                ),
-                                              ),
-                                            ),
-                                            Expanded(
-                                              child: Container(
-                                                height: 45,
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                    color: AppColor.borderColor,
-                                                  ),
-                                                ),
-                                                alignment: Alignment.center,
-                                                child:
-                                                    DropdownButton<
-                                                      LedgerListModel
-                                                    >(
-                                                      padding:
+                                                  alignment: Alignment.center,
+                                                  child: TextField(
+                                                    controller:
+                                                        payingAmtController,
+                                                    readOnly: fullyPaid,
+                                                    onChanged: (v) {
+                                                      setState(() {
+                                                        balanceAmt =
+                                                            "${state.totalAmount - double.parse(v)}";
+                                                      });
+                                                    },
+                                                    style: GoogleFonts.inter(
+                                                      color: AppColor.text,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                    decoration: InputDecoration(
+                                                      hintText: "0",
+                                                      contentPadding:
                                                           EdgeInsets.symmetric(
                                                             vertical: 4,
                                                             horizontal: 10,
                                                           ),
-                                                      underline:
-                                                          const SizedBox(),
-                                                      isExpanded: true,
-                                                      icon: const Icon(
-                                                        Icons
-                                                            .keyboard_arrow_down,
-                                                      ),
-
-                                                      value: selectedLedger,
-
-                                                      hint: Text(
-                                                        "Select Ledger",
-                                                        style:
-                                                            GoogleFonts.inter(
-                                                              fontSize: 14,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w500,
-                                                            ),
-                                                      ),
-                                                      items: ledgerList.map((
-                                                        ledger,
-                                                      ) {
-                                                        return DropdownMenuItem<
-                                                          LedgerListModel
-                                                        >(
-                                                          value: ledger,
-                                                          child: Text(
-                                                            ledger.ledgerName ??
-                                                                "",
-                                                            style:
-                                                                GoogleFonts.inter(
-                                                                  fontSize: 14,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w500,
-                                                                  color: AppColor
-                                                                      .textColor,
-                                                                ),
+                                                      border:
+                                                          OutlineInputBorder(
+                                                            borderSide:
+                                                                BorderSide.none,
                                                           ),
-                                                        );
-                                                      }).toList(),
-
-                                                      onChanged:
-                                                          (LedgerListModel? v) {
-                                                            setState(() {
-                                                              selectedLedger =
-                                                                  v;
-                                                            });
-                                                          },
                                                     ),
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: Sizes.height * .02),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Voucher Number",
-                                        style: GoogleFonts.inter(
-                                          fontSize: 15,
-                                          color: Color(0xff22C55E),
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      Spacer(),
-                                      Expanded(
-                                        child: CommonTextField(
-                                          hintText: "Voucher No",
-                                          controller: voucherNoController,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                              Expanded(
+                                                child: Container(
+                                                  height: 45,
+                                                  decoration: BoxDecoration(
+                                                    border: Border.all(
+                                                      color:
+                                                          AppColor.borderColor,
+                                                    ),
+                                                  ),
+                                                  alignment: Alignment.center,
+                                                  child: DropdownButton<LedgerListModel>(
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                          vertical: 4,
+                                                          horizontal: 10,
+                                                        ),
+                                                    underline: const SizedBox(),
+                                                    isExpanded: true,
+                                                    icon: const Icon(
+                                                      Icons.keyboard_arrow_down,
+                                                    ),
 
-                                  SizedBox(height: Sizes.height * .02),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Balance",
-                                        style: GoogleFonts.inter(
-                                          fontSize: 15,
-                                          color: Color(0xff22C55E),
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      Spacer(),
-                                      Text(
-                                        "₹ $balanceAmt",
-                                        style: GoogleFonts.inter(
-                                          fontSize: 15,
-                                          color: Color(0xff22C55E),
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                                                    value: selectedLedger,
 
-                            SizedBox(height: Sizes.height * .03),
-                            Row(
-                              children: [
-                                Text(
-                                  "Authorized signatory for ",
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: AppColor.text,
-                                  ),
-                                ),
-                                Text(
-                                  "Business Name",
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColor.text,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            GestureDetector(
-                              onTap: () => pickImage('signature'),
-                              child: SizedBox(
-                                width: double.infinity,
-                                height: 110,
-                                child: DottedBorder(
-                                  options: RoundedRectDottedBorderOptions(
-                                    strokeWidth: 1.6,
-                                    radius: Radius.circular(6),
-                                    dashPattern: [5, 3],
-                                    color: AppColor.textLightBlack,
-                                  ),
-                                  child:
-                                      (signatureImage == null &&
-                                          signatureImageUrl.trim().isEmpty)
-                                      ? Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.add,
-                                                size: 30,
-                                                color: AppColor.primary,
-                                              ),
-                                              SizedBox(height: 12),
-                                              Text(
-                                                "Add Signature",
-                                                style: GoogleFonts.roboto(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: AppColor.primary,
+                                                    hint: Text(
+                                                      "Select Ledger",
+                                                      style: GoogleFonts.inter(
+                                                        fontSize: 14,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                    items: ledgerList.map((
+                                                      ledger,
+                                                    ) {
+                                                      return DropdownMenuItem<
+                                                        LedgerListModel
+                                                      >(
+                                                        value: ledger,
+                                                        child: Text(
+                                                          ledger.ledgerName ??
+                                                              "",
+                                                          style:
+                                                              GoogleFonts.inter(
+                                                                fontSize: 14,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w500,
+                                                                color: AppColor
+                                                                    .textColor,
+                                                              ),
+                                                        ),
+                                                      );
+                                                    }).toList(),
+
+                                                    onChanged:
+                                                        (LedgerListModel? v) {
+                                                          setState(() {
+                                                            selectedLedger = v;
+                                                          });
+                                                        },
+                                                  ),
                                                 ),
                                               ),
                                             ],
                                           ),
-                                        )
-                                      : (signatureImage == null)
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          child: Image.network(
-                                            signatureImageUrl,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: 125,
-                                          ),
-                                        )
-                                      : ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          child: Image.memory(
-                                            signatureImage!,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: 125,
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: Sizes.height * .02),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "Voucher Number",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            color: Color(0xff22C55E),
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
+                                        Spacer(),
+                                        Expanded(
+                                          child: CommonTextField(
+                                            hintText: "Voucher No",
+                                            controller: voucherNoController,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    SizedBox(height: Sizes.height * .02),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "Balance",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            color: Color(0xff22C55E),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        Spacer(),
+                                        Text(
+                                          "₹ $balanceAmt",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            color: Color(0xff22C55E),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+
+                              SizedBox(height: Sizes.height * .03),
+                              Row(
+                                children: [
+                                  Text(
+                                    "Authorized signatory for ",
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                      color: AppColor.text,
+                                    ),
+                                  ),
+                                  Text(
+                                    "Business Name",
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColor.text,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 10),
+                              GestureDetector(
+                                onTap: () => pickImage('signature'),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 110,
+                                  child: DottedBorder(
+                                    options: RoundedRectDottedBorderOptions(
+                                      strokeWidth: 1.6,
+                                      radius: Radius.circular(6),
+                                      dashPattern: [5, 3],
+                                      color: AppColor.textLightBlack,
+                                    ),
+                                    child:
+                                        (signatureImage == null &&
+                                            signatureImageUrl.trim().isEmpty)
+                                        ? Center(
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.add,
+                                                  size: 30,
+                                                  color: AppColor.primary,
+                                                ),
+                                                SizedBox(height: 12),
+                                                Text(
+                                                  "Add Signature",
+                                                  style: GoogleFonts.roboto(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: AppColor.primary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        : (signatureImage == null)
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                            child: Image.network(
+                                              signatureImageUrl,
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              height: 125,
+                                            ),
+                                          )
+                                        : ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                            child: Image.memory(
+                                              signatureImage!,
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              height: 125,
+                                            ),
+                                          ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             );
           },
         ),
-      ),
-    );
-  }
-
-  void _showCreateCustomerDialog(SaleInvoiceBloc bloc) {
-    final nameCtrl = TextEditingController();
-    final stateCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Create Customer'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'Name'),
-            ),
-            TextField(
-              controller: stateCtrl,
-              decoration: const InputDecoration(labelText: 'State'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameCtrl.text.trim().isEmpty) return;
-              final res = await ApiService.postData('customer', {
-                "customer_type": "Individual",
-                'company_name': nameCtrl.text.trim(),
-                'state': stateCtrl.text.trim(),
-                'licence_no': Preference.getint(PrefKeys.licenseNo).toString(),
-                'branch_id': Preference.getString(PrefKeys.locationId),
-              }, licenceNo: Preference.getint(PrefKeys.licenseNo));
-              if (res != null && res['status'] == true) {
-                showCustomSnackbarSuccess(context, 'Customer created');
-                bloc.add(
-                  SaleInvoiceLoadInit(),
-                ); // reload state so new customer is available
-                Navigator.pop(context);
-              } else {
-                showCustomSnackbarError(context, res?['message'] ?? 'Failed');
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }

@@ -86,6 +86,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
     });
   }
 
+  final FocusNode _customerFocus = FocusNode();
   @override
   void initState() {
     super.initState();
@@ -135,7 +136,9 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
         });
       }
     }
-
+ WidgetsBinding.instance.addPostFrameCallback((_) {
+      _customerFocus.requestFocus();
+    });
     // fetch misc etc.
     fetchMiscCharges();
   }
@@ -331,8 +334,9 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                       isCashSale: state.cashSaleDefault,
                       customers: state.ledgers,
                       selectedCustomer: state.selectedLedger,
-
+                      onSearchLedger: (text) async => [],
                       cusNameController: cusNameController,
+                         focusNode: _customerFocus,
                       mobileController: cashMobileController,
                       billingController: cashBillingController,
                       shippingController: cashShippingController,

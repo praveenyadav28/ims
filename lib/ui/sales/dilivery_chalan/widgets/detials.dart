@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/sales/dilivery_chalan/state/dilivery_bloc.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
@@ -85,6 +86,63 @@ class DiliveryChallanDetailsCard extends StatelessWidget {
           ),
           flix: 30,
         ),
+        SizedBox(height: Sizes.height * .03),
+        nameField(
+          text: "Transaction Type",
+          child: CommonDropdownField<String>(
+            hintText: "Select Type",
+            items: [
+              DropdownMenuItem(
+                value: "Estimate",
+                child: Text(
+                  "Estimate",
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF565D6D),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              DropdownMenuItem(
+                value: "Proforma",
+                child: Text(
+                  "Performa Invoice",
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF565D6D),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+            onChanged: (v) {
+              context.read<DiliveryChallanBloc>().add(
+                DiliveryChallanSetTransType(v ?? "Estimate"),
+              );
+            },
+          ),
+          flix: 30,
+        ),
+        SizedBox(height: Sizes.height * .03),
+
+        nameField(
+          text: "Transaction No",
+          child: CommonTextField(
+            hintText: 'Number',
+            suffixIcon: IconButton(
+              icon: Icon(Icons.search),
+              onPressed: () {
+                final bloc = context.read<DiliveryChallanBloc>();
+                bloc.add(DiliveryChallanSearchTransaction());
+              },
+            ),
+            onChanged: (v) {
+              context.read<DiliveryChallanBloc>().add(DiliveryChallanSetTransNo(v));
+            },
+          ),
+          flix: 30,
+        ),
+        SizedBox(height: Sizes.height * .03),
       ],
     );
   }

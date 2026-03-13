@@ -16,7 +16,7 @@ class ApiException implements Exception {
 }
 
 class ApiService {
-  static String baseurl = "https://192.168.1.12:4000/api";
+  static String baseurl = "http://192.168.1.21:4000/api";
   static final Dio dio = Dio(
     BaseOptions(
       baseUrl: baseurl,

@@ -124,6 +124,8 @@ class EstSelectSalesPerson extends EstEvent {
   EstSelectSalesPerson(this.name);
 }
 
+class EstLoadCustomers extends EstEvent {}
+
 /// ------------------- STATE -------------------
 class EstState {
   final List<LedgerModelDrop> customers;
@@ -305,11 +307,16 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     on<EstSelectSalesPerson>((event, emit) {
       emit(state.copyWith(salesPerson: event.name));
     });
+    on<EstLoadCustomers>((event, emit) async {
+      final customers = await repo.searchLedger("", true);
+
+      emit(state.copyWith(customers: customers));
+    });
   }
   Future<void> _onLoad(EstLoadInit e, Emitter<EstState> emit) async {
     try {
       // STEP 1: ledger first → fast UI
-      final customers = await repo.fetchLedger(true);
+      final customers = await repo.searchLedger('', true);
 
       emit(
         state.copyWith(
@@ -941,9 +948,22 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
 
   // Convert itemDetails -> GlobalItemRow
   final itemRows = (data.itemDetails).map((i) {
-    final catalogItem = s.catalogue.firstWhere(
-      (c) => c.id == (i.itemId),
-      orElse: () => emptyItem(),
+    final catalogItem = ItemServiceModel(
+      id: i.itemId,
+      name: i.name,
+      itemNo: i.itemNo,
+      type: ItemServiceType.item,
+      hsn: i.hsn,
+      baseSalePrice: i.price,
+      gstRate: i.gstRate,
+      gstIncluded: i.inclusive,
+      gstIncludedPurchase: false,
+      baseUnit: i.unit,
+      secondaryUnit: i.unit,
+      conversion: 1,
+      variants: [],
+      variantValue: '',
+      group: '',
     );
 
     return GlobalItemRow(

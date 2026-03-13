@@ -83,6 +83,27 @@ class PerformaDetailsCard extends StatelessWidget {
           ),
           flix: 30,
         ),
+     
+      SizedBox(height: Sizes.height * .03),
+        nameField(
+          text: "Estimate No",
+          child: CommonTextField(
+            hintText: 'Number',
+            suffixIcon: IconButton(
+              onPressed: () {
+                final bloc = context.read<PerformaBloc>();
+                bloc.add(PerformaSearchTransaction());
+              },
+              icon: Icon(Icons.search),
+            ),
+            onChanged: (v) {
+              context.read<PerformaBloc>().add(PerformaSetTransNo(v));
+            },
+          ),
+
+          flix: 30,
+        ),
+        SizedBox(height: Sizes.height * .03),
       ],
     );
   }

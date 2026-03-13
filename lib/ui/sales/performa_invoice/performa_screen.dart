@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
+import 'package:ims/ui/sales/data/create_cust_dialogue.dart';
 import 'package:ims/ui/sales/data/global_additionalcharge.dart';
 import 'package:ims/ui/sales/data/global_billto.dart';
 import 'package:ims/ui/sales/data/global_discount.dart';
@@ -24,7 +25,6 @@ import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
-import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/state_cities.dart';
 import 'package:searchfield/searchfield.dart';
 
@@ -69,6 +69,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
   final cashMobileController = TextEditingController();
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   DateTime pickedPerformaDate = DateTime.now();
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
@@ -88,6 +89,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
     });
   }
 
+  final FocusNode _customerFocus = FocusNode();
   @override
   void initState() {
     super.initState();
@@ -131,7 +133,9 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
         });
       }
     }
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _customerFocus.requestFocus();
+    });
     // fetch misc etc.
     fetchMiscCharges();
   }
@@ -309,309 +313,281 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
           builder: (context, state) {
             perfromaNoController.text = state.performaNo.toString();
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GlobalHeaderCard(
-                    billTo: GlobalBillToCard(
-                      ispurchase: false,
-                      // --------- STATE VALUES ---------
-                      isCashSale: state.cashSaleDefault,
-                      customers: state.customers,
-                      selectedCustomer: state.selectedCustomer,
+            return Scrollbar(
+              controller: _scrollController,
+              thumbVisibility: true,
+              trackVisibility: true,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GlobalHeaderCard(
+                      billTo: GlobalBillToCard(
+                        ispurchase: false,
+                        focusNode: _customerFocus,
+                        // --------- STATE VALUES ---------
+                        isCashSale: state.cashSaleDefault,
+                        customers: state.customers,
+                        selectedCustomer: state.selectedCustomer,
+                        onSearchLedger: (text) => repo.searchLedger(text, true),
 
-                      // --------- CONTROLLERS ---------
-                      cusNameController: cusNameController,
-                      mobileController: cashMobileController,
-                      billingController: cashBillingController,
-                      shippingController: cashShippingController,
-                      stateController: stateController,
+                        // --------- CONTROLLERS ---------
+                        cusNameController: cusNameController,
+                        mobileController: cashMobileController,
+                        billingController: cashBillingController,
+                        shippingController: cashShippingController,
+                        stateController: stateController,
 
-                      // --------- LOGIC CALLBACKS ---------
-                      onToggleCashSale: () {
-                        bloc.add(
-                          PerformaToggleCashSale(!state.cashSaleDefault),
-                        );
+                        // --------- LOGIC CALLBACKS ---------
+                        onToggleCashSale: () {
+                          bloc.add(
+                            PerformaToggleCashSale(!state.cashSaleDefault),
+                          );
 
-                        if (state.cashSaleDefault) {
-                          // clearing when disabling cash sale
-                          cusNameController.clear();
-                          cashMobileController.clear();
-                          cashBillingController.clear();
-                          cashShippingController.clear();
-                        }
-                      },
+                          if (state.cashSaleDefault) {
+                            // clearing when disabling cash sale
+                            cusNameController.clear();
+                            cashMobileController.clear();
+                            cashBillingController.clear();
+                            cashShippingController.clear();
+                          }
+                        },
 
-                      onCustomerSelected: (customer) {
-                        bloc.add(PerfromaSelectCustomer(customer));
+                        onCustomerSelected: (customer) {
+                          bloc.add(PerfromaSelectCustomer(customer));
 
-                        cashMobileController.text = customer.mobile;
-                        cashBillingController.text = customer.billingAddress;
-                        cashShippingController.text = customer.shippingAddress;
-                        stateController.text =
-                            customer.state ??
-                            Preference.getString(PrefKeys.state);
-                      },
+                          cashMobileController.text = customer.mobile;
+                          cashBillingController.text = customer.billingAddress;
+                          cashShippingController.text =
+                              customer.shippingAddress;
+                          stateController.text =
+                              customer.state ??
+                              Preference.getString(PrefKeys.state);
+                        },
 
-                      onCreateCustomer: () => _showCreateCustomerDialog(
-                        context.read<PerformaBloc>(),
-                      ),
-                    ),
-                    shipTo: GlobalShipToCard(
-                      billingController: cashBillingController,
-                      shippingController: cashShippingController,
-                      onEditAddresses: () => _editAddresses(state, bloc),
-                      stateController: stateController,
-                      statesSuggestions: statesSuggestions,
-                      onStateSelected: (state) {
-                        selectedState = SearchFieldListItem(state);
-                      },
-                    ),
-                    details: PerformaDetailsCard(
-                      prefixController: prefixController,
-                      perfromaNoController: perfromaNoController,
-                      pickedPerformaDate: pickedPerformaDate,
-                      onTapPerfromaDate: () => _pickPerformaDate(
-                        context,
-                        context.read<PerformaBloc>(),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: Sizes.height * .03),
-                  GlobalItemsTableSection(
-                    ledgerType:
-                        state.selectedCustomer?.ledgerType ?? 'Individual',
-                    rows: state.rows, // list of GlobalItemRow
-                    catalogue: state.catalogue, // list of ItemServiceModel
-                    hsnList: state.hsnMaster, // list of HsnModel
-
-                    onAddRow: () => bloc.add(PerformaAddRow()),
-
-  onAddNextRow: () => bloc.add(PerformaAddRow()), // ✅ ADD THIS
-                    onRemoveRow: (id) => bloc.add(PerfromaRemoveRow(id)),
-
-                    onUpdateRow: (row) => bloc.add(PerformaUpdateRow(row)),
-
-                    onSearchItem: (text) => repo.searchItems(text),
-                    onSelectCatalog: (rowId, item) =>
-                        bloc.add(PerfromaSelectCatalogForRow(rowId, item)),
-
-                    onSelectHsn: (rowId, hsn) =>
-                        bloc.add(PerfromaApplyHsnToRow(rowId, hsn)),
-
-                    onToggleUnit: (rowId, value) =>
-                        bloc.add(PerfromaToggleUnitForRow(rowId, value)),
-                  ),
-                  SizedBox(height: Sizes.height * .02),
-
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 10,
-                        child: GlobalNotesSection(
-                          initialNotes: selectedNotesList,
-                          initialTerms: selectedTermsList,
-                          onNotesChanged: (list) => selectedNotesList = list,
-                          onTermsChanged: (list) => selectedTermsList = list,
+                        onCreateCustomer: () => showCreateCustomerDialog(
+                          context: context,
+                          onCustomerCreated: () {
+                            bloc.add(PerformaLoadInit());
+                          },
                         ),
                       ),
+                      shipTo: GlobalShipToCard(
+                        billingController: cashBillingController,
+                        shippingController: cashShippingController,
+                        onEditAddresses: () => _editAddresses(state, bloc),
+                        stateController: stateController,
+                        statesSuggestions: statesSuggestions,
+                        onStateSelected: (state) {
+                          selectedState = SearchFieldListItem(state);
+                        },
+                      ),
+                      details: PerformaDetailsCard(
+                        prefixController: prefixController,
+                        perfromaNoController: perfromaNoController,
+                        pickedPerformaDate: pickedPerformaDate,
+                        onTapPerfromaDate: () => _pickPerformaDate(
+                          context,
+                          context.read<PerformaBloc>(),
+                        ),
+                      ),
+                    ),
 
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 9,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            GlobalSummaryCard(
-                              subtotal: state.subtotal,
-                              totalGst: state.totalGst,
-                              sgst: state.sgst,
-                              cgst: state.cgst,
-                              totalAmount: state.totalAmount,
+                    SizedBox(height: Sizes.height * .03),
+                    GlobalItemsTableSection(
+                      ledgerType:
+                          state.selectedCustomer?.ledgerType ?? 'Individual',
+                      rows: state.rows, // list of GlobalItemRow
+                      catalogue: state.catalogue, // list of ItemServiceModel
+                      hsnList: state.hsnMaster, // list of HsnModel
 
-                              autoRound: state.autoRound,
-                              onToggleRound: (v) =>
-                                  bloc.add(PerfromaToggleRoundOff(v)),
+                      onAddRow: () => bloc.add(PerformaAddRow()),
 
-                              additionalChargesSection:
-                                  GlobalAdditionalChargesSection(
-                                    charges: state.charges,
-                                    onAddCharge: (c) =>
-                                        bloc.add(PerfromaAddCharge(c)),
-                                    onRemoveCharge: (id) =>
-                                        bloc.add(PerfromaRemoveCharge(id)),
-                                  ),
+                      onAddNextRow: () =>
+                          bloc.add(PerformaAddRow()), // ✅ ADD THIS
+                      onRemoveRow: (id) => bloc.add(PerfromaRemoveRow(id)),
 
-                              miscChargesSection: GlobalMiscChargesSection(
-                                miscCharges: state.miscCharges,
-                                miscList: miscList,
-                                onAddMisc: (m) =>
-                                    bloc.add(PerformaAddMiscCharge(m)),
-                                onRemoveMisc: (id) =>
-                                    bloc.add(PerfromaRemoveMiscCharge(id)),
+                      onUpdateRow: (row) => bloc.add(PerformaUpdateRow(row)),
+
+                      onSearchItem: (text) => repo.searchItems(text),
+                      onSelectCatalog: (rowId, item) {
+                        bloc.add(PerfromaSelectCatalogForRow(rowId, item));
+
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (_scrollController.hasClients) {
+                            _scrollController.animateTo(
+                              _scrollController.offset + 75,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.ease,
+                            );
+                          }
+                        });
+                      },
+
+                      onSelectHsn: (rowId, hsn) =>
+                          bloc.add(PerfromaApplyHsnToRow(rowId, hsn)),
+
+                      onToggleUnit: (rowId, value) =>
+                          bloc.add(PerfromaToggleUnitForRow(rowId, value)),
+                    ),
+                    SizedBox(height: Sizes.height * .02),
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 10,
+                          child: GlobalNotesSection(
+                            initialNotes: selectedNotesList,
+                            initialTerms: selectedTermsList,
+                            onNotesChanged: (list) => selectedNotesList = list,
+                            onTermsChanged: (list) => selectedTermsList = list,
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 9,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GlobalSummaryCard(
+                                subtotal: state.subtotal,
+                                totalGst: state.totalGst,
+                                sgst: state.sgst,
+                                cgst: state.cgst,
+                                totalAmount: state.totalAmount,
+
+                                autoRound: state.autoRound,
+                                onToggleRound: (v) =>
+                                    bloc.add(PerfromaToggleRoundOff(v)),
+
+                                additionalChargesSection:
+                                    GlobalAdditionalChargesSection(
+                                      charges: state.charges,
+                                      onAddCharge: (c) =>
+                                          bloc.add(PerfromaAddCharge(c)),
+                                      onRemoveCharge: (id) =>
+                                          bloc.add(PerfromaRemoveCharge(id)),
+                                    ),
+
+                                miscChargesSection: GlobalMiscChargesSection(
+                                  miscCharges: state.miscCharges,
+                                  miscList: miscList,
+                                  onAddMisc: (m) =>
+                                      bloc.add(PerformaAddMiscCharge(m)),
+                                  onRemoveMisc: (id) =>
+                                      bloc.add(PerfromaRemoveMiscCharge(id)),
+                                ),
+
+                                discountSection: GlobalDiscountsSection(
+                                  discounts: state.discounts,
+                                  onAddDiscount: (d) =>
+                                      bloc.add(PerformaAddDiscount(d)),
+                                  onRemoveDiscount: (id) =>
+                                      bloc.add(PerformaRemoveDiscount(id)),
+                                ),
                               ),
 
-                              discountSection: GlobalDiscountsSection(
-                                discounts: state.discounts,
-                                onAddDiscount: (d) =>
-                                    bloc.add(PerformaAddDiscount(d)),
-                                onRemoveDiscount: (id) =>
-                                    bloc.add(PerformaRemoveDiscount(id)),
+                              SizedBox(height: Sizes.height * .02),
+                              Row(
+                                children: [
+                                  Text(
+                                    "Authorized signatory for ",
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                      color: AppColor.text,
+                                    ),
+                                  ),
+                                  Text(
+                                    "Business Name",
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColor.text,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-
-                            SizedBox(height: Sizes.height * .02),
-                            Row(
-                              children: [
-                                Text(
-                                  "Authorized signatory for ",
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: AppColor.text,
-                                  ),
-                                ),
-                                Text(
-                                  "Business Name",
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColor.text,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            GestureDetector(
-                              onTap: () => pickImage('signature'),
-                              child: SizedBox(
-                                width: double.infinity,
-                                height: 110,
-                                child: DottedBorder(
-                                  options: RoundedRectDottedBorderOptions(
-                                    strokeWidth: 1.6,
-                                    radius: Radius.circular(6),
-                                    dashPattern: [5, 3],
-                                    color: AppColor.textLightBlack,
-                                  ),
-                                  child:
-                                      (signatureImage == null &&
-                                          signatureImageUrl.trim().isEmpty)
-                                      ? Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.add,
-                                                size: 30,
-                                                color: AppColor.primary,
-                                              ),
-                                              SizedBox(height: 12),
-                                              Text(
-                                                "Add Signature",
-                                                style: GoogleFonts.roboto(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w500,
+                              SizedBox(height: 10),
+                              GestureDetector(
+                                onTap: () => pickImage('signature'),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 110,
+                                  child: DottedBorder(
+                                    options: RoundedRectDottedBorderOptions(
+                                      strokeWidth: 1.6,
+                                      radius: Radius.circular(6),
+                                      dashPattern: [5, 3],
+                                      color: AppColor.textLightBlack,
+                                    ),
+                                    child:
+                                        (signatureImage == null &&
+                                            signatureImageUrl.trim().isEmpty)
+                                        ? Center(
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.add,
+                                                  size: 30,
                                                   color: AppColor.primary,
                                                 ),
-                                              ),
-                                            ],
+                                                SizedBox(height: 12),
+                                                Text(
+                                                  "Add Signature",
+                                                  style: GoogleFonts.roboto(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: AppColor.primary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        : (signatureImage == null)
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                            child: Image.network(
+                                              signatureImageUrl,
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              height: 125,
+                                            ),
+                                          )
+                                        : ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                            child: Image.memory(
+                                              signatureImage!,
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              height: 125,
+                                            ),
                                           ),
-                                        )
-                                      : (signatureImage == null)
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          child: Image.network(
-                                            signatureImageUrl,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: 125,
-                                          ),
-                                        )
-                                      : ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          child: Image.memory(
-                                            signatureImage!,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: 125,
-                                          ),
-                                        ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             );
           },
         ),
-      ),
-    );
-  }
-
-  void _showCreateCustomerDialog(PerformaBloc bloc) {
-    final nameCtrl = TextEditingController();
-    final stateCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Create Customer'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'Name'),
-            ),
-            TextField(
-              controller: stateCtrl,
-              decoration: const InputDecoration(labelText: 'State'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameCtrl.text.trim().isEmpty) return;
-              final res = await ApiService.postData('customer', {
-                "customer_type": "Individual",
-                'company_name': nameCtrl.text.trim(),
-                'state': stateCtrl.text.trim(),
-                'licence_no': Preference.getint(PrefKeys.licenseNo).toString(),
-                'branch_id': Preference.getString(PrefKeys.locationId),
-              }, licenceNo: Preference.getint(PrefKeys.licenseNo));
-              if (res != null && res['status'] == true) {
-                showCustomSnackbarSuccess(context, 'Customer created');
-                bloc.add(
-                  PerformaLoadInit(),
-                ); // reload state so new customer is available
-                Navigator.pop(context);
-              } else {
-                showCustomSnackbarError(context, res?['message'] ?? 'Failed');
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }

@@ -25,7 +25,7 @@ class SaleReturnDetailsCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         nameField(
-          text: "Sale Invoice No.",
+          text: "Sale Return No.",
           child: Row(
             children: [
               Expanded(
@@ -46,7 +46,7 @@ class SaleReturnDetailsCard extends StatelessWidget {
               Expanded(
                 child: CommonTextField(
                   controller: invoiceNoController,
-                  hintText: 'Invoice No',
+                  hintText: 'Return No',
                   onChanged: (value) {
                     SaleReturnBloc bloc = context.read<SaleReturnBloc>();
                     bloc.emit(
@@ -64,7 +64,7 @@ class SaleReturnDetailsCard extends StatelessWidget {
 
         SizedBox(height: Sizes.height * .03),
         nameField(
-          text: "Invoice Date",
+          text: "Return Date",
           child: Row(
             children: [
               Expanded(

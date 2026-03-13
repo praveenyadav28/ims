@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/ui/onboarding/change_password.dart';
 import 'package:ims/ui/onboarding/utils/backgraound.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/appbar.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
+import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/textfield.dart';
@@ -161,43 +163,39 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     );
   }
 
-  // Future sendOtp(String otpMobileNo, BuildContext context) async {
-  //   final response = await ApiService.postData('otp/send-otp', {
-  //     "mobile": otpMobileNo,
-  //   });
-  //   if (response['status'] == true) {
-  //     otpvarify = true;
-  //     showCustomSnackbarSuccess(context, response['message']);
-  //   } else {
-  //     otpvarify = false;
-  //     showCustomSnackbarError(context, response['message']);
-  //   }
-  // }
-
   Future verifyOtp(String otpMobileNo, BuildContext context) async {
     // Make the GET request
-    final response = await ApiService.postData('otp/verify-otp', {
-      "mobile": otpMobileNo,
+    final response = await ApiService.postData('verify-otp', {
+      "resetToken": resetToken,
       'otp': otpController.text.toString(),
-    });
+    }, licenceNo: int.parse(licenceNoController.text.toString()));
     if (response['status'] == true) {
-      // pushTo(CreatePassword(phoneNo: mobileNumberController.text.toString()));
+      pushTo(
+        CreatePassword(
+          phoneNo: mobileNumberController.text.toString(),
+          licenceNo: licenceNoController.text.toString(),
+        ),
+      );
       showCustomSnackbarSuccess(context, response['message']);
     } else {
       showCustomSnackbarError(context, response['message']);
     }
   }
 
+  String resetToken = '';
   Future<void> getSignupUsersDetails() async {
     try {
       final response = await ApiService.fetchData(
         "get/otp-send/${mobileNumberController.text.toString()}",
         licenceNo: int.parse(licenceNoController.text.toString()),
       );
-      print(response);
       if (response != null && response['status'] == true) {
+        otpvarify = true;
+        resetToken = response['resetToken'] ?? '';
+        showCustomSnackbarSuccess(context, response['message']);
         _startResendTimer(); // Start the timer after sending OTP
       } else {
+        otpvarify = false;
         showCustomSnackbarError(context, response['message']);
       }
     } catch (e) {}

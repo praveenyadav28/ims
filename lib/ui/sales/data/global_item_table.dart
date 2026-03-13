@@ -3,8 +3,11 @@
 
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/ui/inventry/item/create.dart';
 import 'package:ims/utils/colors.dart';
+import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:searchfield/searchfield.dart';
 import '../models/global_models.dart';
@@ -54,13 +57,64 @@ class GlobalItemsTableSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Items',
-            style: GoogleFonts.roboto(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColor.textColor,
-            ),
+          Row(
+            children: [
+              Text(
+                'Items',
+                style: GoogleFonts.roboto(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppColor.textColor,
+                ),
+              ),
+              Spacer(),
+
+              InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () {
+                  pushTo(CreateNewItemScreen());
+                },
+                child: Container(
+                  height: 32,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColor.primary.withOpacity(.6),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColor.primary.withOpacity(.15),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.add_circle_outline,
+                        size: 16,
+                        color: AppColor.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Create New Item",
+                        style: TextStyle(
+                          color: AppColor.primary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           _buildHeader(),
@@ -182,16 +236,22 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
   late TextEditingController discCtrl;
   late TextEditingController taxCtrl;
   late TextEditingController hsnCtrl;
-
+  SearchFieldListItem<ItemServiceModel>? highlightedSuggestion;
+  final TextEditingController itemController = TextEditingController();
   late FocusNode qtyF;
   late FocusNode priceF;
   late FocusNode discF;
   final FocusNode itemFocus = FocusNode();
   List<SearchFieldListItem<ItemServiceModel>> initialSuggestions = [];
-
+  int highlightedIndex = -1;
   @override
   void initState() {
     super.initState();
+    if (widget.row.product != null) {
+      itemController.text =
+          "${widget.row.product!.name} - ${widget.row.product!.itemNo}";
+    }
+
     itemFocus.addListener(() async {
       if (itemFocus.hasFocus) {
         final items = await widget.onSearchItem?.call("") ?? [];
@@ -274,7 +334,9 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
   void didUpdateWidget(covariant _GlobalItemRowWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     final r = widget.row;
-
+    if (r.product != null) {
+      itemController.text = "${r.product!.name} - ${r.product!.itemNo}";
+    }
     // Only overwrite controllers when user is not editing (preserve focus)
     if (!qtyF.hasFocus) qtyCtrl.text = r.qty.toString();
     if (!priceF.hasFocus)
@@ -496,7 +558,6 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
       ],
       onChanged: (v) {
         final sellInBase = v ?? false;
-        // Update unit and price depending on selection
         final basePrice =
             r.selectedVariant?.salePrice ?? r.product?.baseSalePrice ?? 0;
         final newPrice = sellInBase
@@ -518,11 +579,10 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
     return CommonTextField(
       readOnly: true,
       hintText: "Item",
-      controller: TextEditingController(
-        text: r.product != null
+      controller: itemController
+        ..text = r.product != null
             ? "${r.product!.name} - ${r.product!.itemNo}"
             : "",
-      ),
     );
   }
 
@@ -532,81 +592,134 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
         .map((e) => e.product!.id)
         .toSet();
 
-    return SearchField<ItemServiceModel>(
-      key: ValueKey(r.localId + "_item"),
-      itemHeight: 68,
-      suggestions: initialSuggestions,
-      focusNode: itemFocus,
-      autofocus: r.product == null,
-      onSearchTextChanged: (text) async {
-        final items =
-            await (widget.onSearchItem?.call(text.trim()) ?? Future.value([]));
+    return RawKeyboardListener(
+      focusNode: FocusNode(),
+      onKey: (event) {
+        if (event is! RawKeyDownEvent) return;
 
-        return items
-            .where((i) => !selectedIds.contains(i.id) || r.product?.id == i.id)
-            .map((i) {
-              return SearchFieldListItem<ItemServiceModel>(
-                "${i.name} - ${i.itemNo}",
-                item: i,
-                child: ListTile(
-                  dense: true,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.shopping_bag_outlined, size: 20),
-                  ),
-                  title: Text(
-                    "${i.name} • ${i.itemNo}",
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: i.variantValue.isEmpty
-                      ? null
-                      : Text(i.variantValue),
-                  trailing: Text(
-                    i.stockQty ?? "0",
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: (int.tryParse(i.stockQty ?? "0") ?? 0) <= 0
-                          ? AppColor.red
-                          : AppColor.darkGreen,
-                    ),
-                  ),
-                ),
-              );
-            })
-            .toList();
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+          if (initialSuggestions.isEmpty) return;
+
+          highlightedIndex = (highlightedIndex + 1) % initialSuggestions.length;
+          highlightedSuggestion = initialSuggestions[highlightedIndex];
+        }
+
+        if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+          if (initialSuggestions.isEmpty) return;
+
+          highlightedIndex = (highlightedIndex - 1) < 0
+              ? initialSuggestions.length - 1
+              : highlightedIndex - 1;
+
+          highlightedSuggestion = initialSuggestions[highlightedIndex];
+        }
+
+        if (event.logicalKey == LogicalKeyboardKey.tab) {
+          if (initialSuggestions.isEmpty) return;
+
+          final selected = highlightedSuggestion ?? initialSuggestions.first;
+
+          widget.onSelectCatalog(selected.item!);
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final index = widget.rows.indexWhere(
+              (e) => e.localId == widget.row.localId,
+            );
+
+            final isLastRow = index == widget.rows.length - 1;
+
+            if (isLastRow) {
+              widget.onAddNextRow?.call();
+            }
+          });
+        }
       },
+      child: SearchField<ItemServiceModel>(
+        key: ValueKey(r.localId + "_item"),
+        itemHeight: 68,
+        suggestions: initialSuggestions,
+        focusNode: itemFocus,
+        autofocus: r.product == null,
+        onSearchTextChanged: (text) async {
+          highlightedIndex = 0;
+          highlightedSuggestion = null;
+          final items =
+              await (widget.onSearchItem?.call(text.trim()) ??
+                  Future.value([]));
+          final list = items
+              .where(
+                (i) => !selectedIds.contains(i.id) || r.product?.id == i.id,
+              )
+              .map((i) {
+                return SearchFieldListItem<ItemServiceModel>(
+                  "${i.name} - ${i.itemNo}",
+                  item: i,
+                  child: ListTile(
+                    dense: true,
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.shopping_bag_outlined, size: 20),
+                    ),
+                    title: Text(
+                      "${i.name} • ${i.itemNo}",
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: i.variantValue.isEmpty
+                        ? null
+                        : Text(i.variantValue),
+                    trailing: Text(
+                      i.stockQty ?? "0",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: (int.tryParse(i.stockQty ?? "0") ?? 0) <= 0
+                            ? AppColor.red
+                            : AppColor.darkGreen,
+                      ),
+                    ),
+                  ),
+                );
+              })
+              .toList();
 
-      searchInputDecoration: input.copyWith(labelText: "Item / Service"),
+          initialSuggestions = list; // arrow navigation
+          return list; // dropdown show
+        },
 
-      suggestionStyle: GoogleFonts.inter(
-        color: const Color(0xFF565D6D),
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
+        searchInputDecoration: input.copyWith(labelText: "Item / Service"),
+
+        suggestionStyle: GoogleFonts.inter(
+          color: const Color(0xFF565D6D),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        selectedValue: null,
+
+        controller: itemController,
+
+        onSuggestionTap: (s) {
+          itemController.text = "${s.item!.name} - ${s.item!.itemNo}";
+          highlightedIndex = 0;
+          highlightedSuggestion = s;
+          widget.onSelectCatalog(s.item!);
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final index = widget.rows.indexWhere(
+              (e) => e.localId == widget.row.localId,
+            );
+
+            final isLastRow = index == widget.rows.length - 1;
+
+            if (isLastRow) {
+              widget.onAddNextRow?.call();
+            }
+          });
+        },
       ),
-      selectedValue: null,
-
-      controller: TextEditingController(
-        text: r.product != null
-            ? "${r.product!.name} - ${r.product!.itemNo}"
-            : "",
-      ),
-
-      onSuggestionTap: (s) {
-        widget.onSelectCatalog(s.item!);
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          final index = widget.rows.indexOf(widget.row);
-
-          if (index == widget.rows.length - 1) {
-            widget.onAddNextRow?.call(); // ✅ correct
-          }
-        });
-      },
     );
   }
 }

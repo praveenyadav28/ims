@@ -294,7 +294,7 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
     Emitter<CreditNoteState> emit,
   ) async {
     try {
-      final ledgers = await repo.fetchLedger(false);
+      // final ledgers = await repo.fetchLedger(false);
       final creditNoteNo = await repo.fetchCreditNoteNo();
       final hsnList = await repo.fetchHsnList();
 
@@ -308,7 +308,7 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
 
       emit(
         state.copyWith(
-          ledgers: ledgers,
+          // ledgers: ledgers,
           creditNoteNo: creditNoteNo,
           hsnMaster: hsnList,
           miscMasterList: miscMaster,
@@ -677,7 +677,9 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-        "place_of_supply": e.stateName.isNotEmpty ? e.stateName : Preference.getString(PrefKeys.state),
+        "place_of_supply": e.stateName.isNotEmpty
+            ? e.stateName
+            : Preference.getString(PrefKeys.state),
         "prefix": state.prefix,
         "no": int.tryParse(state.creditNoteNo),
         "purchasenote_date": DateFormat(

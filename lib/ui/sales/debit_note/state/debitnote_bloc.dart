@@ -318,7 +318,7 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
     Emitter<DebitNoteState> emit,
   ) async {
     try {
-      final customers = await repo.fetchLedger(true);
+      // final customers = await repo.fetchLedger(true);
       final debitNoteNo = await repo.fetchDebitNoteNo();
       final hsnList = await repo.fetchHsnList();
 
@@ -332,7 +332,7 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
 
       emit(
         state.copyWith(
-          customers: customers,
+          // customers: customers,
           debitNoteNo: debitNoteNo,
           hsnMaster: hsnList,
           miscMasterList: miscMaster,

@@ -87,6 +87,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
     });
   }
 
+  final FocusNode _customerFocus = FocusNode();
   @override
   void initState() {
     super.initState();
@@ -130,7 +131,9 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
         });
       }
     }
-
+ WidgetsBinding.instance.addPostFrameCallback((_) {
+      _customerFocus.requestFocus();
+    });
     // fetch misc etc.
     fetchMiscCharges();
   }
@@ -324,8 +327,10 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                       ispurchase: false,
                       // --------- STATE VALUES ---------
                       isCashSale: state.cashSaleDefault,
+                         focusNode: _customerFocus,
                       customers: state.customers,
                       selectedCustomer: state.selectedCustomer,
+                      onSearchLedger: (text) async => [],
 
                       // --------- CONTROLLERS ---------
                       cusNameController: cusNameController,

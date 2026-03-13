@@ -16,11 +16,15 @@ import 'package:ims/utils/api.dart';
 import 'package:ims/utils/prefence.dart';
 
 class GLobalRepository {
-  Future<List<LedgerModelDrop>> fetchLedger(bool isCustomer) async {
+  Future<List<LedgerModelDrop>> searchLedger(
+    String text,
+    bool isCustomer,
+  ) async {
     final res = await ApiService.fetchData(
-      'get/ledger',
+      text.isEmpty ? "get/ledger/search" : "get/ledger/search?search=$text",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
+
     final data = (res?['data'] as List?) ?? [];
     return data
         .where(
