@@ -99,6 +99,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: 20,
                   ),
                 ),
+                onFieldSubmitted: (value) {
+                  getBranches();
+                },
               ),
               SizedBox(height: Sizes.height * 0.035),
               defaultButton(

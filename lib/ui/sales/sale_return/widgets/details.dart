@@ -95,6 +95,10 @@ class SaleReturnDetailsCard extends StatelessWidget {
               },
               icon: Icon(Icons.search),
             ),
+            onFieldSubmitted: (v) {
+              final bloc = context.read<SaleReturnBloc>();
+              bloc.add(SaleReturnSearchTransaction());
+            },
             onChanged: (v) {
               context.read<SaleReturnBloc>().add(SaleReturnSetTransNo(v));
             },

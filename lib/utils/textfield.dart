@@ -32,6 +32,7 @@ class CommonTextField extends StatelessWidget {
     this.controller,
     this.onChanged,
     this.onPressIcon,
+    this.onFieldSubmitted,
     this.onTap,
     this.readOnly,
     this.focuesNode,
@@ -45,6 +46,7 @@ class CommonTextField extends StatelessWidget {
   bool? readOnly;
   void Function(String)? onChanged;
   void Function()? onPressIcon;
+  void Function(String)? onFieldSubmitted;
   void Function()? onTap;
   FocusNode? focuesNode;
   Widget? suffixIcon;
@@ -56,6 +58,7 @@ class CommonTextField extends StatelessWidget {
       focusNode: focuesNode,
       controller: controller,
       onChanged: onChanged,
+      onFieldSubmitted: onFieldSubmitted,
       onTap: onTap,
       initialValue: initialValue,
       readOnly: readOnly ?? false,
@@ -99,6 +102,7 @@ class TitleTextFeild extends StatelessWidget {
     this.focuesNode,
     this.suffixIcon,
     this.prefixIcon,
+    this.onFieldSubmitted,
     this.keyboardType,
     this.maxLength,
   });
@@ -109,6 +113,7 @@ class TitleTextFeild extends StatelessWidget {
   final TextEditingController? controller;
   final bool? readOnly;
   final void Function(String)? onChanged;
+  final void Function(String)? onFieldSubmitted;
   final String? Function(String?)? validator;
   final void Function()? onTap;
   final FocusNode? focuesNode;
@@ -145,6 +150,7 @@ class TitleTextFeild extends StatelessWidget {
           validator: validator,
           keyboardType: keyboardType,
           maxLength: maxLength,
+          onFieldSubmitted: onFieldSubmitted,
           decoration: InputDecoration(
             hintText: hintText ?? "",
             counterText: "",

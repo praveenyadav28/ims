@@ -83,8 +83,8 @@ class PerformaDetailsCard extends StatelessWidget {
           ),
           flix: 30,
         ),
-     
-      SizedBox(height: Sizes.height * .03),
+
+        SizedBox(height: Sizes.height * .03),
         nameField(
           text: "Estimate No",
           child: CommonTextField(
@@ -98,6 +98,9 @@ class PerformaDetailsCard extends StatelessWidget {
             ),
             onChanged: (v) {
               context.read<PerformaBloc>().add(PerformaSetTransNo(v));
+            },
+            onFieldSubmitted: (v) {
+              context.read<PerformaBloc>().add(PerformaSearchTransaction());
             },
           ),
 

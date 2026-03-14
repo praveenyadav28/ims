@@ -280,9 +280,10 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Dilivery Challan",
+                  text:
+                      "${widget.diliveryChallanData == null ? "Create" : "Update"} Dilivery Challan",
                   height: 40,
-                  width: 179,
+                  width: 190,
                   onTap: () {
                     bloc.add(
                       DiliveryChallanSaveWithUIData(

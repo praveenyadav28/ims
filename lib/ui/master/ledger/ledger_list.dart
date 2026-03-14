@@ -36,7 +36,6 @@ class _LedgerListScreenState extends State<LedgerListScreen> {
     );
 
     List responseData = response['data'] ?? [];
-
     setState(() {
       ledgerList = responseData
           .map((e) => LedgerListModel.fromJson(e))

@@ -356,9 +356,9 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                       const SizedBox(width: 18),
                       defaultButton(
                         buttonColor: const Color(0xff8947E5),
-                        text: "Save Purchase Order",
+                        text: "${widget.purchaseOrderData == null ? "Create" : "Update"} Purchase Order",
                         height: 40,
-                        width: 189,
+                        width: 200,
                         onTap: () {
                           bloc.add(
                             PurchaseOrderSaveWithUIData(

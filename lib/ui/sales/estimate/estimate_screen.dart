@@ -342,9 +342,10 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Estimate",
+                  text:
+                      "${widget.estimateData == null ? "Create" : "Update"} Estimate",
                   height: 40,
-                  width: 149,
+                  width: 160,
                   onTap: () {
                     bloc.add(
                       EstSaveWithUIData(

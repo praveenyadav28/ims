@@ -91,13 +91,17 @@ class CreditNoteDetailsCard extends StatelessWidget {
           text: "Purchase Invoice No",
           child: CommonTextField(
             hintText: 'Number',
-           suffixIcon: IconButton(
+            suffixIcon: IconButton(
               onPressed: () {
                 final bloc = context.read<CreditNoteBloc>();
                 bloc.add(CreditNoteSearchTransaction());
               },
               icon: Icon(Icons.search),
             ),
+            onFieldSubmitted: (v) {
+              final bloc = context.read<CreditNoteBloc>();
+              bloc.add(CreditNoteSearchTransaction());
+            },
             onChanged: (v) {
               context.read<CreditNoteBloc>().add(CreditNoteSetTransNo(v));
             },

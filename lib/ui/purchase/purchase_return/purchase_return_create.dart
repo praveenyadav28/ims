@@ -289,7 +289,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Purchase Return",
+                  text: "${widget.purchaseReturnData == null ? "Create" : "Update"} Purchase Return",
                   height: 40,
                   width: 189,
                   onTap: () {

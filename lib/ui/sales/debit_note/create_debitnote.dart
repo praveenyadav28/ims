@@ -269,9 +269,9 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Credit Note",
+                  text: "${widget.debitNoteData == null ? "Create" : "Update"} Credit Note",
                   height: 40,
-                  width: 179,
+                  width: 190,
                   onTap: () {
                     bloc.add(
                       DebitNoteSaveWithUIData(

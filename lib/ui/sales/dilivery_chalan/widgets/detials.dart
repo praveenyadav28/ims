@@ -136,6 +136,10 @@ class DiliveryChallanDetailsCard extends StatelessWidget {
                 bloc.add(DiliveryChallanSearchTransaction());
               },
             ),
+             onFieldSubmitted : (v) {
+                final bloc = context.read<DiliveryChallanBloc>();
+                bloc.add(DiliveryChallanSearchTransaction());
+              },
             onChanged: (v) {
               context.read<DiliveryChallanBloc>().add(DiliveryChallanSetTransNo(v));
             },

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
-import 'package:excel/excel.dart' hide Border;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/inventry/item/create.dart';
@@ -34,7 +33,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   String searchText = '';
   String? selectedCategoryFilter;
   bool showLowStockOnly = false;
-
+  bool isloading = false;
   @override
   void initState() {
     super.initState();
@@ -434,20 +433,25 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     ],
                   ),
                 ),
-                InkWell(
-                  onTap: exportItemsExcel,
-                  child: Container(
-                    width: 50,
-                    height: 40,
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(5),
-                      color: AppColor.white,
-                      border: Border.all(width: 1, color: AppColor.borderColor),
-                    ),
-                    child: Image.asset("assets/images/excel.png"),
-                  ),
-                ),
+                isloading
+                    ? Text("Processing...")
+                    : InkWell(
+                        onTap: exportItemsCsv,
+                        child: Container(
+                          width: 50,
+                          height: 40,
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(5),
+                            color: AppColor.white,
+                            border: Border.all(
+                              width: 1,
+                              color: AppColor.borderColor,
+                            ),
+                          ),
+                          child: Image.asset("assets/images/excel.png"),
+                        ),
+                      ),
                 SizedBox(width: 10),
                 defaultButton(
                   buttonColor: AppColor.blue,
@@ -528,27 +532,27 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  Future<void> exportItemsExcel() async {
-    final excel = Excel.createExcel();
-    final sheet = excel['Items'];
+Future<void> exportItemsCsv() async {
+  setState(() => isloading = true);
 
-    sheet.appendRow([TextCellValue('Item Name'), TextCellValue('Item Code')]);
+  final items = filteredList;
 
-    for (final item in filteredList) {
-      sheet.appendRow([
-        TextCellValue(item.itemName),
-        TextCellValue(item.itemNo),
-      ]);
-    }
+  final buffer = StringBuffer();
 
-    final bytes = excel.encode();
-    if (bytes == null) return;
+  buffer.writeln(
+      "Item Code,Item Name,Selling Price,Purchase Price,GST Rate,Stock Qty,Bin No,HSN Code,Unit,Group");
 
-    downloadExcel(bytes);
-
-    showCustomSnackbarSuccess(context, "Excel Exported Successfully");
+  for (final item in items) {
+    buffer.writeln(
+        "${item.itemNo},${item.itemName},${item.salesPrice},${item.purchasePriceSe},${item.gstRate},${item.stockQty},${item.other1},${item.hsnCode},${item.baseUnit},${item.group}");
   }
 
+  final bytes = Uint8List.fromList(buffer.toString().codeUnits);
+
+  downloadExcel(bytes, fileName: "inventory.csv");
+
+  setState(() => isloading = false);
+}
   /// ================== WIDGETS ==================
   Widget _infoCard({
     required String title,

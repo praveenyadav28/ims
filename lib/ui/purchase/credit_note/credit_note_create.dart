@@ -136,7 +136,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
         });
       }
     }
- WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _customerFocus.requestFocus();
     });
     // fetch misc etc.
@@ -276,9 +276,10 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Debit Note",
+                  text:
+                      "${widget.creditNoteData == null ? "Create" : "Update"} Debit Note",
                   height: 40,
-                  width: 189,
+                  width: 200,
                   onTap: () {
                     bloc.add(
                       CreditNoteSaveWithUIData(
@@ -336,7 +337,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                       selectedCustomer: state.selectedLedger,
                       onSearchLedger: (text) async => [],
                       cusNameController: cusNameController,
-                         focusNode: _customerFocus,
+                      focusNode: _customerFocus,
                       mobileController: cashMobileController,
                       billingController: cashBillingController,
                       shippingController: cashShippingController,

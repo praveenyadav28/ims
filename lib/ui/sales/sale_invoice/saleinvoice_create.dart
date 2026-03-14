@@ -303,9 +303,9 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Sale Invoice",
+                  text: "${widget.saleInvoiceData == null ? "Create" : "Update"} Sale Invoice",
                   height: 40,
-                  width: 179,
+                  width: 190,
                   onTap: () {
                     bloc.add(
                       SaleInvoiceSaveWithUIData(

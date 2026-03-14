@@ -310,9 +310,9 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Purchase Invoice",
+                  text: "${widget.purchaseInvoiceData == null ? "Create" : "Update"} Purchase Invoice",
                   height: 40,
-                  width: 189,
+                  width: 200,
                   onTap: () {
                     bloc.add(
                       PurchaseInvoiceSaveWithUIData(

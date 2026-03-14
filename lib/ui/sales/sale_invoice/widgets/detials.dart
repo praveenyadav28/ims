@@ -146,6 +146,10 @@ class SaleInvoiceDetailsCard extends StatelessWidget {
                 bloc.add(SaleInvoiceSearchTransaction());
               },
             ),
+             onFieldSubmitted: (v) {
+                final bloc = context.read<SaleInvoiceBloc>();
+                bloc.add(SaleInvoiceSearchTransaction());
+              },
             onChanged: (v) {
               context.read<SaleInvoiceBloc>().add(SaleInvoiceSetTransNo(v));
             },

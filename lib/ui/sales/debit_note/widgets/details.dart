@@ -91,6 +91,10 @@ class DebitNoteDetailsCard extends StatelessWidget {
               },
               icon: Icon(Icons.search),
             ),
+            onFieldSubmitted: (v) {
+              final bloc = context.read<DebitNoteBloc>();
+              bloc.add(DebitNoteSearchTransaction());
+            },
             onChanged: (v) {
               context.read<DebitNoteBloc>().add(DebitNoteSetTransNo(v));
             },

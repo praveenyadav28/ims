@@ -99,8 +99,15 @@ class PurchaseReturnDetailsCard extends StatelessWidget {
               },
               icon: Icon(Icons.search),
             ),
+            onFieldSubmitted: (v) {
+              final bloc = context.read<PurchaseReturnBloc>();
+              bloc.add(PurchaseReturnSearchTransaction());
+            },
+
             onChanged: (v) {
-              context.read<PurchaseReturnBloc>().add(PurchaseReturnSetTransNo(v));
+              context.read<PurchaseReturnBloc>().add(
+                PurchaseReturnSetTransNo(v),
+              );
             },
           ),
 
