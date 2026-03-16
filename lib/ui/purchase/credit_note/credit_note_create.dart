@@ -1,10 +1,6 @@
-import 'dart:typed_data';
-
-import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/purchase/credit_note/state/credit_note_bloc.dart';
 import 'package:ims/ui/purchase/credit_note/widgets/credit_note_details.dart';
@@ -70,10 +66,6 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
-  String signatureBytesUrl = '';
-
-  Uint8List? signatureBytes; // picked image (web/desktop)
-  final ImagePicker picker = ImagePicker();
 
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
@@ -107,7 +99,6 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
 
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
-      signatureBytesUrl = e.signature;
 
       if (e.caseSale == true) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -173,16 +164,6 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
     }
   }
 
-  Future<void> pickImage(String target) async {
-    final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-
-    final bytes = await picked.readAsBytes();
-    setState(() {
-      if (target == 'signature') signatureBytes = bytes;
-    });
-  }
-
   // ---------------- misc fetch ----------------
   Future<void> fetchMiscCharges() async {
     final res = await ApiService.fetchData(
@@ -215,7 +196,12 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
         bool isUpdateMode = widget.creditNoteData != null;
 
         final customer = state.selectedLedger;
-
+        if (creditNoteNoController.text != state.creditNoteNo.toString()) {
+          creditNoteNoController.text = state.creditNoteNo.toString();
+        }
+        if (prefixController.text != state.prefix) {
+          prefixController.text = state.prefix;
+        }
         // Only autofill addresses when user selects customer in CREATE mode
         if (!isUpdateMode && customer != null && !state.cashSaleDefault) {
           cusNameController.text = customer.name;
@@ -237,7 +223,6 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
           stateController.text = state.transPlaceOfSupply!;
           return; // 🚨 customer logic SKIP
         }
-        creditNoteNoController.text = state.creditNoteNo.toString();
       },
       child: Scaffold(
         key: creditNoteNavigatorKey,
@@ -290,7 +275,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                         stateName: stateController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
-                        signatureImage: signatureBytes,
+                        signatureImage: null,
                         updateId: widget.creditNoteData?.id,
                         printAfterSave: printAfterSave,
                       ),
@@ -323,8 +308,6 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
         ),
         body: BlocBuilder<CreditNoteBloc, CreditNoteState>(
           builder: (context, state) {
-            creditNoteNoController.text = state.creditNoteNo.toString();
-
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -465,90 +448,6 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                             ),
 
                             SizedBox(height: Sizes.height * .02),
-                            Row(
-                              children: [
-                                Text(
-                                  "Authorized signatory for ",
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: AppColor.text,
-                                  ),
-                                ),
-                                Text(
-                                  "Business Name",
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColor.text,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            GestureDetector(
-                              onTap: () => pickImage('signature'),
-                              child: SizedBox(
-                                width: double.infinity,
-                                height: 110,
-                                child: DottedBorder(
-                                  options: RoundedRectDottedBorderOptions(
-                                    strokeWidth: 1.6,
-                                    radius: Radius.circular(6),
-                                    dashPattern: [5, 3],
-                                    color: AppColor.textLightBlack,
-                                  ),
-                                  child:
-                                      (signatureBytes == null &&
-                                          signatureBytesUrl.trim().isEmpty)
-                                      ? Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.add,
-                                                size: 30,
-                                                color: AppColor.primary,
-                                              ),
-                                              SizedBox(height: 12),
-                                              Text(
-                                                "Add Signature",
-                                                style: GoogleFonts.roboto(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: AppColor.primary,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        )
-                                      : (signatureBytes == null)
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          child: Image.network(
-                                            signatureBytesUrl,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: 125,
-                                          ),
-                                        )
-                                      : ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          child: Image.memory(
-                                            signatureBytes!,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: 125,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                       ),

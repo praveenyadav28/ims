@@ -108,6 +108,15 @@ class DebitNoteSetTransNo extends DebitNoteEvent {
   DebitNoteSetTransNo(this.number);
 }
 
+class DebitNoteUpdateNo extends DebitNoteEvent {
+  final String value;
+  DebitNoteUpdateNo(this.value);
+}
+
+class DebitNoteUpdatePrefix extends DebitNoteEvent {
+  final String value;
+  DebitNoteUpdatePrefix(this.value);
+}
 class DebitNoteSearchTransaction extends DebitNoteEvent {}
 
 class DebitNoteSavePayment extends DebitNoteEvent {
@@ -296,6 +305,12 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
     on<DebitNoteUpdateCharge>(_onUpdateCharge);
     on<DebitNoteAddDiscount>(_onAddDiscount);
     on<DebitNoteRemoveDiscount>(_onRemoveDiscount);
+     on<DebitNoteUpdateNo>((event, emit) {
+      emit(state.copyWith(debitNoteNo: event.value));
+    });
+    on<DebitNoteUpdatePrefix>((event, emit) {
+      emit(state.copyWith(prefix: event.value));
+    });
 
     // misc
     on<DebitNoteAddMiscCharge>(_onAddMiscCharge);
@@ -691,7 +706,7 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
 
       final mobile = isCash ? e.mobile : state.selectedCustomer?.mobile ?? "";
 
-      // Address — prefer selectedCustomer's addresses (autofill). If cash sale use provided fields.
+      // Address — prefer selectedCustomer's addresses (autofill). If direct sale use provided fields.
       final billing = isCash
           ? e.billingAddress
           : state.selectedCustomer?.billingAddress ?? e.billingAddress;

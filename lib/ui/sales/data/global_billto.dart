@@ -60,7 +60,7 @@ class _GlobalBillToCardState extends State<GlobalBillToCard> {
   LedgerModelDrop? getCashSaleCustomer() {
     try {
       return widget.customers.firstWhere(
-        (e) => e.name.toLowerCase() == "cash sale",
+        (e) => e.name.toLowerCase() == "direct sale",
       );
     } catch (e) {
       return null;
@@ -104,7 +104,7 @@ class _GlobalBillToCardState extends State<GlobalBillToCard> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    "Cash Sale ledger not found. Please create ledger with name 'Cash Sale'",
+                    "Direct Sale ledger not found. Please create ledger with name 'Direct Sale'",
                     style: GoogleFonts.inter(
                       color: Colors.red,
                       fontSize: 13,
@@ -116,7 +116,7 @@ class _GlobalBillToCardState extends State<GlobalBillToCard> {
             ),
           ),
 
-        /// SHOW CASH SALE FIELDS
+        /// SHOW Direct SALE FIELDS
         if (widget.isCashSale)
           _CashSaleFields(
             cusNameController: widget.cusNameController,
@@ -190,7 +190,9 @@ class _GlobalBillToCardState extends State<GlobalBillToCard> {
                 ),
                 onPressed: widget.onToggleCashSale,
                 child: Text(
-                  widget.isCashSale ? 'Disable Cash Sale' : '  Set Cash Sale  ',
+                  widget.isCashSale
+                      ? 'Disable Direct Sale'
+                      : '  Set Direct Sale  ',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -219,7 +221,7 @@ class _CashSaleFields extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Cash Sale',
+          'Direct Sale',
           style: GoogleFonts.roboto(
             fontSize: 16,
             fontWeight: FontWeight.w600,

@@ -120,6 +120,16 @@ class PurchaseOrderToggleRoundOff extends PurchaseOrderEvent {
 
 class PurchaseOrderAddLowStockItems extends PurchaseOrderEvent {}
 
+class PurchaseOrderUpdateNo extends PurchaseOrderEvent {
+  final String value;
+  PurchaseOrderUpdateNo(this.value);
+}
+
+class PurchaseOrderUpdatePrefix extends PurchaseOrderEvent {
+  final String value;
+  PurchaseOrderUpdatePrefix(this.value);
+}
+
 class PurchaseOrderLoadCustomers extends PurchaseOrderEvent {}
 
 /// ------------------- STATE -------------------
@@ -288,6 +298,12 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
     on<PurchaseOrderUpdateCharge>(_onUpdateCharge);
     on<PurchaseOrderAddDiscount>(_onAddDiscount);
     on<PurchaseOrderRemoveDiscount>(_onRemoveDiscount);
+    on<PurchaseOrderUpdateNo>((event, emit) {
+      emit(state.copyWith(purchaseOrderNo: event.value));
+    });
+    on<PurchaseOrderUpdatePrefix>((event, emit) {
+      emit(state.copyWith(prefix: event.value));
+    });
 
     // misc
     on<PurchaseOrderAddMiscCharge>(_onAddMiscCharge);
@@ -727,7 +743,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
 
       final mobile = isCash ? e.mobile : state.selectedCustomer?.mobile ?? "";
 
-      // Address — prefer selectedCustomer's addresses (autofill). If cash sale use provided fields.
+      // Address — prefer selectedCustomer's addresses (autofill). If direct sale use provided fields.
       final billing = isCash
           ? e.billingAddress
           : state.selectedCustomer?.billingAddress ?? e.billingAddress;

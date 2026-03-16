@@ -34,12 +34,7 @@ class SaleInvoiceDetailsCard extends StatelessWidget {
                   controller: prefixController,
                   hintText: 'Prefix',
                   onChanged: (value) {
-                    SaleInvoiceBloc bloc = context.read<SaleInvoiceBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        saleInvoiceNo: invoiceNoController.text,
-                      ),
-                    );
+                    context.read<SaleInvoiceBloc>().add(SaleInvoiceUpdatePrefix(value));
                   },
                 ),
               ),
@@ -48,13 +43,8 @@ class SaleInvoiceDetailsCard extends StatelessWidget {
                 child: CommonTextField(
                   controller: invoiceNoController,
                   hintText: 'Invoice No',
-                  onChanged: (value) {
-                    SaleInvoiceBloc bloc = context.read<SaleInvoiceBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        saleInvoiceNo: invoiceNoController.text,
-                      ),
-                    );
+                 onChanged: (value) {
+                    context.read<SaleInvoiceBloc>().add(SaleInvoiceUpdateInvoiceNo(value));
                   },
                 ),
               ),

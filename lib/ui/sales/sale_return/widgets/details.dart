@@ -33,11 +33,8 @@ class SaleReturnDetailsCard extends StatelessWidget {
                   controller: prefixController,
                   hintText: 'Prefix',
                   onChanged: (value) {
-                    SaleReturnBloc bloc = context.read<SaleReturnBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        saleReturnNo: invoiceNoController.text,
-                      ),
+                    context.read<SaleReturnBloc>().add(
+                      SaleReturnUpdatePrefix(value),
                     );
                   },
                 ),
@@ -48,11 +45,8 @@ class SaleReturnDetailsCard extends StatelessWidget {
                   controller: invoiceNoController,
                   hintText: 'Return No',
                   onChanged: (value) {
-                    SaleReturnBloc bloc = context.read<SaleReturnBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        saleReturnNo: invoiceNoController.text,
-                      ),
+                    context.read<SaleReturnBloc>().add(
+                      SaleReturnUpdateNo(value),
                     );
                   },
                 ),

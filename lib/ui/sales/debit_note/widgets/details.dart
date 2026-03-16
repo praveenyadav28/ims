@@ -33,9 +33,8 @@ class DebitNoteDetailsCard extends StatelessWidget {
                   controller: prefixController,
                   hintText: 'Prefix',
                   onChanged: (value) {
-                    DebitNoteBloc bloc = context.read<DebitNoteBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(debitNoteNo: noteNoController.text),
+                    context.read<DebitNoteBloc>().add(
+                      DebitNoteUpdatePrefix(value),
                     );
                   },
                 ),
@@ -46,10 +45,7 @@ class DebitNoteDetailsCard extends StatelessWidget {
                   controller: noteNoController,
                   hintText: 'Debit Note No',
                   onChanged: (value) {
-                    DebitNoteBloc bloc = context.read<DebitNoteBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(debitNoteNo: noteNoController.text),
-                    );
+                    context.read<DebitNoteBloc>().add(DebitNoteUpdateNo(value));
                   },
                 ),
               ),

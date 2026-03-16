@@ -126,6 +126,16 @@ class EstSelectSalesPerson extends EstEvent {
 
 class EstLoadCustomers extends EstEvent {}
 
+class EstUpdateEstimateNo extends EstEvent {
+  final String value;
+  EstUpdateEstimateNo(this.value);
+}
+
+class EstUpdatePrefix extends EstEvent {
+  final String value;
+  EstUpdatePrefix(this.value);
+}
+
 /// ------------------- STATE -------------------
 class EstState {
   final List<LedgerModelDrop> customers;
@@ -296,7 +306,12 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     on<EstUpdateCharge>(_onUpdateCharge);
     on<EstAddDiscount>(_onAddDiscount);
     on<EstRemoveDiscount>(_onRemoveDiscount);
-
+    on<EstUpdateEstimateNo>((event, emit) {
+      emit(state.copyWith(estimateNo: event.value));
+    });
+    on<EstUpdatePrefix>((event, emit) {
+      emit(state.copyWith(prefix: event.value));
+    });
     // misc
     on<EstAddMiscCharge>(_onAddMiscCharge);
     on<EstRemoveMiscCharge>(_onRemoveMiscCharge);
@@ -658,7 +673,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
 
       final mobile = isCash ? e.mobile : state.selectedCustomer?.mobile ?? "";
 
-      // Address — prefer selectedCustomer's addresses (autofill). If cash sale use provided fields.
+      // Address — prefer selectedCustomer's addresses (autofill). If direct sale use provided fields.
       final billing = isCash
           ? e.billingAddress
           : state.selectedCustomer?.billingAddress ?? e.billingAddress;

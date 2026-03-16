@@ -1,9 +1,6 @@
-import 'dart:typed_data';
-import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/data/global_additionalcharge.dart';
 import 'package:ims/ui/sales/data/global_billto.dart';
@@ -74,10 +71,6 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
-  String signatureImageUrl = '';
-
-  Uint8List? signatureImage;
-  final ImagePicker picker = ImagePicker();
 
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
@@ -105,7 +98,6 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
       pickedInvoiceDate = e.saleReturnDate;
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
-      signatureImageUrl = e.signature;
 
       if (e.caseSale == true) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -133,11 +125,11 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
         });
       }
     }
-     WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _customerFocus.requestFocus();
     });
- statesSuggestions = stateCities.keys.toList();
-   
+    statesSuggestions = stateCities.keys.toList();
+
     // fetch misc etc.
     fetchMiscCharges();
   }
@@ -168,16 +160,6 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
       bloc.add(SaleReturnCalculate());
       setState(() {});
     }
-  }
-
-  Future<void> pickImage(String target) async {
-    final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-
-    final bytes = await picked.readAsBytes();
-    setState(() {
-      if (target == 'signature') signatureImage = bytes;
-    });
   }
 
   // ---------------- misc fetch ----------------
@@ -212,7 +194,12 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
         bool isUpdateMode = widget.saleReturnData != null;
 
         final customer = state.selectedCustomer;
-
+        if (invoiceNoController.text != state.saleReturnNo) {
+          invoiceNoController.text = state.saleReturnNo;
+        }
+        if (prefixController.text != state.prefix) {
+          prefixController.text = state.prefix;
+        }
         // Only autofill addresses when user selects customer in CREATE mode
         if (!isUpdateMode && customer != null && !state.cashSaleDefault) {
           cusNameController.text = customer.name;
@@ -237,7 +224,6 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
           });
           return; // 🚨 customer logic skip
         }
-        invoiceNoController.text = state.saleReturnNo.toString();
       },
       child: Scaffold(
         key: saleReturnNavigatorKey,
@@ -289,7 +275,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                         stateName: stateController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
-                        signatureImage: signatureImage,
+                        signatureImage: null,
                         updateId: widget.saleReturnData?.id,
                         printAfterSave: printAfterSave,
                       ),
@@ -322,8 +308,6 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
         ),
         body: BlocBuilder<SaleReturnBloc, SaleReturnState>(
           builder: (context, state) {
-            invoiceNoController.text = state.saleReturnNo.toString();
-
             return Scrollbar(
               controller: _scrollController,
               thumbVisibility: true,
@@ -337,7 +321,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                     GlobalHeaderCard(
                       billTo: GlobalBillToCard(
                         ispurchase: false,
-                         focusNode: _customerFocus,
+                        focusNode: _customerFocus,
                         // --------- STATE VALUES ---------
                         isCashSale: state.cashSaleDefault,
                         customers: state.customers,
@@ -358,7 +342,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                           );
 
                           if (state.cashSaleDefault) {
-                            // clearing when disabling cash sale
+                            // clearing when disabling direct sale
                             cusNameController.clear();
                             cashMobileController.clear();
                             cashBillingController.clear();
@@ -501,90 +485,6 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                               ),
 
                               SizedBox(height: Sizes.height * .02),
-                              Row(
-                                children: [
-                                  Text(
-                                    "Authorized signatory for ",
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w400,
-                                      color: AppColor.text,
-                                    ),
-                                  ),
-                                  Text(
-                                    "Business Name",
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColor.text,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 10),
-                              GestureDetector(
-                                onTap: () => pickImage('signature'),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  height: 110,
-                                  child: DottedBorder(
-                                    options: RoundedRectDottedBorderOptions(
-                                      strokeWidth: 1.6,
-                                      radius: Radius.circular(6),
-                                      dashPattern: [5, 3],
-                                      color: AppColor.textLightBlack,
-                                    ),
-                                    child:
-                                        (signatureImage == null &&
-                                            signatureImageUrl.trim().isEmpty)
-                                        ? Center(
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.add,
-                                                  size: 30,
-                                                  color: AppColor.primary,
-                                                ),
-                                                SizedBox(height: 12),
-                                                Text(
-                                                  "Add Signature",
-                                                  style: GoogleFonts.roboto(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: AppColor.primary,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          )
-                                        : (signatureImage == null)
-                                        ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            child: Image.network(
-                                              signatureImageUrl,
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              height: 125,
-                                            ),
-                                          )
-                                        : ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            child: Image.memory(
-                                              signatureImage!,
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              height: 125,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                         ),

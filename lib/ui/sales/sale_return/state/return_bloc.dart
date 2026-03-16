@@ -128,6 +128,16 @@ class SaleReturnSetTransNo extends SaleReturnEvent {
   SaleReturnSetTransNo(this.number);
 }
 
+class SaleReturnUpdateNo extends SaleReturnEvent {
+  final String value;
+  SaleReturnUpdateNo(this.value);
+}
+
+class SaleReturnUpdatePrefix extends SaleReturnEvent {
+  final String value;
+  SaleReturnUpdatePrefix(this.value);
+}
+
 class SaleReturnSearchTransaction extends SaleReturnEvent {}
 
 /// ------------------- STATE -------------------
@@ -308,6 +318,12 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
     on<SaleReturnUpdateCharge>(_onUpdateCharge);
     on<SaleReturnAddDiscount>(_onAddDiscount);
     on<SaleReturnRemoveDiscount>(_onRemoveDiscount);
+    on<SaleReturnUpdateNo>((event, emit) {
+      emit(state.copyWith(saleReturnNo: event.value));
+    });
+    on<SaleReturnUpdatePrefix>((event, emit) {
+      emit(state.copyWith(prefix: event.value));
+    });
 
     // misc
     on<SaleReturnAddMiscCharge>(_onAddMiscCharge);
@@ -736,7 +752,7 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
 
       final mobile = isCash ? e.mobile : state.selectedCustomer?.mobile ?? "";
 
-      // Address — prefer selectedCustomer's addresses (autofill). If cash sale use provided fields.
+      // Address — prefer selectedCustomer's addresses (autofill). If direct sale use provided fields.
       final billing = isCash
           ? e.billingAddress
           : state.selectedCustomer?.billingAddress ?? e.billingAddress;

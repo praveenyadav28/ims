@@ -4,7 +4,6 @@ import 'package:ims/model/employee_model.dart';
 import 'package:ims/ui/sales/estimate/state/estimate_bloc.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
-import 'package:intl/intl.dart';
 import 'package:searchfield/searchfield.dart';
 
 class EstimateDetailsCard extends StatelessWidget {
@@ -20,6 +19,8 @@ class EstimateDetailsCard extends StatelessWidget {
     required this.onValidForChanged,
     required this.salesPersonController,
     required this.employeeList,
+    required this.estimateDateController,
+    required this.validityDateController,
   });
 
   final TextEditingController prefixController;
@@ -32,6 +33,8 @@ class EstimateDetailsCard extends StatelessWidget {
   final VoidCallback onTapValidityDate;
   final ValueChanged<String> onValidForChanged;
   final List<EmployeeModel> employeeList;
+  final TextEditingController estimateDateController;
+  final TextEditingController validityDateController;
 
   @override
   Widget build(BuildContext context) {
@@ -47,12 +50,7 @@ class EstimateDetailsCard extends StatelessWidget {
                   controller: prefixController,
                   hintText: 'Prefix',
                   onChanged: (value) {
-                    EstBloc bloc = context.read<EstBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        estimateNo: estimateNoController.text,
-                      ),
-                    );
+                    context.read<EstBloc>().add(EstUpdatePrefix(value));
                   },
                 ),
               ),
@@ -62,12 +60,7 @@ class EstimateDetailsCard extends StatelessWidget {
                   controller: estimateNoController,
                   hintText: 'Estimate No',
                   onChanged: (value) {
-                    EstBloc bloc = context.read<EstBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        estimateNo: estimateNoController.text,
-                      ),
-                    );
+                    context.read<EstBloc>().add(EstUpdateEstimateNo(value));
                   },
                 ),
               ),
@@ -85,11 +78,7 @@ class EstimateDetailsCard extends StatelessWidget {
                 flex: 3,
                 child: CommonTextField(
                   onTap: onTapEstimateDate,
-                  controller: TextEditingController(
-                    text: pickedEstimateDate == null
-                        ? 'Select Date'
-                        : DateFormat('yyyy-MM-dd').format(pickedEstimateDate!),
-                  ),
+                  controller: estimateDateController,
                 ),
               ),
               Spacer(flex: 2),
@@ -115,11 +104,7 @@ class EstimateDetailsCard extends StatelessWidget {
                 flex: 3,
                 child: CommonTextField(
                   onTap: onTapValidityDate,
-                  controller: TextEditingController(
-                    text: pickedValidityDate == null
-                        ? 'Select Date'
-                        : DateFormat('yyyy-MM-dd').format(pickedValidityDate!),
-                  ),
+                  controller: validityDateController,
                 ),
               ),
             ],

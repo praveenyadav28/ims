@@ -42,7 +42,7 @@ class _PerformaInvoiceListScreenState extends State<PerformaInvoiceListScreen> {
       fetchData: repo.getPerforma,
 
       /// ACTIONS
-       onView: (e) async {
+      onView: (e) async {
         final doc = e.toPrintModel(); // ✅ no dynamic
 
         final companyApi = await CompanyProfileAPi.getCompanyProfile();
@@ -72,7 +72,8 @@ class _PerformaInvoiceListScreenState extends State<PerformaInvoiceListScreen> {
       /// EXTRACTORS
       idGetter: (e) => e.id,
       dateGetter: (e) => e.performaDate,
-      numberGetter: (e) => "${e.prefix} ${e.no}",
+      numberGetter: (e) =>
+          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
       mobile: (e) => e.mobile,

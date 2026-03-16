@@ -66,7 +66,7 @@ class _SaleInvoiceInvoiceListScreenState
       onDelete: repo.deleteSaleInvoice,
       idGetter: (e) => e.id,
       dateGetter: (e) => e.saleInvoiceDate,
-      numberGetter: (e) => "${e.prefix} ${e.no}",
+      numberGetter: (e) => "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
       customerGetter: (e) => e.customerName,
       gstGetter: (e) => e.subGst,
       basicGetter: (e) => e.subTotal,

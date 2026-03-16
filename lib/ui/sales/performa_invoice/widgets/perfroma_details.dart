@@ -32,13 +32,8 @@ class PerformaDetailsCard extends StatelessWidget {
                 child: CommonTextField(
                   controller: prefixController,
                   hintText: 'Prefix',
-                  onChanged: (value) {
-                    PerformaBloc bloc = context.read<PerformaBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        performaNo: perfromaNoController.text,
-                      ),
-                    );
+                   onChanged: (value) {
+                    context.read<PerformaBloc>().add(PerformaUpdatePrefix(value));
                   },
                 ),
               ),
@@ -48,12 +43,7 @@ class PerformaDetailsCard extends StatelessWidget {
                   controller: perfromaNoController,
                   hintText: 'Performa No',
                   onChanged: (value) {
-                    PerformaBloc bloc = context.read<PerformaBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        performaNo: perfromaNoController.text,
-                      ),
-                    );
+                    context.read<PerformaBloc>().add(PerformaUpdatePerformaNo(value));
                   },
                 ),
               ),

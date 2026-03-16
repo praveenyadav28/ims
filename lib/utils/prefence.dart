@@ -29,6 +29,7 @@ class Preference {
 }
 
 class PrefKeys {
+  static const loginStatus = "loginStatus";
   static const token = "token";
   static const userstatus = "userstatus";
   static const branchName = "branchName";
@@ -42,6 +43,9 @@ class PrefKeys {
   static const sessionDate = "sessionDate";
   static const state = "state";
   static const amcDueDate = "amcDueDate";
+  static const savedUserId = "savedUserId";
+  static const savedPassword = "savedPassword";
+  static const savedLicence = "savedLicence";
 }
 
 logoutPrefData() async {

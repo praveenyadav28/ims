@@ -124,6 +124,16 @@ class PurchaseReturnSetTransNo extends PurchaseReturnEvent {
   PurchaseReturnSetTransNo(this.number);
 }
 
+class PurchaseReturnUpdateNo extends PurchaseReturnEvent {
+  final String value;
+  PurchaseReturnUpdateNo(this.value);
+}
+
+class PurchaseReturnUpdatePrefix extends PurchaseReturnEvent {
+  final String value;
+  PurchaseReturnUpdatePrefix(this.value);
+}
+
 class PurchaseReturnSearchTransaction extends PurchaseReturnEvent {}
 
 /// ------------------- STATE -------------------
@@ -297,6 +307,12 @@ class PurchaseReturnBloc
     on<PurchaseReturnUpdateCharge>(_onUpdateCharge);
     on<PurchaseReturnAddDiscount>(_onAddDiscount);
     on<PurchaseReturnRemoveDiscount>(_onRemoveDiscount);
+    on<PurchaseReturnUpdateNo>((event, emit) {
+      emit(state.copyWith(purchaseReturnNo: event.value));
+    });
+    on<PurchaseReturnUpdatePrefix>((event, emit) {
+      emit(state.copyWith(prefix: event.value));
+    });
 
     // misc
     on<PurchaseReturnAddMiscCharge>(_onAddMiscCharge);
@@ -748,7 +764,7 @@ class PurchaseReturnBloc
 
       final mobile = isCash ? e.mobile : state.selectedCustomer?.mobile ?? "";
 
-      // Address — prefer selectedCustomer's addresses (autofill). If cash sale use provided fields.
+      // Address — prefer selectedCustomer's addresses (autofill). If direct sale use provided fields.
       final billing = isCash
           ? e.billingAddress
           : state.selectedCustomer?.billingAddress ?? e.billingAddress;
@@ -1005,23 +1021,23 @@ PurchaseReturnState _prefillPurchaseReturnFromTrans(
 
   // Convert itemDetails -> GlobalItemRow
   final itemRows = (data.itemDetails).map((i) {
-   final catalogItem = ItemServiceModel(
-  id: i.itemId,
-  name: i.name,
-  itemNo: i.itemNo,
-  type: ItemServiceType.item,
-  hsn: i.hsn,
-  baseSalePrice: i.price,
-  gstRate: i.gstRate,
-  gstIncluded: i.inclusive,
-  gstIncludedPurchase: false,
-  baseUnit: i.unit,
-  secondaryUnit: i.unit,
-  conversion: 1,
-  variants: [],
-  variantValue: '',
-  group: '',
-);
+    final catalogItem = ItemServiceModel(
+      id: i.itemId,
+      name: i.name,
+      itemNo: i.itemNo,
+      type: ItemServiceType.item,
+      hsn: i.hsn,
+      baseSalePrice: i.price,
+      gstRate: i.gstRate,
+      gstIncluded: i.inclusive,
+      gstIncludedPurchase: false,
+      baseUnit: i.unit,
+      secondaryUnit: i.unit,
+      conversion: 1,
+      variants: [],
+      variantValue: '',
+      group: '',
+    );
 
     return GlobalItemRow(
       localId: UniqueKey().toString(),
@@ -1150,23 +1166,23 @@ PurchaseReturnState _prefillPurchaseReturn(
 
   // Convert itemDetails -> GlobalItemRow
   final itemRows = (data.itemDetails).map((i) {
-   final catalogItem = ItemServiceModel(
-  id: i.itemId,
-  name: i.name,
-  itemNo: i.itemNo,
-  type: ItemServiceType.item,
-  hsn: i.hsn,
-  baseSalePrice: i.price,
-  gstRate: i.gstRate,
-  gstIncluded: i.inclusive,
-  gstIncludedPurchase: false,
-  baseUnit: i.unit,
-  secondaryUnit: i.unit,
-  conversion: 1,
-  variants: [],
-  variantValue: '',
-  group: '',
-);
+    final catalogItem = ItemServiceModel(
+      id: i.itemId,
+      name: i.name,
+      itemNo: i.itemNo,
+      type: ItemServiceType.item,
+      hsn: i.hsn,
+      baseSalePrice: i.price,
+      gstRate: i.gstRate,
+      gstIncluded: i.inclusive,
+      gstIncludedPurchase: false,
+      baseUnit: i.unit,
+      secondaryUnit: i.unit,
+      conversion: 1,
+      variants: [],
+      variantValue: '',
+      group: '',
+    );
 
     return GlobalItemRow(
       localId: UniqueKey().toString(),

@@ -14,6 +14,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,9 +27,21 @@ class _LoginScreenState extends State<LoginScreen> {
   TextEditingController licenceNoController = TextEditingController();
   TextEditingController userIdController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
-
+  bool rememberMe = false;
   BranchList? _selectedBranch;
   List<BranchList> branchList = [];
+  @override
+  void initState() {
+    super.initState();
+
+    rememberMe = Preference.getBool(PrefKeys.loginStatus);
+
+    if (rememberMe) {
+      licenceNoController.text = Preference.getString(PrefKeys.savedLicence);
+      userIdController.text = Preference.getString(PrefKeys.savedUserId);
+      passwordController.text = Preference.getString(PrefKeys.savedPassword);
+    }
+  }
 
   @override
   void dispose() {
@@ -103,7 +116,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   getBranches();
                 },
               ),
-              SizedBox(height: Sizes.height * 0.035),
+              SizedBox(height: Sizes.height * 0.02),
+              Row(
+                children: [
+                  Checkbox(
+                    value: rememberMe,
+                    onChanged: (v) {
+                      setState(() {
+                        rememberMe = v ?? false;
+                      });
+                    },
+                  ),
+                  Text("Remember Me", style: GoogleFonts.inter(fontSize: 13)),
+                ],
+              ),
+              SizedBox(height: Sizes.height * 0.02),
               defaultButton(
                 height: 40,
                 width: double.infinity,
@@ -183,8 +210,19 @@ class _LoginScreenState extends State<LoginScreen> {
       },
       licenceNo: int.parse(licenceNoController.text.trim().toString()),
     );
-    print(response);
     if (response["status"] == true) {
+      Preference.setBool(PrefKeys.loginStatus, rememberMe);
+
+      if (rememberMe) {
+        Preference.setString(PrefKeys.savedUserId, userIdController.text);
+        Preference.setString(PrefKeys.savedPassword, passwordController.text);
+        Preference.setString(PrefKeys.savedLicence, licenceNoController.text);
+      } else {
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.remove(PrefKeys.savedUserId);
+        await prefs.remove(PrefKeys.savedPassword);
+        await prefs.remove(PrefKeys.savedLicence);
+      }
       Preference.setString(PrefKeys.token, response['token']);
       Preference.setInt(
         PrefKeys.licenseNo,

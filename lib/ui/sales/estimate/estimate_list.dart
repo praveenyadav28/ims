@@ -32,7 +32,7 @@ class _EstimateListScreenState extends State<EstimateListScreen> {
       fetchData: repo.getEstimates,
 
       /// ACTIONS
-        onView: (e) async {
+      onView: (e) async {
         final doc = e.toPrintModel(); // ✅ no dynamic
 
         final companyApi = await CompanyProfileAPi.getCompanyProfile();
@@ -62,7 +62,8 @@ class _EstimateListScreenState extends State<EstimateListScreen> {
       /// EXTRACTORS — REQUIRED
       idGetter: (e) => e.id,
       dateGetter: (e) => e.estimateDate,
-      numberGetter: (e) => "${e.prefix} ${e.no}",
+      numberGetter: (e) =>
+          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
       mobile: (e) => e.mobile,

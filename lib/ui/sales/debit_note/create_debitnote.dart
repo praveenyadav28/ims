@@ -1,10 +1,6 @@
-import 'dart:typed_data';
-
-import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/data/global_additionalcharge.dart';
 import 'package:ims/ui/sales/data/global_billto.dart';
@@ -71,10 +67,6 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
-  String signatureImageUrl = '';
-
-  Uint8List? signatureImage;
-  final ImagePicker picker = ImagePicker();
 
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
@@ -103,7 +95,6 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
       pickedInvoiceDate = e.debitNoteDate;
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
-      signatureImageUrl = e.signature;
 
       if (e.caseSale == true) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -131,7 +122,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
         });
       }
     }
- WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _customerFocus.requestFocus();
     });
     // fetch misc etc.
@@ -161,18 +152,6 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
       bloc.add(DebitNoteCalculate());
       setState(() {});
     }
-  }
-
-  // ---------------- PICK IMAGE ----------------
-
-  Future<void> pickImage(String target) async {
-    final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-
-    final bytes = await picked.readAsBytes();
-    setState(() {
-      if (target == 'signature') signatureImage = bytes;
-    });
   }
 
   // ---------------- misc fetch ----------------
@@ -207,7 +186,12 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
         bool isUpdateMode = widget.debitNoteData != null;
 
         final customer = state.selectedCustomer;
-
+        if (debitNoteNoController.text != state.debitNoteNo.toString()) {
+          debitNoteNoController.text = state.debitNoteNo.toString();
+        }
+        if (prefixController.text != state.prefix) {
+          prefixController.text = state.prefix;
+        }
         // Only autofill addresses when user selects customer in CREATE mode
         if (!isUpdateMode && customer != null && !state.cashSaleDefault) {
           cusNameController.text = customer.name;
@@ -230,7 +214,6 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
           stateController.text = state.transPlaceOfSupply!;
           return; // 🚨 customer logic SKIP
         }
-        debitNoteNoController.text = state.debitNoteNo.toString();
       },
       child: Scaffold(
         key: debitNoteNavigatorKey,
@@ -269,7 +252,8 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "${widget.debitNoteData == null ? "Create" : "Update"} Credit Note",
+                  text:
+                      "${widget.debitNoteData == null ? "Create" : "Update"} Credit Note",
                   height: 40,
                   width: 190,
                   onTap: () {
@@ -281,7 +265,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                         shippingAddress: cashShippingController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
-                        signatureImage: signatureImage,
+                        signatureImage: null,
                         updateId: widget.debitNoteData?.id,
                         stateName: stateController.text,
                         printAfterSave: printAfterSave,
@@ -315,8 +299,6 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
         ),
         body: BlocBuilder<DebitNoteBloc, DebitNoteState>(
           builder: (context, state) {
-            debitNoteNoController.text = state.debitNoteNo.toString();
-
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -327,7 +309,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                       ispurchase: false,
                       // --------- STATE VALUES ---------
                       isCashSale: state.cashSaleDefault,
-                         focusNode: _customerFocus,
+                      focusNode: _customerFocus,
                       customers: state.customers,
                       selectedCustomer: state.selectedCustomer,
                       onSearchLedger: (text) async => [],
@@ -346,7 +328,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                         );
 
                         if (state.cashSaleDefault) {
-                          // clearing when disabling cash sale
+                          // clearing when disabling direct sale
                           cusNameController.clear();
                           cashMobileController.clear();
                           cashBillingController.clear();
@@ -465,90 +447,6 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                             ),
 
                             SizedBox(height: Sizes.height * .02),
-                            Row(
-                              children: [
-                                Text(
-                                  "Authorized signatory for ",
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: AppColor.text,
-                                  ),
-                                ),
-                                Text(
-                                  "Business Name",
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColor.text,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            GestureDetector(
-                              onTap: () => pickImage('signature'),
-                              child: SizedBox(
-                                width: double.infinity,
-                                height: 110,
-                                child: DottedBorder(
-                                  options: RoundedRectDottedBorderOptions(
-                                    strokeWidth: 1.6,
-                                    radius: Radius.circular(6),
-                                    dashPattern: [5, 3],
-                                    color: AppColor.textLightBlack,
-                                  ),
-                                  child:
-                                      (signatureImage == null &&
-                                          signatureImageUrl.trim().isEmpty)
-                                      ? Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.add,
-                                                size: 30,
-                                                color: AppColor.primary,
-                                              ),
-                                              SizedBox(height: 12),
-                                              Text(
-                                                "Add Signature",
-                                                style: GoogleFonts.roboto(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: AppColor.primary,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        )
-                                      : (signatureImage == null)
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          child: Image.network(
-                                            signatureImageUrl,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: 125,
-                                          ),
-                                        )
-                                      : ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          child: Image.memory(
-                                            signatureImage!,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: 125,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                       ),

@@ -130,6 +130,16 @@ class PerfromaToggleRoundOff extends PerformaEvent {
 
 class PerformaLoadCustomers extends PerformaEvent {}
 
+class PerformaUpdatePerformaNo extends PerformaEvent {
+  final String value;
+  PerformaUpdatePerformaNo(this.value);
+}
+
+class PerformaUpdatePrefix extends PerformaEvent {
+  final String value;
+  PerformaUpdatePrefix(this.value);
+}
+
 /// ------------------- STATE -------------------
 class PerformaState {
   final List<LedgerModelDrop> customers;
@@ -308,6 +318,12 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
     on<PerformaUpdateCharge>(_onUpdateCharge);
     on<PerformaAddDiscount>(_onAddDiscount);
     on<PerformaRemoveDiscount>(_onRemoveDiscount);
+    on<PerformaUpdatePerformaNo>((event, emit) {
+      emit(state.copyWith(performaNo: event.value));
+    });
+    on<PerformaUpdatePrefix>((event, emit) {
+      emit(state.copyWith(prefix: event.value));
+    });
 
     // misc
     on<PerformaAddMiscCharge>(_onAddMiscCharge);
@@ -726,7 +742,7 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
 
       final mobile = isCash ? e.mobile : state.selectedCustomer?.mobile ?? "";
 
-      // Address — prefer selectedCustomer's addresses (autofill). If cash sale use provided fields.
+      // Address — prefer selectedCustomer's addresses (autofill). If direct sale use provided fields.
       final billing = isCash
           ? e.billingAddress
           : state.selectedCustomer?.billingAddress ?? e.billingAddress;

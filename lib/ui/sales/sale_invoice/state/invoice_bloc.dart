@@ -140,6 +140,16 @@ class SaleInvoiceSearchTransaction extends SaleInvoiceEvent {}
 
 class SaleInvoiceLoadCustomers extends SaleInvoiceEvent {}
 
+class SaleInvoiceUpdateInvoiceNo extends SaleInvoiceEvent {
+  final String value;
+  SaleInvoiceUpdateInvoiceNo(this.value);
+}
+
+class SaleInvoiceUpdatePrefix extends SaleInvoiceEvent {
+  final String value;
+  SaleInvoiceUpdatePrefix(this.value);
+}
+
 class SaleInvoiceSavePayment extends SaleInvoiceEvent {
   final String amount;
   final String voucherNo;
@@ -330,6 +340,12 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
     on<SaleInvoiceUpdateCharge>(_onUpdateCharge);
     on<SaleInvoiceAddDiscount>(_onAddDiscount);
     on<SaleInvoiceRemoveDiscount>(_onRemoveDiscount);
+    on<SaleInvoiceUpdateInvoiceNo>((event, emit) {
+      emit(state.copyWith(saleInvoiceNo: event.value));
+    });
+    on<SaleInvoiceUpdatePrefix>((event, emit) {
+      emit(state.copyWith(prefix: event.value));
+    });
 
     // misc
     on<SaleInvoiceAddMiscCharge>(_onAddMiscCharge);
@@ -351,12 +367,10 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
     on<SaleInvoiceSearchTransaction>(_onSearchTransaction);
     on<SaleInvoiceSavePayment>(_onSaveRecieptVoucher);
     on<SaleInvoiceLoadCustomers>((event, emit) async {
+      final customers = await repo.searchLedger("", true);
 
-  final customers = await repo.searchLedger("", true);
-
-  emit(state.copyWith(customers: customers));
-
-});
+      emit(state.copyWith(customers: customers));
+    });
   }
   Future<void> _onLoad(
     SaleInvoiceLoadInit e,
@@ -843,7 +857,7 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
 
       final mobile = isCash ? e.mobile : state.selectedCustomer?.mobile ?? "";
 
-      // Address — prefer selectedCustomer's addresses (autofill). If cash sale use provided fields.
+      // Address — prefer selectedCustomer's addresses (autofill). If direct sale use provided fields.
       final billing = isCash
           ? e.billingAddress
           : state.selectedCustomer?.billingAddress ?? e.billingAddress;

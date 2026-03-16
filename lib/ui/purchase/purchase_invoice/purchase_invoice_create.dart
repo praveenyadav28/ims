@@ -1,9 +1,6 @@
-import 'dart:typed_data';
-import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:ims/model/ledger_model.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/purchase/purchase_invoice/state/p_invoice_bloc.dart';
@@ -82,12 +79,8 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
-  String signatureImageUrl = '';
   List<LedgerListModel> ledgerList = [];
   LedgerListModel? selectedLedger;
-
-  Uint8List? signatureImage;
-  final ImagePicker picker = ImagePicker();
 
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
@@ -131,7 +124,6 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
 
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
-      signatureImageUrl = e.signature;
 
       if (e.caseSale == true) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -206,16 +198,6 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
     }
   }
 
-  Future<void> pickImage(String target) async {
-    final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-
-    final bytes = await picked.readAsBytes();
-    setState(() {
-      if (target == 'signature') signatureImage = bytes;
-    });
-  }
-
   // ---------------- misc fetch ----------------
   Future<void> fetchMiscCharges() async {
     final res = await ApiService.fetchData(
@@ -248,7 +230,13 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
         bool isUpdateMode = widget.purchaseInvoiceData != null;
 
         final customer = state.selectedCustomer;
-
+        if (purchaseInvoiceNoController.text !=
+            state.purchaseInvoiceNo.toString()) {
+          purchaseInvoiceNoController.text = state.purchaseInvoiceNo.toString();
+        }
+        if (prefixController.text != state.prefix) {
+          prefixController.text = state.prefix;
+        }
         // Only autofill addresses when user selects customer in CREATE mode
         if (!isUpdateMode && customer != null && !state.cashSaleDefault) {
           cusNameController.text = customer.name;
@@ -271,7 +259,6 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
           stateController.text = state.transPlaceOfSupply!;
           return; // 🚨 customer logic SKIP
         }
-        purchaseInvoiceNoController.text = state.purchaseInvoiceNo.toString();
       },
       child: Scaffold(
         key: purchaseInvoiceNavigatorKey,
@@ -310,7 +297,8 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "${widget.purchaseInvoiceData == null ? "Create" : "Update"} Purchase Invoice",
+                  text:
+                      "${widget.purchaseInvoiceData == null ? "Create" : "Update"} Purchase Invoice",
                   height: 40,
                   width: 200,
                   onTap: () {
@@ -323,7 +311,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                         stateName: stateController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
-                        signatureImage: signatureImage,
+                        signatureImage: null,
                         updateId: widget.purchaseInvoiceData?.id,
                         printAfterSave: printAfterSave,
                       ),
@@ -372,9 +360,6 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
         ),
         body: BlocBuilder<PurchaseInvoiceBloc, PurchaseInvoiceState>(
           builder: (context, state) {
-            purchaseInvoiceNoController.text = state.purchaseInvoiceNo
-                .toString();
-
             return Scrollbar(
               controller: _scrollController,
               thumbVisibility: true,
@@ -754,116 +739,10 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                                         ),
                                       ],
                                     ),
-
-                                    SizedBox(height: Sizes.height * .02),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          "Balance",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 15,
-                                            color: Color(0xff22C55E),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        Spacer(),
-                                        Text(
-                                          "₹ $balanceAmt",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 15,
-                                            color: Color(0xff22C55E),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
                                   ],
                                 ),
 
-                              Row(
-                                children: [
-                                  Text(
-                                    "Authorized signatory for ",
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w400,
-                                      color: AppColor.text,
-                                    ),
-                                  ),
-                                  Text(
-                                    "Business Name",
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColor.text,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 10),
-                              GestureDetector(
-                                onTap: () => pickImage('signature'),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  height: 110,
-                                  child: DottedBorder(
-                                    options: RoundedRectDottedBorderOptions(
-                                      strokeWidth: 1.6,
-                                      radius: Radius.circular(6),
-                                      dashPattern: [5, 3],
-                                      color: AppColor.textLightBlack,
-                                    ),
-                                    child:
-                                        (signatureImage == null &&
-                                            signatureImageUrl.trim().isEmpty)
-                                        ? Center(
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.add,
-                                                  size: 30,
-                                                  color: AppColor.primary,
-                                                ),
-                                                SizedBox(height: 12),
-                                                Text(
-                                                  "Add Signature",
-                                                  style: GoogleFonts.roboto(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: AppColor.primary,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          )
-                                        : (signatureImage == null)
-                                        ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            child: Image.network(
-                                              signatureImageUrl,
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              height: 125,
-                                            ),
-                                          )
-                                        : ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            child: Image.memory(
-                                              signatureImage!,
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              height: 125,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              ),
+                              SizedBox(height: Sizes.height * .02),
                             ],
                           ),
                         ),

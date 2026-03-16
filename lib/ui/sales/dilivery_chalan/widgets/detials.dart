@@ -34,12 +34,8 @@ class DiliveryChallanDetailsCard extends StatelessWidget {
                   controller: prefixController,
                   hintText: 'Prefix',
                   onChanged: (value) {
-                    DiliveryChallanBloc bloc = context
-                        .read<DiliveryChallanBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        diliveryChallanNo: invoiceNoController.text,
-                      ),
+                    context.read<DiliveryChallanBloc>().add(
+                      DiliveryChallanUpdatePrefix(value),
                     );
                   },
                 ),
@@ -50,12 +46,8 @@ class DiliveryChallanDetailsCard extends StatelessWidget {
                   controller: invoiceNoController,
                   hintText: 'Invoice No',
                   onChanged: (value) {
-                    DiliveryChallanBloc bloc = context
-                        .read<DiliveryChallanBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        diliveryChallanNo: invoiceNoController.text,
-                      ),
+                    context.read<DiliveryChallanBloc>().add(
+                      DiliveryChallanUpdateNo(value),
                     );
                   },
                 ),
@@ -136,12 +128,14 @@ class DiliveryChallanDetailsCard extends StatelessWidget {
                 bloc.add(DiliveryChallanSearchTransaction());
               },
             ),
-             onFieldSubmitted : (v) {
-                final bloc = context.read<DiliveryChallanBloc>();
-                bloc.add(DiliveryChallanSearchTransaction());
-              },
+            onFieldSubmitted: (v) {
+              final bloc = context.read<DiliveryChallanBloc>();
+              bloc.add(DiliveryChallanSearchTransaction());
+            },
             onChanged: (v) {
-              context.read<DiliveryChallanBloc>().add(DiliveryChallanSetTransNo(v));
+              context.read<DiliveryChallanBloc>().add(
+                DiliveryChallanSetTransNo(v),
+              );
             },
           ),
           flix: 30,

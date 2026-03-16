@@ -1,9 +1,5 @@
-import 'dart:io';
-
-import 'package:excel/excel.dart';
+import 'package:ims/ui/sales/data/download_csv.dart';
 import 'package:intl/intl.dart';
-import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 
 Future<void> exportTransactionsExcel<T>({
   required String title,
@@ -17,38 +13,22 @@ Future<void> exportTransactionsExcel<T>({
   required double Function(T) gstGetter,
   required double Function(T) amountGetter,
 }) async {
-  final excel = Excel.createExcel();
-  final sheet = excel['Transactions'];
+  final buffer = StringBuffer();
 
-  sheet.appendRow([
-    TextCellValue('Date'),
-    TextCellValue('Number'),
-    TextCellValue('Party'),
-    TextCellValue('Mobile'),
-    TextCellValue('State'),
-    TextCellValue('Basic'),
-    TextCellValue('GST'),
-    TextCellValue('Final Amount'),
-  ]);
+  buffer.writeln("Date,Number,Party,Mobile,State,Basic,GST,Final Amount");
 
   for (final item in list) {
-    sheet.appendRow([
-      TextCellValue(DateFormat("dd-MM-yyyy").format(dateGetter(item))),
-      TextCellValue(numberGetter(item)),
-      TextCellValue(customerGetter(item)),
-      TextCellValue(mobile(item)),
-      TextCellValue(placeOfSupply(item)),
-      DoubleCellValue(basicGetter(item)),
-      DoubleCellValue(gstGetter(item)),
-      DoubleCellValue(amountGetter(item)),
-    ]);
+    buffer.writeln(
+      "${DateFormat("dd-MM-yyyy").format(dateGetter(item))},"
+      "${numberGetter(item)},"
+      "${customerGetter(item)},"
+      "${mobile(item)},"
+      "${placeOfSupply(item)},"
+      "${basicGetter(item)},"
+      "${gstGetter(item)},"
+      "${amountGetter(item)}",
+    );
   }
 
-  final dir = await getApplicationDocumentsDirectory();
-  final file = File("${dir.path}/${title}_Report.xlsx");
-
-  final bytes = excel.encode();
-  await file.writeAsBytes(bytes!);
-
-  await OpenFilex.open(file.path);
+  downloadCsv(buffer.toString(), "${title}_Report.csv");
 }

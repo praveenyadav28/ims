@@ -33,11 +33,8 @@ class CreditNoteDetailsCard extends StatelessWidget {
                   controller: prefixController,
                   hintText: 'Prefix',
                   onChanged: (value) {
-                    CreditNoteBloc bloc = context.read<CreditNoteBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        creditNoteNo: creditNoteNoController.text,
-                      ),
+                    context.read<CreditNoteBloc>().add(
+                      CreditNoteUpdatePrefix(value),
                     );
                   },
                 ),
@@ -48,11 +45,8 @@ class CreditNoteDetailsCard extends StatelessWidget {
                   controller: creditNoteNoController,
                   hintText: 'Credit Note No',
                   onChanged: (value) {
-                    CreditNoteBloc bloc = context.read<CreditNoteBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        creditNoteNo: creditNoteNoController.text,
-                      ),
+                    context.read<CreditNoteBloc>().add(
+                      CreditNoteUpdateEstimateNo(value),
                     );
                   },
                 ),

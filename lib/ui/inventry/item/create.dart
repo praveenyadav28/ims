@@ -2124,10 +2124,16 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
       'item_name': itemNameController.text,
       'item_no': itemNoController.text,
       'group': selectedCategory,
-      'sales_price': salePriceController.text,
+      'sales_price': salePriceController.text.isEmpty
+          ? "0"
+          : salePriceController.text,
       'title': saleTaxMode,
-      "purchase_price": priceData["purchase_price"],
-      "purchase_price_se": priceData["purchase_price_se"],
+      "purchase_price": priceData["purchase_price"].toString().isEmpty
+          ? "0"
+          : priceData["purchase_price"],
+      "purchase_price_se": priceData["purchase_price_se"].toString().isEmpty
+          ? "0"
+          : priceData["purchase_price_se"],
       'hsn_code': selectedHsn,
       "baseunit": baseUnit ?? "",
       "secondryunit": secondaryUnit ?? "",

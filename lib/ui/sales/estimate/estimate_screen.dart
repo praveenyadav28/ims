@@ -1,11 +1,6 @@
-// create_estimate_fullscreen.dart
-import 'dart:typed_data';
-
-import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:ims/model/employee_model.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/data/create_cust_dialogue.dart';
@@ -29,6 +24,7 @@ import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/state_cities.dart';
+import 'package:intl/intl.dart';
 import 'package:searchfield/searchfield.dart';
 
 class CreateEstimateFullScreen extends StatelessWidget {
@@ -81,9 +77,6 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   late List<String> statesSuggestions;
   DateTime? pickedValidityDate;
 
-  Uint8List? signatureBytes; // picked image (web/desktop)
-  String signatureImageUrl = '';
-  final ImagePicker picker = ImagePicker();
 
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
@@ -95,6 +88,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
       printAfterSave = value;
     });
   }
+
+  final estimateDateController = TextEditingController();
+  final validityDateController = TextEditingController();
 
   final FocusNode _customerFocus = FocusNode();
   @override
@@ -124,9 +120,8 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
-      signatureImageUrl = e.signature;
 
-      // If the estimate is a cash sale, enable cash sale mode in BLoC.
+      // If the estimate is a direct sale, enable direct sale mode in BLoC.
       if (e.caseSale == true) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           context.read<EstBloc>().add(EstToggleCashSale(true));
@@ -161,6 +156,15 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
     // fetch misc etc.
     fetchMiscCharges();
     fetchEmployee();
+    estimateDateController.text = DateFormat(
+      'yyyy-MM-dd',
+    ).format(pickedEstimateDate);
+
+    if (pickedValidityDate != null) {
+      validityDateController.text = DateFormat(
+        'yyyy-MM-dd',
+      ).format(pickedValidityDate!);
+    }
   }
 
   @override
@@ -223,16 +227,6 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
     }
   }
 
-  Future<void> pickImage(String target) async {
-    final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-
-    final bytes = await picked.readAsBytes();
-    setState(() {
-      if (target == 'signature') signatureBytes = bytes;
-    });
-  }
-
   // ---------------- misc fetch ----------------
   Future<void> fetchMiscCharges() async {
     final res = await ApiService.fetchData(
@@ -276,6 +270,12 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
             previous.estimateNo != current.estimateNo;
       },
       listener: (context, state) {
+        if (estimateNoController.text != state.estimateNo.toString()) {
+          estimateNoController.text = state.estimateNo.toString();
+        }
+        if (prefixController.text != state.prefix) {
+          prefixController.text = state.prefix;
+        }
         // When customer selected via dropdown, autofill name/mobile/address fields
         bool isUpdateMode = widget.estimateData != null;
 
@@ -298,9 +298,6 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 state.selectedCustomer!.shippingAddress;
           }
         }
-
-        // Sync estimate number if repo sets it after load
-        estimateNoController.text = state.estimateNo.toString();
 
         // validity days sync (if BLoC has validForDays)
         validForController.text = state.validForDays.toString();
@@ -355,7 +352,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                         shippingAddress: cashShippingController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
-                        signatureImage: signatureBytes,
+                        signatureImage: null,
                         updateId: widget.estimateData?.id,
                         stateName: stateController.text,
                         printAfterSave: printAfterSave,
@@ -390,7 +387,6 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
         body: BlocBuilder<EstBloc, EstState>(
           builder: (context, state) {
             // keep estimate number in sync (repo may set it)
-            estimateNoController.text = state.estimateNo.toString();
 
             return Scrollbar(
               controller: _scrollController,
@@ -464,10 +460,13 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                         pickedValidityDate: pickedValidityDate,
                         salesPersonController: salesPersonController,
                         employeeList: employeeList,
+                        estimateDateController: estimateDateController,
+                        validityDateController: validityDateController,
                         onTapEstimateDate: () =>
                             _pickEstimateDate(context, context.read<EstBloc>()),
                         onTapValidityDate: () =>
                             _pickValidityDate(context, context.read<EstBloc>()),
+
                         onValidForChanged: (value) {
                           final days = int.tryParse(value) ?? 0;
                           pickedValidityDate = pickedEstimateDate.add(
@@ -576,90 +575,6 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                               ),
 
                               SizedBox(height: Sizes.height * .02),
-                              Row(
-                                children: [
-                                  Text(
-                                    "Authorized signatory for ",
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w400,
-                                      color: AppColor.text,
-                                    ),
-                                  ),
-                                  Text(
-                                    "Business Name",
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColor.text,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 10),
-                              GestureDetector(
-                                onTap: () => pickImage('signature'),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  height: 110,
-                                  child: DottedBorder(
-                                    options: RoundedRectDottedBorderOptions(
-                                      strokeWidth: 1.6,
-                                      radius: Radius.circular(6),
-                                      dashPattern: [5, 3],
-                                      color: AppColor.textLightBlack,
-                                    ),
-                                    child:
-                                        (signatureBytes == null &&
-                                            signatureImageUrl.trim().isEmpty)
-                                        ? Center(
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.add,
-                                                  size: 30,
-                                                  color: AppColor.primary,
-                                                ),
-                                                SizedBox(height: 12),
-                                                Text(
-                                                  "Add Signature",
-                                                  style: GoogleFonts.roboto(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: AppColor.primary,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          )
-                                        : (signatureBytes == null)
-                                        ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            child: Image.network(
-                                              signatureImageUrl,
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              height: 125,
-                                            ),
-                                          )
-                                        : ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            child: Image.memory(
-                                              signatureBytes!,
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              height: 125,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                         ),

@@ -33,12 +33,8 @@ class PurchaseInvoiceDetailsCard extends StatelessWidget {
                   controller: prefixController,
                   hintText: 'Prefix',
                   onChanged: (value) {
-                    PurchaseInvoiceBloc bloc = context
-                        .read<PurchaseInvoiceBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        purchaseInvoiceNo: purchaseInvoiceNoController.text,
-                      ),
+                    context.read<PurchaseInvoiceBloc>().add(
+                      PurchaseInvoiceUpdatePrefix(value),
                     );
                   },
                 ),
@@ -49,12 +45,8 @@ class PurchaseInvoiceDetailsCard extends StatelessWidget {
                   controller: purchaseInvoiceNoController,
                   hintText: 'Invoice No',
                   onChanged: (value) {
-                    PurchaseInvoiceBloc bloc = context
-                        .read<PurchaseInvoiceBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        purchaseInvoiceNo: purchaseInvoiceNoController.text,
-                      ),
+                    context.read<PurchaseInvoiceBloc>().add(
+                      PurchaseInvoiceUpdateNo(value),
                     );
                   },
                 ),

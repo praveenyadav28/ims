@@ -131,6 +131,16 @@ class DiliveryChallanToggleRoundOff extends DiliveryChallanEvent {
   DiliveryChallanToggleRoundOff(this.value);
 }
 
+class DiliveryChallanUpdateNo extends DiliveryChallanEvent {
+  final String value;
+  DiliveryChallanUpdateNo(this.value);
+}
+
+class DiliveryChallanUpdatePrefix extends DiliveryChallanEvent {
+  final String value;
+  DiliveryChallanUpdatePrefix(this.value);
+}
+
 class DiliveryChallanLoadCustomers extends DiliveryChallanEvent {}
 
 /// ------------------- STATE -------------------
@@ -323,6 +333,12 @@ class DiliveryChallanBloc
 
     on<DiliveryChallanSetTransNo>((e, emit) {
       emit(state.copyWith(transNo: e.number));
+    });
+    on<DiliveryChallanUpdateNo>((event, emit) {
+      emit(state.copyWith(diliveryChallanNo: event.value));
+    });
+    on<DiliveryChallanUpdatePrefix>((event, emit) {
+      emit(state.copyWith(prefix: event.value));
     });
 
     // misc
@@ -776,7 +792,7 @@ class DiliveryChallanBloc
 
       final mobile = isCash ? e.mobile : state.selectedCustomer?.mobile ?? "";
 
-      // Address — prefer selectedCustomer's addresses (autofill). If cash sale use provided fields.
+      // Address — prefer selectedCustomer's addresses (autofill). If direct sale use provided fields.
       final billing = isCash
           ? e.billingAddress
           : state.selectedCustomer?.billingAddress ?? e.billingAddress;

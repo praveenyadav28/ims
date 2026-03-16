@@ -127,6 +127,17 @@ class PurchaseInvoiceSetTransNo extends PurchaseInvoiceEvent {
   PurchaseInvoiceSetTransNo(this.number);
 }
 
+class PurchaseInvoiceUpdateNo extends PurchaseInvoiceEvent {
+  final String value;
+  PurchaseInvoiceUpdateNo(this.value);
+}
+
+class PurchaseInvoiceUpdatePrefix extends PurchaseInvoiceEvent {
+
+  final String value;
+  PurchaseInvoiceUpdatePrefix(this.value);
+}
+
 class PurchaseInvoiceSearchTransaction extends PurchaseInvoiceEvent {}
 
 class PurchaseInvoiceSavePayment extends PurchaseInvoiceEvent {
@@ -316,6 +327,12 @@ class PurchaseInvoiceBloc
     on<PurchaseInvoiceUpdateCharge>(_onUpdateCharge);
     on<PurchaseInvoiceAddDiscount>(_onAddDiscount);
     on<PurchaseInvoiceRemoveDiscount>(_onRemoveDiscount);
+     on<PurchaseInvoiceUpdateNo>((event, emit) {
+      emit(state.copyWith(purchaseInvoiceNo: event.value));
+    });
+    on<PurchaseInvoiceUpdatePrefix>((event, emit) {
+      emit(state.copyWith(prefix: event.value));
+    });
 
     // misc
     on<PurchaseInvoiceAddMiscCharge>(_onAddMiscCharge);
@@ -832,7 +849,7 @@ class PurchaseInvoiceBloc
 
       final mobile = isCash ? e.mobile : state.selectedCustomer?.mobile ?? "";
 
-      // Address — prefer selectedCustomer's addresses (autofill). If cash sale use provided fields.
+      // Address — prefer selectedCustomer's addresses (autofill). If Direct sale use provided fields.
       final billing = isCash
           ? e.billingAddress
           : state.selectedCustomer?.billingAddress ?? e.billingAddress;

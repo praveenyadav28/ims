@@ -42,11 +42,8 @@ class PurchaseOrderDetailsCard extends StatelessWidget {
                   controller: prefixController,
                   hintText: 'Prefix',
                   onChanged: (value) {
-                    PurchaseOrderBloc bloc = context.read<PurchaseOrderBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        purchaseOrderNo: purchaseOrderNoController.text,
-                      ),
+                    context.read<PurchaseOrderBloc>().add(
+                      PurchaseOrderUpdatePrefix(value),
                     );
                   },
                 ),
@@ -57,11 +54,8 @@ class PurchaseOrderDetailsCard extends StatelessWidget {
                   controller: purchaseOrderNoController,
                   hintText: 'Order No',
                   onChanged: (value) {
-                    PurchaseOrderBloc bloc = context.read<PurchaseOrderBloc>();
-                    bloc.emit(
-                      bloc.state.copyWith(
-                        purchaseOrderNo: purchaseOrderNoController.text,
-                      ),
+                    context.read<PurchaseOrderBloc>().add(
+                      PurchaseOrderUpdateNo(value),
                     );
                   },
                 ),

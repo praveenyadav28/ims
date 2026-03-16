@@ -1,9 +1,6 @@
-import 'dart:typed_data';
-import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:ims/model/ledger_model.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/data/create_cust_dialogue.dart';
@@ -82,12 +79,8 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
 
-  String signatureImageUrl = '';
   List<LedgerListModel> ledgerList = [];
   LedgerListModel? selectedLedger;
-
-  Uint8List? signatureImage;
-  final ImagePicker picker = ImagePicker();
 
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
@@ -126,7 +119,6 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
       pickedInvoiceDate = e.saleInvoiceDate;
       selectedNotesList = e.notes;
       selectedTermsList = e.terms;
-      signatureImageUrl = e.signature;
 
       if (e.caseSale == true) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -197,16 +189,6 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
     }
   }
 
-  Future<void> pickImage(String target) async {
-    final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-
-    final bytes = await picked.readAsBytes();
-    setState(() {
-      if (target == 'signature') signatureImage = bytes;
-    });
-  }
-
   // ---------------- misc fetch ----------------
   Future<void> fetchMiscCharges() async {
     final res = await ApiService.fetchData(
@@ -239,7 +221,12 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
         bool isUpdateMode = widget.saleInvoiceData != null;
 
         final customer = state.selectedCustomer;
-
+        if (invoiceNoController.text != state.saleInvoiceNo) {
+          invoiceNoController.text = state.saleInvoiceNo;
+        }
+        if (prefixController.text != state.prefix) {
+          prefixController.text = state.prefix;
+        }
         // Only autofill addresses when user selects customer in CREATE mode
         if (!isUpdateMode && customer != null && !state.cashSaleDefault) {
           cusNameController.text = customer.name;
@@ -264,7 +251,6 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
           });
           return; // 🚨 customer logic skip
         }
-        invoiceNoController.text = state.saleInvoiceNo.toString();
       },
       child: Scaffold(
         key: saleInvoiceNavigatorKey,
@@ -303,7 +289,8 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "${widget.saleInvoiceData == null ? "Create" : "Update"} Sale Invoice",
+                  text:
+                      "${widget.saleInvoiceData == null ? "Create" : "Update"} Sale Invoice",
                   height: 40,
                   width: 190,
                   onTap: () {
@@ -315,7 +302,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                         shippingAddress: cashShippingController.text,
                         notes: selectedNotesList,
                         terms: selectedTermsList,
-                        signatureImage: signatureImage,
+                        signatureImage: null,
                         updateId: widget.saleInvoiceData?.id,
                         stateName: stateController.text,
                         printAfterSave: printAfterSave,
@@ -363,8 +350,6 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
         ),
         body: BlocBuilder<SaleInvoiceBloc, SaleInvoiceState>(
           builder: (context, state) {
-            invoiceNoController.text = state.saleInvoiceNo.toString();
-
             return Scrollbar(
               controller: _scrollController,
               thumbVisibility: true,
@@ -399,7 +384,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                           );
 
                           if (state.cashSaleDefault) {
-                            // clearing when disabling cash sale
+                            // clearing when disabling direct sale
                             cusNameController.clear();
                             cashMobileController.clear();
                             cashBillingController.clear();
@@ -742,115 +727,8 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                                     ),
 
                                     SizedBox(height: Sizes.height * .02),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          "Balance",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 15,
-                                            color: Color(0xff22C55E),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        Spacer(),
-                                        Text(
-                                          "₹ $balanceAmt",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 15,
-                                            color: Color(0xff22C55E),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
                                   ],
                                 ),
-
-                              SizedBox(height: Sizes.height * .03),
-                              Row(
-                                children: [
-                                  Text(
-                                    "Authorized signatory for ",
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w400,
-                                      color: AppColor.text,
-                                    ),
-                                  ),
-                                  Text(
-                                    "Business Name",
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColor.text,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 10),
-                              GestureDetector(
-                                onTap: () => pickImage('signature'),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  height: 110,
-                                  child: DottedBorder(
-                                    options: RoundedRectDottedBorderOptions(
-                                      strokeWidth: 1.6,
-                                      radius: Radius.circular(6),
-                                      dashPattern: [5, 3],
-                                      color: AppColor.textLightBlack,
-                                    ),
-                                    child:
-                                        (signatureImage == null &&
-                                            signatureImageUrl.trim().isEmpty)
-                                        ? Center(
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.add,
-                                                  size: 30,
-                                                  color: AppColor.primary,
-                                                ),
-                                                SizedBox(height: 12),
-                                                Text(
-                                                  "Add Signature",
-                                                  style: GoogleFonts.roboto(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: AppColor.primary,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          )
-                                        : (signatureImage == null)
-                                        ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            child: Image.network(
-                                              signatureImageUrl,
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              height: 125,
-                                            ),
-                                          )
-                                        : ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            child: Image.memory(
-                                              signatureImage!,
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              height: 125,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                         ),

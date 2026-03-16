@@ -107,6 +107,15 @@ class CreditNoteSetTransNo extends CreditNoteEvent {
   CreditNoteSetTransNo(this.number);
 }
 
+class CreditNoteUpdateEstimateNo extends CreditNoteEvent {
+  final String value;
+  CreditNoteUpdateEstimateNo(this.value);
+}
+
+class CreditNoteUpdatePrefix extends CreditNoteEvent {
+  final String value;
+  CreditNoteUpdatePrefix(this.value);
+}
 class CreditNoteSearchTransaction extends CreditNoteEvent {}
 
 /// ------------------- STATE -------------------
@@ -273,6 +282,12 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
     on<CreditNoteUpdateCharge>(_onUpdateCharge);
     on<CreditNoteAddDiscount>(_onAddDiscount);
     on<CreditNoteRemoveDiscount>(_onRemoveDiscount);
+     on<CreditNoteUpdateEstimateNo>((event, emit) {
+      emit(state.copyWith(creditNoteNo: event.value));
+    });
+    on<CreditNoteUpdatePrefix>((event, emit) {
+      emit(state.copyWith(prefix: event.value));
+    });
 
     // misc
     on<CreditNoteAddMiscCharge>(_onAddMiscCharge);
@@ -617,7 +632,7 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
 
       final mobile = isCash ? e.mobile : state.selectedLedger?.mobile ?? "";
 
-      // Address — prefer selectedLedger's addresses (autofill). If cash sale use provided fields.
+      // Address — prefer selectedLedger's addresses (autofill). If Direct sale use provided fields.
       final billing = isCash
           ? e.billingAddress
           : state.selectedLedger?.billingAddress ?? e.billingAddress;
