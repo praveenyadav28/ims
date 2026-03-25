@@ -45,6 +45,7 @@ class EstimateData {
 
   final int paymentTerms;
   final bool caseSale;
+  final bool printSig;
 
   final List<String> notes;
   final List<String> terms;
@@ -81,6 +82,7 @@ class EstimateData {
     required this.estimateDate,
     required this.paymentTerms,
     required this.caseSale,
+    required this.printSig,
     required this.notes,
     required this.terms,
     required this.subTotal,
@@ -115,6 +117,7 @@ class EstimateData {
 
     paymentTerms: j["payment_terms"] ?? 0,
     caseSale: j["case_sale"] ?? false,
+    printSig: j["print_sig"] ?? true,
 
     notes: List<String>.from(j["add_note"] ?? []),
     terms: List<String>.from(j["te_co"] ?? []),

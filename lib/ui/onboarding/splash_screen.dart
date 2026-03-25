@@ -19,7 +19,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 2), _openHome);
+    _timer = Timer(const Duration(seconds: 1), _openHome);
   }
 
   void _openHome() {
@@ -53,39 +53,47 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(.1),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white24, width: 2),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.inventory_2_rounded,
-                  color: Colors.white,
-                  size: 72,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white24, width: 2),
+                    ),
+                    alignment: Alignment.center,
+                    child: Image.asset("assets/images/applogo.png", height: 82),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Vyapari Bahi',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Inventory made simple',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontSize: 20,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              Text(
-                'IMS Desktop',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Inventory made simple',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 48),
+
+              const SizedBox(height: 40),
               SizedBox(
                 width: 200,
                 child: LinearProgressIndicator(

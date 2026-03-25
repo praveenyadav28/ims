@@ -29,7 +29,7 @@ class _PurchaseInvoiceListScreenState extends State<PurchaseInvoiceListScreen> {
       key: listKey,
       title: "Purchase Invoice",
       fetchData: repo.getPurchaseInvoice,
-       onView: (e) async {
+      onView: (e) async {
         final doc = e.toPrintModel(); // ✅ no dynamic
 
         final companyApi = await CompanyProfileAPi.getCompanyProfile();
@@ -58,7 +58,8 @@ class _PurchaseInvoiceListScreenState extends State<PurchaseInvoiceListScreen> {
       /// EXTRACTORS — REQUIRED
       idGetter: (e) => e.id,
       dateGetter: (e) => e.purchaseInvoiceDate,
-      numberGetter: (e) => "${e.prefix} ${e.no}",
+      numberGetter: (e) =>
+          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
       customerGetter: (e) => e.supplierName,
       amountGetter: (e) => e.totalAmount,
       gstGetter: (e) => e.subGst,

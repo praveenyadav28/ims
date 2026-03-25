@@ -73,6 +73,18 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
     "Last 180 Days": 180,
     "Last 365 Days": 365,
   };
+  int currentPage = 1;
+  int rowsPerPage = 50;
+  List<T> paginated = [];
+  void _applyPagination() {
+    final start = (currentPage - 1) * rowsPerPage;
+    final end = start + rowsPerPage;
+
+    paginated = filtered.sublist(
+      start,
+      end > filtered.length ? filtered.length : end,
+    );
+  }
 
   @override
   void initState() {
@@ -129,7 +141,10 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
       return dateOk && searchOk;
     }).toList();
 
-    setState(() {});
+    setState(() {
+      currentPage = 1; // reset page
+      _applyPagination();
+    });
   }
 
   void search(String _) {
@@ -169,7 +184,9 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
           _filters(),
           const SizedBox(height: 20),
           _header(),
+
           Expanded(child: _list()),
+          _paginationControls(),
         ],
       ),
     );
@@ -362,8 +379,8 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
     }
 
     return ListView.builder(
-      itemCount: filtered.length,
-      itemBuilder: (_, i) => _row(filtered[i]),
+      itemCount: paginated.length,
+      itemBuilder: (_, i) => _row(paginated[i]),
     );
   }
 
@@ -625,6 +642,39 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
           }
         },
       ),
+    );
+  }
+
+  Widget _paginationControls() {
+    final totalPages = (filtered.length / rowsPerPage).ceil();
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: currentPage > 1
+              ? () {
+                  setState(() {
+                    currentPage--;
+                    _applyPagination();
+                  });
+                }
+              : null,
+        ),
+        Text("Page $currentPage / $totalPages"),
+        IconButton(
+          icon: Icon(Icons.arrow_forward),
+          onPressed: currentPage < totalPages
+              ? () {
+                  setState(() {
+                    currentPage++;
+                    _applyPagination();
+                  });
+                }
+              : null,
+        ),
+      ],
     );
   }
 }

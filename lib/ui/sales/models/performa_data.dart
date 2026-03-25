@@ -44,8 +44,12 @@ class PerformaData {
   final int no;
   final DateTime performaDate;
 
+  final String transNo;
+  final String transPre;
+
   final int paymentTerms;
   final bool caseSale;
+  final bool printSign;
 
   final List<String> notes;
   final List<String> terms;
@@ -74,9 +78,12 @@ class PerformaData {
     required this.customerName,
     required this.address0,
     required this.address1,
+    required this.printSign,
     required this.placeOfSupply,
     required this.mobile,
     required this.prefix,
+    required this.transNo,
+    required this.transPre,
     required this.no,
     required this.performaDate,
     required this.paymentTerms,
@@ -111,6 +118,9 @@ class PerformaData {
     prefix: j["prefix"],
     no: j["no"],
     performaDate: DateTime.parse(j["proforma_date"]),
+    transNo: j["estimate_no"] ?? "",
+    transPre: j["estimate_pre"] ?? "",
+    printSign: j["print_sig"] ?? true,
 
     paymentTerms: j["payment_terms"] ?? 0,
     caseSale: j["case_sale"] ?? false,

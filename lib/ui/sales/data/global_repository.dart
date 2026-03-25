@@ -38,121 +38,111 @@ class GLobalRepository {
 
   //
   //Get Auto no
-  Future<String> fetchEstimateNo() async {
+  Future<Map<String, dynamic>> fetchEstimateNo() async {
     final res = await ApiService.fetchData(
       'get/estimate_no',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    final data = (res?['next_no'].toString()) ?? '';
-    return data;
+    final num = (res?['next_no'].toString()) ?? '';
+    final prefix = (res?['prefix'].toString()) ?? '';
+    return {'next_no': num, 'prefix': prefix};
   }
 
-  Future<String> fetchPerformaNo() async {
+  Future<Map<String, dynamic>> fetchPerformaNo() async {
     final res = await ApiService.fetchData(
       'get/proforma_no',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    final data = (res?['next_no'].toString()) ?? '';
-    return data;
+    final num = (res?['next_no'].toString()) ?? '';
+    final prefix = (res?['prefix'].toString()) ?? '';
+    return {'next_no': num, 'prefix': prefix};
   }
 
-  Future<String> fetchSaleInvoiceNo() async {
+  Future<Map<String, dynamic>> fetchSaleInvoiceNo() async {
     final res = await ApiService.fetchData(
       'get/invoice_no',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    final data = (res?['next_no'].toString()) ?? '';
-    return data;
+    final num = (res?['next_no'].toString()) ?? '';
+    final prefix = (res?['prefix'].toString()) ?? '';
+    return {'next_no': num, 'prefix': prefix};
   }
 
-  Future<String> fetchSaleReturnNo() async {
+  Future<Map<String, dynamic>> fetchSaleReturnNo() async {
     final res = await ApiService.fetchData(
       'get/returnsale_no',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    final data = (res?['next_no'].toString()) ?? '';
-
-    return data;
+    print(res);
+    final num = (res?['next_no'].toString()) ?? '';
+    final prefix = (res?['prefix'].toString()) ?? '';
+    return {'next_no': num, 'prefix': prefix};
   }
 
-  Future<String> fetchDiliveryChallanNo() async {
+  Future<Map<String, dynamic>> fetchDiliveryChallanNo() async {
     final res = await ApiService.fetchData(
       'get/dilverychallan_no',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    final data = (res?['next_no'].toString()) ?? '';
 
-    return data;
+    final num = (res?['next_no'].toString()) ?? '';
+    final prefix = (res?['prefix'].toString()) ?? '';
+    return {'next_no': num, 'prefix': prefix};
   }
 
-  Future<String> fetchDebitNoteNo() async {
+  Future<Map<String, dynamic>> fetchDebitNoteNo() async {
     final res = await ApiService.fetchData(
       'get/debitnote_no',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    final data = (res?['next_no'].toString()) ?? '';
 
-    return data;
+    final num = (res?['next_no'].toString()) ?? '';
+    final prefix = (res?['prefix'].toString()) ?? '';
+    return {'next_no': num, 'prefix': prefix};
   }
 
-  Future<String> fetchPurchaseOrderNo() async {
+  Future<Map<String, dynamic>> fetchPurchaseOrderNo() async {
     final res = await ApiService.fetchData(
       'get/purchaseoder_no',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    final data = (res?['next_no'].toString()) ?? '';
 
-    return data;
+    final num = (res?['next_no'].toString()) ?? '';
+    final prefix = (res?['prefix'].toString()) ?? '';
+    return {'next_no': num, 'prefix': prefix};
   }
 
-  Future<String> fetchPurchaseInvoiceNo() async {
+  Future<Map<String, dynamic>> fetchPurchaseInvoiceNo() async {
     final res = await ApiService.fetchData(
       'get/purchaseinvoice_no',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    final data = (res?['next_no'].toString()) ?? '';
-    return data;
+
+    final num = (res?['next_no'].toString()) ?? '';
+    final prefix = (res?['prefix'].toString()) ?? '';
+    return {'next_no': num, 'prefix': prefix};
   }
 
-  Future<String> fetchPurchaseReturnNo() async {
+  Future<Map<String, dynamic>> fetchPurchaseReturnNo() async {
     final res = await ApiService.fetchData(
       'get/purchasereturn_no',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    final data = (res?['next_no'].toString()) ?? '';
-    return data;
+
+    final num = (res?['next_no'].toString()) ?? '';
+    final prefix = (res?['prefix'].toString()) ?? '';
+    return {'next_no': num, 'prefix': prefix};
   }
 
-  Future<String> fetchCreditNoteNo() async {
+  Future<Map<String, dynamic>> fetchCreditNoteNo() async {
     final res = await ApiService.fetchData(
       'get/purchasenote_no',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    final data = (res?['next_no'].toString()) ?? '';
-    return data;
-  }
 
-  //
-  //Get Item/Service/Misc
-  Future<List<ItemServiceModel>> fetchCatalogue() async {
-    final items = await ApiService.fetchData(
-      'get/item',
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-    final services = await ApiService.fetchData(
-      'get/service',
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-    final itemList = (items?['data'] as List?) ?? [];
-    final serviceList = (services?['data'] as List?) ?? [];
-    final combined = <ItemServiceModel>[];
-    for (var it in itemList) {
-      combined.add(ItemServiceModel.fromItem(Map<String, dynamic>.from(it)));
-    }
-    for (var s in serviceList) {
-      combined.add(ItemServiceModel.fromService(Map<String, dynamic>.from(s)));
-    }
-    return combined;
+    final num = (res?['next_no'].toString()) ?? '';
+    final prefix = (res?['prefix'].toString()) ?? '';
+    return {'next_no': num, 'prefix': prefix};
   }
 
   Future<List<ItemServiceModel>> searchItems(String text) async {
@@ -487,10 +477,12 @@ class GLobalRepository {
   Future<GlobalDataAll> getTransByNumber({
     required int transNo,
     required String transType,
+    String? prefix,
   }) async {
     final res = await ApiService.postData("get/getreletedrecode", {
       "trans_no": transNo,
       "trans_type": transType,
+      "prefix": prefix ?? "",
       "licence_no": Preference.getint(PrefKeys.licenseNo),
     }, licenceNo: Preference.getint(PrefKeys.licenseNo));
     return GlobalDataAll.fromJson(res['data']);
@@ -499,6 +491,7 @@ class GLobalRepository {
   Future<GlobalDataAllPurchase> getTransByNumberPurchase({
     required int transNo,
     required String transType,
+    required String prefix,
   }) async {
     final res = await ApiService.postData("get/getreletedrecode", {
       "trans_no": transNo,

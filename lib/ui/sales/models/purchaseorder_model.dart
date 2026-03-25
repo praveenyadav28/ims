@@ -46,6 +46,7 @@ class PurchaseOrderData {
 
   final int paymentTerms;
   final bool caseSale;
+  final bool printSig;
 
   final List<String> notes;
   final List<String> terms;
@@ -75,6 +76,7 @@ class PurchaseOrderData {
     required this.address1,
     required this.placeOfSupply,
     required this.mobile,
+    required this.printSig,
     required this.prefix,
     required this.no,
     required this.purchaseOrderDate,
@@ -105,10 +107,10 @@ class PurchaseOrderData {
         address0: j["address_0"],
         address1: j["address_1"],
         placeOfSupply: j["place_of_supply"],
-        mobile: j["mobile"].toString(),
-
+        mobile: j["mobile"].toString() == "null" ? "" : j["mobile"].toString(),
         prefix: j["prefix"],
         no: j["no"],
+        printSig: j["print_sig"] ?? true,
         purchaseOrderDate: DateTime.parse(j["purchaseoder_date"]),
 
         paymentTerms: j["payment_terms"] ?? 0,

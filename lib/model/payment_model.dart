@@ -1,12 +1,12 @@
 class PaymentModel {
   final String id;
-  final String ledgerName;
   final String supplierName;
   final double amount;
-  final int invoiceNo;
+  final String invoiceNo;
   final DateTime date;
   final DateTime? reminderDate;
   final String prefix;
+  List<VoucherLedgerDetail>? ledgerDetails;
   final int voucherNo;
   final String note;
   final String docu;
@@ -15,10 +15,10 @@ class PaymentModel {
 
   PaymentModel({
     required this.id,
-    required this.ledgerName,
     required this.supplierName,
     required this.amount,
     required this.invoiceNo,
+    required this.ledgerDetails,
     required this.date,
     required this.reminderDate,
     required this.prefix,
@@ -32,15 +32,21 @@ class PaymentModel {
   factory PaymentModel.fromJson(Map<String, dynamic> json) {
     return PaymentModel(
       id: json['_id'],
-      ledgerName: json['ledger_name'],
       supplierName: json['supplier_name'] ?? json['customer_name'],
-      amount: (json['amount'] as num).toDouble(),
-      invoiceNo: json['invoice_no'] ?? 0,
+      amount: double.tryParse(json['amount2'] ?? "0") ?? 0,
+      invoiceNo: json['invoice_no'] ?? "",
       date: DateTime.parse(json['date']),
       reminderDate: json['reminder_date'] != null
           ? DateTime.parse(json['reminder_date'])
           : null,
-      prefix: json['prefix'],
+      ledgerDetails: json["ledger_details"] == null
+          ? <VoucherLedgerDetail>[]
+          : List<VoucherLedgerDetail>.from(
+              json["ledger_details"].map(
+                (x) => VoucherLedgerDetail.fromJson(x),
+              ),
+            ),
+      prefix: json['prefix'] ?? "",
       voucherNo: json['vouncher_no'],
       note: json['note'] ?? '',
       type: json['type'] ?? '',
@@ -48,4 +54,18 @@ class PaymentModel {
       other1: json['other1'] ?? '',
     );
   }
+}
+
+class VoucherLedgerDetail {
+  String? ledgerId;
+  String? ledgerName;
+  int? amount;
+
+  VoucherLedgerDetail({this.ledgerId, this.ledgerName, this.amount});
+  factory VoucherLedgerDetail.fromJson(Map<String, dynamic> json) =>
+      VoucherLedgerDetail(
+        ledgerId: json["ledger_id"],
+        ledgerName: json["ledger_name"],
+        amount: json["amount"],
+      );
 }

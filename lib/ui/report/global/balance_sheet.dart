@@ -155,7 +155,7 @@ class _BalanceSheetAllInOneScreenState
               e['other1'] == "Income" &&
               !DateTime.parse(e['date']).isAfter(asOn),
         )
-        .fold(0.0, (s, e) => s + toDouble(e['amount'].toString()));
+        .fold(0.0, (s, e) => s + toDouble(e['amount1'].toString()));
   }
 
   void _calculatePL() {

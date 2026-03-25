@@ -29,8 +29,6 @@ class _CreateLedgerState extends State<CreateLedger> {
   final List<String> _groupLedgerList = [
     'Bank Account',
     'Cash In Hand',
-    'Sundry Debtor',
-    'Sundry Creditor',
     'Expense',
     'Income',
     'Fixed Asset',
@@ -38,73 +36,14 @@ class _CreateLedgerState extends State<CreateLedger> {
     'Loans (Liability)',
   ];
 
-  // // LedgerList? ledgerData;
-  // @override
-  // void didChangeDependencies() {
-  //   super.didChangeDependencies();
-  //   final args = ModalRoute.of(context)?.settings.arguments;
-  //   if (args != null && ledgerData == null) {
-  //     ledgerData = args as LedgerList;
-
-  //     _selectedTitle = ledgerData?.title ?? "";
-  //     _selectedsubTitle = ledgerData?.relationType ?? "";
-  //     _selectedLedgerGroup = ledgerData?.ledgerGroup ?? "";
-  //     _selectedClosingBalance = ledgerData?.openingType ?? "Dr";
-  //     _selectedBalance = ledgerData?.openingType ?? "Dr";
-  //     ledgerNameController.text = ledgerData?.ledgerName ?? "";
-  //     fatherNameController.text = ledgerData?.name ?? "";
-  //     _documentImageUrls = ledgerData?.uplodeFile?.cast<String>() ?? [];
-  //     contactNoNameController.text = ledgerData?.contactNo ?? "";
-  //     emailIdController.text = ledgerData?.email ?? "";
-  //     whatsapppNoController.text = ledgerData?.whatsappNo ?? "";
-  //     gstNoController.text = ledgerData?.gstNo ?? "";
-  //     closingBalanceController.text = ledgerData?.closingBalance ?? "";
-  //     openingBalanceController.text = ledgerData?.openingBalance ?? "";
-  //     aadharNoController.text = ledgerData?.aadharNo ?? "";
-  //     addressLine1Controller.text = ledgerData?.permanentAddress ?? "";
-  //     permanentareaController.text = ledgerData?.cityTownVillage ?? "";
-  //     permanentpinCodeController.text = ledgerData?.pinCode ?? "";
-  //     temporaryAddressController.text = ledgerData?.temporaryAddress ?? "";
-  //     temporaryareaController.text = ledgerData?.tcityTownVillage ?? "";
-  //     temporarypinCodeController.text = ledgerData?.tpinCode ?? "";
-  //     selectedState = SearchFieldListItem<String>(
-  //       ledgerData?.state ?? "",
-  //       item: ledgerData?.state ?? "",
-  //     );
-  //     selectedCity = SearchFieldListItem<String>(
-  //       ledgerData?.city ?? "",
-  //       item: ledgerData?.city ?? "",
-  //     );
-  //     stateController.text = selectedState?.searchKey ?? '';
-  //     cityController.text = selectedCity?.searchKey ?? '';
-  //     selectedStateTemp = SearchFieldListItem<String>(
-  //       ledgerData?.tstate ?? "",
-  //       item: ledgerData?.tstate ?? "",
-  //     );
-  //     selectedCityTemp = SearchFieldListItem<String>(
-  //       ledgerData?.tcity ?? "",
-  //       item: ledgerData?.tcity ?? "",
-  //     );
-  //     tempSateController.text = selectedStateTemp?.searchKey ?? '';
-  //     tempCityController.text = selectedCityTemp?.searchKey ?? '';
-  //     citiesSuggestions = stateCities[selectedState?.searchKey] ?? [];
-  //     citiesSuggestionsTemp = stateCities[selectedStateTemp?.searchKey] ?? [];
-
-  //   }
-  // }
-
-  // TextEditingController miscAddNameController = TextEditingController();
   TextEditingController ledgerNameController = TextEditingController();
-  // TextEditingController fatherNameController = TextEditingController();
+  TextEditingController spIdController = TextEditingController();
   TextEditingController contactNoNameController = TextEditingController();
   TextEditingController whatsapppNoController = TextEditingController();
   TextEditingController emailIdController = TextEditingController();
-  // TextEditingController closingBalanceController = TextEditingController();
   TextEditingController openingBalanceController = TextEditingController(
     text: "0",
   );
-  // TextEditingController gstNoController = TextEditingController();
-  // TextEditingController aadharNoController = TextEditingController();
   TextEditingController addressLine1Controller = TextEditingController();
   TextEditingController permanentareaController = TextEditingController();
 
@@ -124,8 +63,17 @@ class _CreateLedgerState extends State<CreateLedger> {
 
     if (widget.existing != null) {
       final l = widget.existing!;
+      String fullName = l.ledgerName ?? "";
 
-      ledgerNameController.text = l.ledgerName ?? "";
+      if (fullName.contains('~')) {
+        List<String> parts = fullName.split('~');
+
+        ledgerNameController.text = parts[0]; // Customer Name
+        spIdController.text = parts[1]; // Special ID
+      } else {
+        ledgerNameController.text = fullName; // Only Name
+        spIdController.text = ''; // No Special ID
+      }
       contactNoNameController.text = l.contactNo?.toString() ?? "";
       whatsapppNoController.text = l.whatsAppNo.toString() == "null"
           ? ""
@@ -189,9 +137,24 @@ class _CreateLedgerState extends State<CreateLedger> {
           children: [
             nameField(
               text: "Ledger Name",
-              child: CommonTextField(
-                controller: ledgerNameController,
-                hintText: "Enter ledger Name",
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: CommonTextField(
+                      controller: ledgerNameController,
+                      hintText: "Ledger Name",
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    flex: 1,
+                    child: CommonTextField(
+                      controller: spIdController,
+                      hintText: "Special ID",
+                    ),
+                  ),
+                ],
               ),
             ),
             SizedBox(height: Sizes.height * .02),
@@ -379,15 +342,17 @@ class _CreateLedgerState extends State<CreateLedger> {
   }
 
   Future<void> postLedger() async {
-    // 1. Initialize the base payload map.
     final Map<String, dynamic> payloadData = {
       'licence_no': Preference.getint(PrefKeys.licenseNo),
       'branch_id': Preference.getString(PrefKeys.locationId),
-      'ledger_name': ledgerNameController.text.trim().toString(),
+      'ledger_name':
+          ledgerNameController.text.trim() +
+          (spIdController.text.trim().isNotEmpty
+              ? "~${spIdController.text.trim()}"
+              : ""),
       'whatapp_no': whatsapppNoController.text.trim().toString(),
       'email': emailIdController.text.trim().toString(),
       'ledger_group': _selectedLedgerGroup,
-      // Safely parse int, using null if empty.
       'opening_balance': openingBalanceController.text.trim().isEmpty
           ? "0"
           : _selectedBalance != "Cr"
@@ -402,89 +367,31 @@ class _CreateLedgerState extends State<CreateLedger> {
       'city': selectedCity?.item ?? "",
     };
 
-    // 2. Conditionally add 'contact_no' to the payload.
     final contactNoText = contactNoNameController.text.trim();
     if (contactNoText.isNotEmpty) {
       final contactNo = int.tryParse(contactNoText);
       if (contactNo != null) {
         payloadData['contact_no'] = contactNo;
       }
-      // Note: If you must send a value even if parsing fails, change the logic.
-      // However, it's best practice to only send valid data types.
     }
 
-    // 3. Post the data.
     final response = widget.existing == null
         ? await ApiService.postData(
             'ledger',
-            payloadData, // Pass the single, complete map
+            payloadData,
             licenceNo: Preference.getint(PrefKeys.licenseNo),
           )
         : await ApiService.putData(
             'ledger/${widget.existing?.id}',
-            payloadData, // Pass the single, complete map
+            payloadData,
             licenceNo: Preference.getint(PrefKeys.licenseNo),
           );
 
-    // 4. Handle the response.
     if (response["status"] == true) {
-      // Use `await` for async snackbar/dialog if needed, but not strictly required here.
       showCustomSnackbarSuccess(context, response['message']);
-      // If you uncomment the pop, ensure 'context' is valid.
       Navigator.pop(context, "data");
     } else {
       showCustomSnackbarError(context, response['message']);
     }
   }
-  // Future updateLedger(List<XFile>? documents) async {
-  //   final response = await ApiService.uploadFiles(
-  //     endpoint: 'ledger/${ledgerData!.id}',
-  //     multiFiles: documents != null && documents.isNotEmpty
-  //         ? {"ledger_file[]": documents}
-  //         : null,
-  //     fields: {
-  //       'licence_no': Preference.getint(PrefKeys.licenseNo),
-  //       'branch_id': Preference.getint(PrefKeys.locationId).toString(),
-  //       'title': _selectedTitle,
-  //       'ledger_name': ledgerNameController.text.trim().toString(),
-  //       'relation_type': _selectedsubTitle,
-  //       // 'ledger_file': 'nullable|array',
-  //       // 'ledger_file.*': 'file|max:2048',
-  //       'name': fatherNameController.text.trim().toString(),
-  //       'contact_no': contactNoNameController.text.trim().toString(),
-  //       'whatsapp_no': whatsapppNoController.text.trim().toString(),
-  //       'email': emailIdController.text.trim().toString(),
-  //       'ledger_group': _selectedLedgerGroup ?? "Sundry Debitors",
-  //       'opening_balance': openingBalanceController.text.trim().toString(),
-  //       'opening_type': _selectedBalance,
-  //       'closing_balance': closingBalanceController.text.trim().toString(),
-  //       'closing_type': _selectedClosingBalance,
-  //       'gst_no': gstNoController.text.trim().toString(),
-  //       'aadhar_no': aadharNoController.text.trim().toString(),
-  //       // 'l_docu_uplode': 'nullable|file|max:2048',
-  //       'permanent_address': addressLine1Controller.text.trim().toString(),
-  //       'state': stateController.text.trim().toString(),
-  //       'city': cityController.text.trim().toString(),
-  //       'city_town_village': permanentareaController.text.trim().toString(),
-  //       'pin_code': permanentpinCodeController.text.trim().toString(),
-  //       'temporary_address': temporaryAddressController.text.trim().toString(),
-  //       't_state': tempSateController.text.trim().toString(),
-  //       't_city': tempCityController.text.trim().toString(),
-  //       't_city_town_village': temporaryareaController.text.trim().toString(),
-  //       't_pin_code': temporarypinCodeController.text.trim().toString(),
-  //       'other1': 'LGR',
-  //       'other4': "",
-  //       'other5': "",
-  //       '_method': "PUT",
-  //     },
-  //   );
-
-  //   if (response["status"] == true) {
-  //     showCustomSnackbarSuccess(context, response['message']);
-  //     return true;
-  //   } else {
-  //     showCustomSnackbarError(context, response['message']);
-  //     return false;
-  //   }
-  // }
 }

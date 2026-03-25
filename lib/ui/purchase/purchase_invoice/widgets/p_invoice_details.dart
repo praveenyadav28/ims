@@ -12,12 +12,16 @@ class PurchaseInvoiceDetailsCard extends StatelessWidget {
     required this.purchaseInvoiceNoController,
     required this.pickedPurchaseInvoiceDate,
     required this.onTapPurchaseInvoiceDate,
+    required this.transNoController,
+    required this.prefixTransController,
   });
 
   final TextEditingController prefixController;
   final TextEditingController purchaseInvoiceNoController;
   final DateTime? pickedPurchaseInvoiceDate;
   final VoidCallback onTapPurchaseInvoiceDate;
+  final TextEditingController transNoController;
+  final TextEditingController prefixTransController;
 
   @override
   Widget build(BuildContext context) {
@@ -82,26 +86,44 @@ class PurchaseInvoiceDetailsCard extends StatelessWidget {
         SizedBox(height: Sizes.height * .03),
         nameField(
           text: "Purchase Order No",
-          child: CommonTextField(
-            hintText: 'Number',
-            suffixIcon: IconButton(
-              onPressed: () {
-                final bloc = context.read<PurchaseInvoiceBloc>();
-                bloc.add(PurchaseInvoiceSearchTransaction());
-              },
-              icon: Icon(Icons.search),
-            ),
-            onFieldSubmitted: (v) {
-              final bloc = context.read<PurchaseInvoiceBloc>();
-              bloc.add(PurchaseInvoiceSearchTransaction());
-            },
-            onChanged: (v) {
-              context.read<PurchaseInvoiceBloc>().add(
-                PurchaseInvoiceSetTransNo(v),
-              );
-            },
+          child: Row(
+            children: [
+              Expanded(
+                child: CommonTextField(
+                  controller: prefixTransController,
+                  hintText: 'Prefix',
+                  onChanged: (value) {
+                    context.read<PurchaseInvoiceBloc>().add(
+                      PurchaseInvoiceSetTransPrefix(value),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: CommonTextField(
+                  controller: transNoController,
+                  hintText: 'Number',
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.search),
+                    onPressed: () {
+                      final bloc = context.read<PurchaseInvoiceBloc>();
+                      bloc.add(PurchaseInvoiceSearchTransaction());
+                    },
+                  ),
+                  onFieldSubmitted: (v) {
+                    final bloc = context.read<PurchaseInvoiceBloc>();
+                    bloc.add(PurchaseInvoiceSearchTransaction());
+                  },
+                  onChanged: (v) {
+                    context.read<PurchaseInvoiceBloc>().add(
+                      PurchaseInvoiceSetTransNo(v),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-
           flix: 30,
         ),
         SizedBox(height: Sizes.height * .03),

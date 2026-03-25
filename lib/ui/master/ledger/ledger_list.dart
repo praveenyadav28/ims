@@ -36,10 +36,17 @@ class _LedgerListScreenState extends State<LedgerListScreen> {
     );
 
     List responseData = response['data'] ?? [];
+    
+    final allLedgers = responseData.map((e) => LedgerListModel.fromJson(e)).toList();
     setState(() {
-      ledgerList = responseData
-          .map((e) => LedgerListModel.fromJson(e))
+       ledgerList = allLedgers
+          .where(
+            (e) =>
+                e.ledgerGroup != 'Sundry Debtor' &&
+                e.ledgerGroup != 'Sundry Creditor',
+          )
           .toList();
+     
     });
   }
 

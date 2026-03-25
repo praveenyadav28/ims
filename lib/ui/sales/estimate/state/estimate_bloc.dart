@@ -260,6 +260,8 @@ class EstSaveWithUIData extends EstEvent {
   final List<String> notes;
   final List<String> terms;
   final bool printAfterSave;
+  final bool printSignature;
+  final bool sendWhatsApp;
   final Uint8List? signatureImage; // NEW
 
   EstSaveWithUIData({
@@ -271,6 +273,8 @@ class EstSaveWithUIData extends EstEvent {
     required this.notes,
     required this.terms,
     required this.printAfterSave,
+    required this.printSignature,
+    required this.sendWhatsApp,
     this.updateId,
     this.signatureImage,
   });
@@ -347,9 +351,11 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
       ]);
 
+      final estimateNoData = results[0] as Map<String, dynamic>;
       emit(
         state.copyWith(
-          estimateNo: results[0] as String,
+          estimateNo: estimateNoData['next_no'] as String,
+          prefix: estimateNoData['prefix'] as String,
           hsnMaster: results[1] as List<HsnModel>,
           miscMasterList: results[2] as List<MiscChargeModelList>,
           catalogue: const [], // server search use ho raha hai
@@ -701,6 +707,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
             "measuring_unit": r.sellInBaseUnit
                 ? r.product!.baseUnit
                 : r.product!.secondaryUnit,
+            'bin_no': r.product?.binNo ?? "",
             "qty": r.qty,
             "amount": r.gross,
             "discount": r.discountPercent,
@@ -749,7 +756,7 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         };
       }).toList();
 
-      // ---------------- FINAL PAYLOAD ----------------
+      // ---------------- FINAL    ----------------
 
       Map<String, dynamic> payload = {
         "licence_no": Preference.getint(PrefKeys.licenseNo),
@@ -784,6 +791,8 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         "discount": discounts,
         "item_details": itemRows,
         "service_details": serviceRows,
+        "print_sig": e.printSignature,
+        "whatsapp_msg": e.sendWhatsApp,
       };
 
       if (itemRows.isEmpty && serviceRows.isEmpty) {
@@ -953,6 +962,7 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
       gstIncluded: false,
       gstIncludedPurchase: false,
       baseUnit: '',
+      binNo: '',
       secondaryUnit: '',
       conversion: 1,
       variants: [],
@@ -974,6 +984,7 @@ EstState _prefillEstimate(EstimateData data, EstState s) {
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],

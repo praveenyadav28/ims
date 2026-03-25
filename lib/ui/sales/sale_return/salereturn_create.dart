@@ -69,6 +69,9 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
   final cashShippingController = TextEditingController();
   DateTime pickedInvoiceDate = DateTime.now();
   final stateController = TextEditingController();
+  final noteController = TextEditingController();
+  final transNoController = TextEditingController();
+  final prefixTransController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
 
@@ -80,6 +83,13 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
   void onTogglePrint(bool value) {
     setState(() {
       printAfterSave = value;
+    });
+  }
+
+  bool printSignature = true;
+  void onToggleSignature(bool value) {
+    setState(() {
+      printSignature = value;
     });
   }
 
@@ -96,7 +106,14 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
       cashShippingController.text = e.address1;
       stateController.text = e.placeOfSupply;
       pickedInvoiceDate = e.saleReturnDate;
-      selectedNotesList = e.notes;
+      if (widget.saleReturnData != null) {
+        noteController.text = widget.saleReturnData!.notes.join(", ");
+      }
+      transNoController.text = e.transNo.toString() == "0"
+          ? ""
+          : e.transNo.toString();
+      prefixTransController.text = e.transPre.toString();
+
       selectedTermsList = e.terms;
 
       if (e.caseSale == true) {
@@ -273,35 +290,19 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
                         stateName: stateController.text,
-                        notes: selectedNotesList,
+                        notes: noteController.text.trim().isEmpty
+                            ? []
+                            : [noteController.text.trim()],
                         terms: selectedTermsList,
                         signatureImage: null,
                         updateId: widget.saleReturnData?.id,
                         printAfterSave: printAfterSave,
+                        printSignatue: printSignature,
                       ),
                     );
                   },
                 ),
                 const SizedBox(width: 10),
-                Checkbox(
-                  fillColor: WidgetStatePropertyAll(AppColor.primary),
-                  shape: ContinuousRectangleBorder(
-                    borderRadius: BorderRadiusGeometry.circular(5),
-                  ),
-                  value: printAfterSave,
-                  onChanged: (v) {
-                    onTogglePrint(v ?? true);
-                    setState(() {});
-                  },
-                ),
-                Text(
-                  "Print   ",
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: AppColor.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ],
             ),
           ],
@@ -366,6 +367,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                           context.read<SaleReturnBloc>(),
                         ),
                         isReturn: false,
+                        isSaleReturn: true,
                       ),
                       shipTo: GlobalShipToCard(
                         billingController: cashBillingController,
@@ -385,6 +387,8 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                           context,
                           context.read<SaleReturnBloc>(),
                         ),
+                        transNoController: transNoController,
+                        prefixTransController: prefixTransController,
                       ),
                     ),
 
@@ -392,12 +396,11 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                     GlobalItemsTableSection(
                       ledgerType:
                           state.selectedCustomer?.ledgerType ?? 'Individual',
-                      rows: state.rows, // list of GlobalItemRow
-                      catalogue: state.catalogue, // list of ItemServiceModel
-                      hsnList: state.hsnMaster, // list of HsnModel
+                      rows: state.rows,
+                      catalogue: state.catalogue,
+                      hsnList: state.hsnMaster,
 
-                      onAddNextRow: () =>
-                          bloc.add(SaleReturnAddRow()), // ✅ ADD THIS
+                      onAddNextRow: () => bloc.add(SaleReturnAddRow()),
                       onAddRow: () => bloc.add(SaleReturnAddRow()),
 
                       onRemoveRow: (id) => bloc.add(SaleReturnRemoveRow(id)),
@@ -433,10 +436,10 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                         Expanded(
                           flex: 10,
                           child: GlobalNotesSection(
-                            initialNotes: selectedNotesList,
                             initialTerms: selectedTermsList,
-                            onNotesChanged: (list) => selectedNotesList = list,
+                            noteController: noteController,
                             onTermsChanged: (list) => selectedTermsList = list,
+                            termId: '1',
                           ),
                         ),
 
@@ -485,6 +488,71 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                               ),
 
                               SizedBox(height: Sizes.height * .02),
+                              Row(
+                                children: [
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          fillColor: WidgetStatePropertyAll(
+                                            AppColor.primary,
+                                          ),
+                                          shape: ContinuousRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  5,
+                                                ),
+                                          ),
+                                          value: printAfterSave,
+                                          onChanged: (v) {
+                                            onTogglePrint(v ?? true);
+                                            setState(() {});
+                                          },
+                                        ),
+                                        Text(
+                                          "Print PDF on save",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            color: AppColor.black,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          fillColor: WidgetStatePropertyAll(
+                                            AppColor.primary,
+                                          ),
+                                          shape: ContinuousRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  5,
+                                                ),
+                                          ),
+                                          value: printSignature,
+                                          onChanged: (v) {
+                                            onToggleSignature(v ?? true);
+                                            setState(() {});
+                                          },
+                                        ),
+                                        Text(
+                                          "Print Signature in PDF",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            color: AppColor.black,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         ),

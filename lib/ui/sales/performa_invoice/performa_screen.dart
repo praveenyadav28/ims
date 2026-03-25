@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -66,12 +67,17 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
   final cashMobileController = TextEditingController();
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
+  final noteController = TextEditingController();
+  final transNoController = TextEditingController();
+  final prefixTransController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   DateTime pickedPerformaDate = DateTime.now();
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
 
+  Timer? _ledgerDebounce;
+  Timer? _itemDebounce;
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
   List<MiscChargeModelList> miscList = [];
@@ -79,6 +85,20 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
   void onTogglePrint(bool value) {
     setState(() {
       printAfterSave = value;
+    });
+  }
+
+  bool sendWhatsApp = false;
+  void onToggleWhatsApp(bool value) {
+    setState(() {
+      sendWhatsApp = value;
+    });
+  }
+
+  bool printSignature = true;
+  void onToggleSignature(bool value) {
+    setState(() {
+      printSignature = value;
     });
   }
 
@@ -96,7 +116,13 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
       cashShippingController.text = e.address1;
       stateController.text = e.placeOfSupply;
       pickedPerformaDate = e.performaDate;
-      selectedNotesList = e.notes;
+      if (widget.performaData != null) {
+        noteController.text = widget.performaData!.notes.join(", ");
+      }
+      transNoController.text = e.transNo.toString() == "0"
+          ? ""
+          : e.transNo.toString();
+      prefixTransController.text = e.transPre.toString();
       selectedTermsList = e.terms;
 
       if (e.caseSale == true) {
@@ -262,35 +288,20 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
                         stateName: stateController.text,
-                        notes: selectedNotesList,
+                        notes: noteController.text.trim().isEmpty
+                            ? []
+                            : [noteController.text.trim()],
                         terms: selectedTermsList,
                         signatureImage: null,
                         updateId: widget.performaData?.id,
                         printAfterSave: printAfterSave,
+                        printSignature: printSignature,
+                        sendWhatsApp: sendWhatsApp,
                       ),
                     );
                   },
                 ),
                 const SizedBox(width: 10),
-                Checkbox(
-                  fillColor: WidgetStatePropertyAll(AppColor.primary),
-                  shape: ContinuousRectangleBorder(
-                    borderRadius: BorderRadiusGeometry.circular(5),
-                  ),
-                  value: printAfterSave,
-                  onChanged: (v) {
-                    onTogglePrint(v ?? true);
-                    setState(() {});
-                  },
-                ),
-                Text(
-                  "Print   ",
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: AppColor.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ],
             ),
           ],
@@ -315,7 +326,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
                         isCashSale: state.cashSaleDefault,
                         customers: state.customers,
                         selectedCustomer: state.selectedCustomer,
-                        onSearchLedger: (text) => repo.searchLedger(text, true),
+                        onSearchLedger: (text) => _searchLedgerDebounced(text),
 
                         // --------- CONTROLLERS ---------
                         cusNameController: cusNameController,
@@ -376,6 +387,8 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
                           context,
                           context.read<PerformaBloc>(),
                         ),
+                        transNoController: transNoController,
+                        prefixTransController: prefixTransController,
                       ),
                     ),
 
@@ -395,7 +408,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
 
                       onUpdateRow: (row) => bloc.add(PerformaUpdateRow(row)),
 
-                      onSearchItem: (text) => repo.searchItems(text),
+                      onSearchItem: (text) => _searchItemDebounced(text),
                       onSelectCatalog: (rowId, item) {
                         bloc.add(PerfromaSelectCatalogForRow(rowId, item));
 
@@ -424,10 +437,10 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
                         Expanded(
                           flex: 10,
                           child: GlobalNotesSection(
-                            initialNotes: selectedNotesList,
                             initialTerms: selectedTermsList,
-                            onNotesChanged: (list) => selectedNotesList = list,
+                            noteController: noteController,
                             onTermsChanged: (list) => selectedTermsList = list,
+                            termId: '3',
                           ),
                         ),
 
@@ -476,6 +489,102 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
                               ),
 
                               SizedBox(height: Sizes.height * .02),
+                              Row(
+                                children: [
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          fillColor: WidgetStatePropertyAll(
+                                            AppColor.primary,
+                                          ),
+                                          shape: ContinuousRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  5,
+                                                ),
+                                          ),
+                                          value: printAfterSave,
+                                          onChanged: (v) {
+                                            onTogglePrint(v ?? true);
+                                            setState(() {});
+                                          },
+                                        ),
+                                        Text(
+                                          "Print PDF on save",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: AppColor.black,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          fillColor: WidgetStatePropertyAll(
+                                            AppColor.primary,
+                                          ),
+                                          shape: ContinuousRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  5,
+                                                ),
+                                          ),
+                                          value: printSignature,
+                                          onChanged: (v) {
+                                            onToggleSignature(v ?? true);
+                                            setState(() {});
+                                          },
+                                        ),
+                                        Text(
+                                          "Print Signature in PDF",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: AppColor.black,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          fillColor: WidgetStatePropertyAll(
+                                            AppColor.primary,
+                                          ),
+                                          shape: ContinuousRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  5,
+                                                ),
+                                          ),
+                                          value: sendWhatsApp,
+                                          onChanged: (v) {
+                                            onToggleWhatsApp(v ?? true);
+                                            setState(() {});
+                                          },
+                                        ),
+                                        Text(
+                                          "Send PdF on Whatsapp",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: AppColor.black,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -559,5 +668,31 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
         ],
       ),
     );
+  }
+
+  Future<List<LedgerModelDrop>> _searchLedgerDebounced(String text) async {
+    if (_ledgerDebounce?.isActive ?? false) _ledgerDebounce!.cancel();
+
+    final completer = Completer<List<LedgerModelDrop>>();
+
+    _ledgerDebounce = Timer(const Duration(milliseconds: 500), () async {
+      final result = await repo.searchLedger(text, false);
+      completer.complete(result);
+    });
+
+    return completer.future;
+  }
+
+  Future<List<ItemServiceModel>> _searchItemDebounced(String text) async {
+    if (_itemDebounce?.isActive ?? false) _itemDebounce!.cancel();
+
+    final completer = Completer<List<ItemServiceModel>>();
+
+    _itemDebounce = Timer(const Duration(milliseconds: 500), () async {
+      final result = await repo.searchItems(text);
+      completer.complete(result);
+    });
+
+    return completer.future;
   }
 }

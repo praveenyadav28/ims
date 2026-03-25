@@ -30,10 +30,16 @@ class LedgerModelDrop {
     mobile: (m['contact_no'] ?? '').toString(),
     closingBalance: (m['closing_balance'] ?? '').toString(),
     ledgerGroup: (m['ledger_group'] ?? '').toString(),
-    billingAddress:
-        "${(m['address'] ?? '')}, ${(m['city'] ?? "")}, ${(m['state'] ?? "")}",
-    shippingAddress:
-        "${(m['address'] ?? '')}, ${(m['city'] ?? "")}, ${(m['state'] ?? "")}",
+    billingAddress: [
+      m['address'],
+      m['city'],
+      m['state'],
+    ].where((e) => e != null && e.toString().trim().isNotEmpty).join(', '),
+    shippingAddress: [
+      m['address'],
+      m['city'],
+      m['state'],
+    ].where((e) => e != null && e.toString().trim().isNotEmpty).join(', '),
     gstin: (m['gst_no'] ?? '').toString(),
     state: (m['state'] ?? '').toString(),
     ledgerType: (m['other1'] ?? 'Individual').toString(),
@@ -90,6 +96,7 @@ class ItemServiceModel {
   final bool gstIncluded;
   final bool gstIncludedPurchase;
   final String baseUnit;
+  final String? binNo;
   final String secondaryUnit;
   final String? stockQty;
   final int conversion;
@@ -112,6 +119,7 @@ class ItemServiceModel {
     required this.gstIncludedPurchase,
     this.stockQty,
     required this.baseUnit,
+    this.binNo,
     required this.secondaryUnit,
     required this.conversion,
     required this.variants,
@@ -149,6 +157,7 @@ class ItemServiceModel {
       gstIncluded: m['gst_include'] ?? false,
       gstIncludedPurchase: m['gstinclude_purchase'] ?? false,
       baseUnit: m['baseunit']?.toString() ?? 'Base',
+      binNo: m['other1']?.toString() ?? '',
       secondaryUnit: m['secondryunit']?.toString() ?? 'Unit',
       conversion: (m['convertion_amount'] != null)
           ? int.tryParse(m['convertion_amount'].toString()) ?? 1
@@ -177,6 +186,7 @@ class ItemServiceModel {
       gstIncluded: m['gst_include'] ?? false,
       gstIncludedPurchase: m['gstinclude_purchase'] ?? false,
       baseUnit: m['baseunit']?.toString() ?? '',
+      binNo: m['other1']?.toString() ?? '',
       secondaryUnit: '',
       conversion: 1,
       variants: const [],

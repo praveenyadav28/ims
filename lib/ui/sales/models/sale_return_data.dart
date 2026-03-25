@@ -46,7 +46,9 @@ class SaleReturnData {
 
   final int paymentTerms;
   final bool caseSale;
-  final int transNo;
+  final bool printSig;
+  final String transNo;
+  final String transPre;
   final String transId;
 
   final List<String> notes;
@@ -79,7 +81,9 @@ class SaleReturnData {
     required this.placeOfSupply,
     required this.mobile,
     required this.prefix,
+    required this.printSig,
     required this.transNo,
+    required this.transPre,
     required this.transId,
     required this.no,
     required this.saleReturnDate,
@@ -118,12 +122,14 @@ class SaleReturnData {
 
     paymentTerms: j["payment_terms"] ?? 0,
     caseSale: j["case_sale"] ?? false,
+    printSig: j["print_sig"] ?? true,
 
     notes: List<String>.from(j["add_note"] ?? []),
     terms: List<String>.from(j["te_co"] ?? []),
 
     transId: j["invoice_id"] ?? "",
-    transNo: j["invoice_no"] ?? 0,
+    transNo: j["invoice_no"] ?? "",
+    transPre: j["invoice_pre"] ?? "",
     subTotal: (j["sub_totle"] ?? 0).toDouble(),
     subGst: (j["sub_gst"] ?? 0).toDouble(),
     autoRound: j["auto_ro"] ?? false,

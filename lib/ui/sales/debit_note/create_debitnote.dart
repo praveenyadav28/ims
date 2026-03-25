@@ -67,6 +67,9 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
+  final noteController = TextEditingController();
+  final transNoController = TextEditingController();
+  final prefixTransController = TextEditingController();
 
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
@@ -76,6 +79,13 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
   void onTogglePrint(bool value) {
     setState(() {
       printAfterSave = value;
+    });
+  }
+
+  bool printSignature = true;
+  void onToggleSignature(bool value) {
+    setState(() {
+      printSignature = value;
     });
   }
 
@@ -93,7 +103,14 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
       cashShippingController.text = e.address1;
       stateController.text = e.placeOfSupply;
       pickedInvoiceDate = e.debitNoteDate;
-      selectedNotesList = e.notes;
+      if (widget.debitNoteData != null) {
+        noteController.text = widget.debitNoteData!.notes.join(", ");
+      }
+      transNoController.text = e.transNo.toString() == "0"
+          ? ""
+          : e.transNo.toString();
+      prefixTransController.text = e.transPre.toString();
+
       selectedTermsList = e.terms;
 
       if (e.caseSale == true) {
@@ -263,36 +280,20 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                         mobile: cashMobileController.text,
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
-                        notes: selectedNotesList,
+                        notes: noteController.text.trim().isEmpty
+                            ? []
+                            : [noteController.text.trim()],
                         terms: selectedTermsList,
                         signatureImage: null,
                         updateId: widget.debitNoteData?.id,
                         stateName: stateController.text,
                         printAfterSave: printAfterSave,
+                        printSignatue: printSignature,
                       ),
                     );
                   },
                 ),
                 const SizedBox(width: 10),
-                Checkbox(
-                  fillColor: WidgetStatePropertyAll(AppColor.primary),
-                  shape: ContinuousRectangleBorder(
-                    borderRadius: BorderRadiusGeometry.circular(5),
-                  ),
-                  value: printAfterSave,
-                  onChanged: (v) {
-                    onTogglePrint(v ?? true);
-                    setState(() {});
-                  },
-                ),
-                Text(
-                  "Print   ",
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: AppColor.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ],
             ),
           ],
@@ -351,6 +352,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                         context.read<DebitNoteBloc>(),
                       ),
                       isReturn: false,
+                      isSaleReturn: true,
                     ),
                     shipTo: GlobalShipToCard(
                       billingController: cashBillingController,
@@ -370,6 +372,8 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                         context,
                         context.read<DebitNoteBloc>(),
                       ),
+                      transNoController: transNoController,
+                      prefixTransController: prefixTransController,
                     ),
                   ),
 
@@ -395,10 +399,10 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                       Expanded(
                         flex: 10,
                         child: GlobalNotesSection(
-                          initialNotes: selectedNotesList,
                           initialTerms: selectedTermsList,
-                          onNotesChanged: (list) => selectedNotesList = list,
+                          noteController: noteController,
                           onTermsChanged: (list) => selectedTermsList = list,
+                          termId: '6',
                         ),
                       ),
 
@@ -447,6 +451,67 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                             ),
 
                             SizedBox(height: Sizes.height * .02),
+                            Row(
+                              children: [
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Checkbox(
+                                        fillColor: WidgetStatePropertyAll(
+                                          AppColor.primary,
+                                        ),
+                                        shape: ContinuousRectangleBorder(
+                                          borderRadius:
+                                              BorderRadiusGeometry.circular(5),
+                                        ),
+                                        value: printAfterSave,
+                                        onChanged: (v) {
+                                          onTogglePrint(v ?? true);
+                                          setState(() {});
+                                        },
+                                      ),
+                                      Text(
+                                        "Print PDF on save",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          color: AppColor.black,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Checkbox(
+                                        fillColor: WidgetStatePropertyAll(
+                                          AppColor.primary,
+                                        ),
+                                        shape: ContinuousRectangleBorder(
+                                          borderRadius:
+                                              BorderRadiusGeometry.circular(5),
+                                        ),
+                                        value: printSignature,
+                                        onChanged: (v) {
+                                          onToggleSignature(v ?? true);
+                                          setState(() {});
+                                        },
+                                      ),
+                                      Text(
+                                        "Print Signature in PDF",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          color: AppColor.black,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),

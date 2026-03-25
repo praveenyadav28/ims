@@ -419,6 +419,7 @@ class _ContraEntryState extends State<ContraEntry> {
     );
     if (response['status'] == true) {
       voucherNoController.text = response['NextNo'].toString();
+      prefixController.text = response['prefix'].toString();
     }
   }
 

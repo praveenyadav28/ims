@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -68,6 +70,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   final cashMobileController = TextEditingController();
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
+  final noteController = TextEditingController();
   final validForController = TextEditingController();
   final salesPersonController = TextEditingController();
   DateTime pickedEstimateDate = DateTime.now();
@@ -77,7 +80,8 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   late List<String> statesSuggestions;
   DateTime? pickedValidityDate;
 
-
+  Timer? _ledgerDebounce;
+  Timer? _itemDebounce;
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
   List<MiscChargeModelList> miscList = [];
@@ -86,6 +90,20 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
   void onTogglePrint(bool value) {
     setState(() {
       printAfterSave = value;
+    });
+  }
+
+  bool sendWhatsApp = false;
+  void onToggleWhatsApp(bool value) {
+    setState(() {
+      sendWhatsApp = value;
+    });
+  }
+
+  bool printSignature = true;
+  void onToggleSignature(bool value) {
+    setState(() {
+      printSignature = value;
     });
   }
 
@@ -117,8 +135,9 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
       // set estimate dates & validity
       pickedEstimateDate = e.estimateDate;
       pickedValidityDate = e.estimateDate.add(Duration(days: e.paymentTerms));
-
-      selectedNotesList = e.notes;
+      if (widget.estimateData != null) {
+        noteController.text = widget.estimateData!.notes.join(", ");
+      }
       selectedTermsList = e.terms;
 
       // If the estimate is a direct sale, enable direct sale mode in BLoC.
@@ -350,36 +369,21 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                         mobile: cashMobileController.text,
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
-                        notes: selectedNotesList,
+                        notes: noteController.text.trim().isEmpty
+                            ? []
+                            : [noteController.text.trim()],
                         terms: selectedTermsList,
                         signatureImage: null,
                         updateId: widget.estimateData?.id,
                         stateName: stateController.text,
                         printAfterSave: printAfterSave,
+                        printSignature: printSignature,
+                        sendWhatsApp: sendWhatsApp,
                       ),
                     );
                   },
                 ),
                 const SizedBox(width: 10),
-                Checkbox(
-                  fillColor: WidgetStatePropertyAll(AppColor.primary),
-                  shape: ContinuousRectangleBorder(
-                    borderRadius: BorderRadiusGeometry.circular(5),
-                  ),
-                  value: printAfterSave,
-                  onChanged: (v) {
-                    onTogglePrint(v ?? true);
-                    setState(() {});
-                  },
-                ),
-                Text(
-                  "Print   ",
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: AppColor.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ],
             ),
           ],
@@ -405,7 +409,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                         customers: state.customers,
                         focusNode: _customerFocus,
                         selectedCustomer: state.selectedCustomer,
-                        onSearchLedger: (text) => repo.searchLedger(text, true),
+                        onSearchLedger: (text) => _searchLedgerDebounced(text),
                         cusNameController: cusNameController,
                         mobileController: cashMobileController,
                         billingController: cashBillingController,
@@ -496,7 +500,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                       onAddRow: () => bloc.add(EstAddRow()),
                       onRemoveRow: (id) => bloc.add(EstRemoveRow(id)),
                       onUpdateRow: (row) => bloc.add(EstUpdateRow(row)),
-                      onSearchItem: (text) => repo.searchItems(text),
+                      onSearchItem: (text) => _searchItemDebounced(text),
                       onSelectCatalog: (rowId, item) {
                         bloc.add(EstSelectCatalogForRow(rowId, item));
 
@@ -523,10 +527,10 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                         Expanded(
                           flex: 10,
                           child: GlobalNotesSection(
-                            initialNotes: selectedNotesList,
                             initialTerms: selectedTermsList,
-                            onNotesChanged: (list) => selectedNotesList = list,
+                            noteController: noteController,
                             onTermsChanged: (list) => selectedTermsList = list,
+                            termId: '5',
                           ),
                         ),
 
@@ -575,6 +579,102 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                               ),
 
                               SizedBox(height: Sizes.height * .02),
+                              Row(
+                                children: [
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          fillColor: WidgetStatePropertyAll(
+                                            AppColor.primary,
+                                          ),
+                                          shape: ContinuousRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  5,
+                                                ),
+                                          ),
+                                          value: printAfterSave,
+                                          onChanged: (v) {
+                                            onTogglePrint(v ?? true);
+                                            setState(() {});
+                                          },
+                                        ),
+                                        Text(
+                                          "Print PDF on save",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: AppColor.black,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          fillColor: WidgetStatePropertyAll(
+                                            AppColor.primary,
+                                          ),
+                                          shape: ContinuousRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  5,
+                                                ),
+                                          ),
+                                          value: printSignature,
+                                          onChanged: (v) {
+                                            onToggleSignature(v ?? true);
+                                            setState(() {});
+                                          },
+                                        ),
+                                        Text(
+                                          "Print Signature in PDF",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: AppColor.black,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          fillColor: WidgetStatePropertyAll(
+                                            AppColor.primary,
+                                          ),
+                                          shape: ContinuousRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  5,
+                                                ),
+                                          ),
+                                          value: sendWhatsApp,
+                                          onChanged: (v) {
+                                            onToggleWhatsApp(v ?? true);
+                                            setState(() {});
+                                          },
+                                        ),
+                                        Text(
+                                          "Send PdF on Whatsapp",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: AppColor.black,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -658,5 +758,31 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
         ],
       ),
     );
+  }
+
+  Future<List<LedgerModelDrop>> _searchLedgerDebounced(String text) async {
+    if (_ledgerDebounce?.isActive ?? false) _ledgerDebounce!.cancel();
+
+    final completer = Completer<List<LedgerModelDrop>>();
+
+    _ledgerDebounce = Timer(const Duration(milliseconds: 500), () async {
+      final result = await repo.searchLedger(text, true);
+      completer.complete(result);
+    });
+
+    return completer.future;
+  }
+
+  Future<List<ItemServiceModel>> _searchItemDebounced(String text) async {
+    if (_itemDebounce?.isActive ?? false) _itemDebounce!.cancel();
+
+    final completer = Completer<List<ItemServiceModel>>();
+
+    _itemDebounce = Timer(const Duration(milliseconds: 500), () async {
+      final result = await repo.searchItems(text);
+      completer.complete(result);
+    });
+
+    return completer.future;
   }
 }

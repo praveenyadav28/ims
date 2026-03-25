@@ -43,10 +43,12 @@ class CreditNoteData {
   final String prefix;
   final int no;
   final String transId;
-  final int transNo;
+  final String transNo;
+  final String transPre;
   final DateTime creditNoteDate;
 
   final bool caseSale;
+  final bool printSig;
 
   final List<String> notes;
   final List<String> terms;
@@ -77,9 +79,11 @@ class CreditNoteData {
     required this.placeOfSupply,
     required this.mobile,
     required this.prefix,
+    required this.printSig,
     required this.no,
     required this.transId,
     required this.transNo,
+    required this.transPre,
     required this.creditNoteDate,
     required this.caseSale,
     required this.notes,
@@ -109,9 +113,11 @@ class CreditNoteData {
     mobile: (j["mobile"] ?? "").toString(),
 
     prefix: j["prefix"],
+    printSig: j["print_sig"] ?? true,
     no: j["no"],
     transId: j["purchaseinvoice_id"],
-    transNo: j["purchaseinvoice_no"],
+    transNo: (j["purchaseinvoice_no"] ?? "").toString(),
+    transPre: j["purchaseinvoice_pre"],
     creditNoteDate: DateTime.parse(j["purchasenote_date"]),
 
     caseSale: j["case_sale"] ?? false,

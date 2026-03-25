@@ -337,7 +337,7 @@ class _ContraListTableScreenState extends State<ContraListTableScreen> {
             flex: 2,
             child: Text(DateFormat('yyyy-MM-dd').format(p.date)),
           ),
-          Expanded(flex: 3, child: Text("${p.prefix} ${p.voucherNo}")),
+          Expanded(flex: 3, child: Text("${p.prefix}${p.prefix.isNotEmpty ? '-' : ''}${p.voucherNo}")),
           Expanded(flex: 3, child: Text(p.fromAccount)),
           Expanded(flex: 3, child: Text(p.toAccount)),
           Expanded(

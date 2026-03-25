@@ -1,5 +1,5 @@
 // ignore_for_file: must_be_immutable
-
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -8,14 +8,16 @@ import 'package:image_picker/image_picker.dart';
 import 'package:ims/model/ledger_model.dart';
 import 'package:ims/model/payment_model.dart';
 import 'package:ims/ui/master/company/company_api.dart';
+import 'package:ims/ui/master/customer_supplier/create.dart';
+import 'package:ims/ui/master/ledger/ledger_master.dart';
 import 'package:ims/ui/sales/data/reuse_print.dart';
 import 'package:ims/ui/sales/models/credit_note_data.dart';
-import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
 import 'package:ims/ui/sales/models/purchase_return_data.dart';
 import 'package:ims/ui/voucher/pdf_print.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
+import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
@@ -30,8 +32,8 @@ class PaymentEntry extends StatefulWidget {
 }
 
 class _PaymentEntryState extends State<PaymentEntry> {
+  List<PaymentRowModel> paymentRows = [];
   List<LedgerListModel> ledgerList = [];
-  LedgerListModel? selectedLedger;
   List<LedgerListModel> supplierList = [];
   LedgerListModel? selectedSupplier;
   List<String> invoiceList = [];
@@ -47,7 +49,6 @@ class _PaymentEntryState extends State<PaymentEntry> {
 
   TextEditingController partyController = TextEditingController();
   TextEditingController invoiceNoController = TextEditingController();
-  TextEditingController amountController = TextEditingController();
   TextEditingController dateController = TextEditingController(
     text:
         "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}",
@@ -55,6 +56,8 @@ class _PaymentEntryState extends State<PaymentEntry> {
   TextEditingController prefixController = TextEditingController();
   TextEditingController voucherNoController = TextEditingController();
   TextEditingController noteController = TextEditingController();
+  List<LedgerListModel> initialPartyList = [];
+  List<LedgerListModel> initialBankList = [];
 
   DateTime? selectedDate;
   Uint8List? paymentImage;
@@ -81,7 +84,30 @@ class _PaymentEntryState extends State<PaymentEntry> {
   @override
   void initState() {
     super.initState();
-    fetchLedgerData().then((onValue) {
+
+    if (paymentRows.isEmpty) {
+      paymentRows.add(PaymentRowModel());
+    }
+
+    searchLedger("").then((data) {
+      initialPartyList = data
+          .where(
+            (e) =>
+                e.ledgerGroup != "Bank Account" &&
+                e.ledgerGroup != "Cash In Hand",
+          )
+          .toList();
+
+      initialBankList = data
+          .where(
+            (e) =>
+                e.ledgerGroup == "Bank Account" ||
+                e.ledgerGroup == "Cash In Hand",
+          )
+          .toList();
+      supplierList = initialPartyList;
+      ledgerList = initialBankList;
+      setState(() {});
       if (widget.data != null) {
         fillDataForEdit();
       } else {
@@ -90,12 +116,19 @@ class _PaymentEntryState extends State<PaymentEntry> {
     });
   }
 
+  @override
+  void dispose() {
+    for (var row in paymentRows) {
+      row.amountController.dispose();
+    }
+    super.dispose();
+  }
+
   void fillDataForEdit() {
     final d = widget.data!;
 
     partyController.text = d.supplierName;
     selectedType = d.type.toString();
-    amountController.text = d.amount.toString();
     invoiceNoController.text = d.invoiceNo.toString();
     dateController.text =
         "${d.date.year}-${d.date.month.toString().padLeft(2, '0')}-${d.date.day.toString().padLeft(2, '0')}";
@@ -105,17 +138,24 @@ class _PaymentEntryState extends State<PaymentEntry> {
     noteController.text = d.note;
     existingDocuUrl = d.docu;
 
-    // match selected ledger
-    selectedLedger = ledgerList.firstWhere(
-      (e) => e.ledgerName == d.ledgerName,
-      orElse: () => ledgerList.first,
-    );
-
     // match supplier
     selectedSupplier = supplierList.firstWhere(
       (e) => e.ledgerName == d.supplierName,
       orElse: () => supplierList.first,
     );
+    paymentRows.clear();
+    for (var e in widget.data!.ledgerDetails!) {
+      final row = PaymentRowModel();
+
+      row.ledger = ledgerList.firstWhere(
+        (l) => l.id == e.ledgerId,
+        // orElse: () => null,
+      );
+
+      row.amountController.text = e.amount.toString();
+
+      paymentRows.add(row);
+    }
 
     setState(() {});
   }
@@ -145,7 +185,6 @@ class _PaymentEntryState extends State<PaymentEntry> {
         ),
 
         actions: [
-         
           Row(
             children: [
               defaultButton(
@@ -164,26 +203,27 @@ class _PaymentEntryState extends State<PaymentEntry> {
                 text: (widget.data != null) ? "Update" : "Save",
                 height: 40,
                 width: 113,
-              ),  const SizedBox(width: 10),
-                Checkbox(
-                  fillColor: WidgetStatePropertyAll(AppColor.primary),
-                  shape: ContinuousRectangleBorder(
-                    borderRadius: BorderRadiusGeometry.circular(5),
-                  ),
-                  value: printAfterSave,
-                  onChanged: (v) {
-                    onTogglePrint(v ?? true);
-                    setState(() {});
-                  },
+              ),
+              const SizedBox(width: 10),
+              Checkbox(
+                fillColor: WidgetStatePropertyAll(AppColor.primary),
+                shape: ContinuousRectangleBorder(
+                  borderRadius: BorderRadiusGeometry.circular(5),
                 ),
-                Text(
-                  "Print   ",
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: AppColor.black,
-                    fontWeight: FontWeight.w600,
-                  ),
+                value: printAfterSave,
+                onChanged: (v) {
+                  onTogglePrint(v ?? true);
+                  setState(() {});
+                },
+              ),
+              Text(
+                "Print   ",
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  color: AppColor.black,
+                  fontWeight: FontWeight.w600,
                 ),
+              ),
             ],
           ),
         ],
@@ -221,13 +261,31 @@ class _PaymentEntryState extends State<PaymentEntry> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    "Party Name",
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColor.textColor,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        "Party Name",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppColor.textColor,
+                                        ),
+                                      ),
+                                      Spacer(),
+                                      TextButton(
+                                        onPressed: () async {
+                                          await pushTo(
+                                            CreateCusSup(isCustomer: false),
+                                          );
+                                        },
+                                        child: Text(
+                                          "+ Create Supplier",
+                                          style: TextStyle(
+                                            color: AppColor.primary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 8),
                                   CommonSearchableDropdownField<
@@ -319,136 +377,183 @@ class _PaymentEntryState extends State<PaymentEntry> {
                             ),
                           ],
                         ),
+                        if (selectedType != "Other")
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(height: Sizes.height * .02),
+                              Text(
+                                "Invoice No",
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColor.textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              CommonSearchableDropdownField<String>(
+                                hintText: "Select Invoice Number",
+                                controller: invoiceNoController,
+                                suggestions: invoiceList
+                                    .map(
+                                      (e) => SearchFieldListItem<String>(
+                                        e,
+                                        item: e,
+                                      ),
+                                    )
+                                    .toList(),
+                                onSuggestionTap: (item) {
+                                  setState(() {
+                                    invoiceNoController.text = item.item ?? "";
+                                  });
+                                  fetchInvoicePending(
+                                    item.item!,
+                                  ); // 🔥 ADD THIS
+                                },
+                                suffixIcon:
+                                    selectedType != "Other" &&
+                                        invoiceNoController.text.isNotEmpty
+                                    ? Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          loadingPending
+                                              ? const SizedBox(
+                                                  height: 10,
+                                                  width: 10,
+                                                  child: GlowLoader(),
+                                                )
+                                              : Text(
+                                                  "₹ ${pendingAmount.toStringAsFixed(2)}",
+                                                  style: GoogleFonts.inter(
+                                                    fontWeight: FontWeight.w700,
+                                                    color: pendingAmount > 0
+                                                        ? Colors.red
+                                                        : Colors.green,
+                                                  ),
+                                                ),
+
+                                          if (advanceAmount > 0)
+                                            Text(
+                                              "Adv: ₹ ${advanceAmount.toStringAsFixed(2)}",
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.blue,
+                                              ),
+                                            ),
+                                        ],
+                                      )
+                                    : const SizedBox.shrink(),
+                              ),
+                            ],
+                          ),
+
+                        if (selectedType != "Other") SizedBox(width: 10),
                         SizedBox(height: Sizes.height * .02),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Payment Mode",
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppColor.textColor,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            CommonDropdownField<LedgerListModel>(
-                              hintText: "Select Payment Mode",
-                              value: selectedLedger,
-                              items: ledgerList.map((ledger) {
-                                return DropdownMenuItem<LedgerListModel>(
-                                  value: ledger,
+                            Row(
+                              children: [
+                                Text("Payment Modes"),
+                                Spacer(),
+                                TextButton(
+                                  onPressed: () async {
+                                    await pushTo(CreateLedger());
+                                  },
                                   child: Text(
-                                    ledger.ledgerName ?? "",
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColor.textColor,
-                                    ),
+                                    "+ Create Ledger",
+                                    style: TextStyle(color: AppColor.primary),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            SizedBox(height: 8),
+
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: NeverScrollableScrollPhysics(),
+                              itemCount: paymentRows.length,
+                              itemBuilder: (context, index) {
+                                final row = paymentRows[index];
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      /// Ledger Dropdown
+                                      Expanded(
+                                        flex: 3,
+                                        child:
+                                            CommonDropdownField<
+                                              LedgerListModel
+                                            >(
+                                              hintText: "Select Mode",
+                                              value:
+                                                  ledgerList.contains(
+                                                    row.ledger,
+                                                  )
+                                                  ? row.ledger
+                                                  : null,
+                                              items: ledgerList.map((ledger) {
+                                                return DropdownMenuItem(
+                                                  value: ledger,
+                                                  child: Text(
+                                                    ledger.ledgerName ?? "",
+                                                  ),
+                                                );
+                                              }).toList(),
+                                              onChanged: (v) {
+                                                setState(() {
+                                                  row.ledger = v;
+                                                });
+                                              },
+                                            ),
+                                      ),
+
+                                      SizedBox(width: 10),
+
+                                      /// Amount
+                                      Expanded(
+                                        flex: 2,
+                                        child: CommonTextField(
+                                          controller: row.amountController,
+                                          hintText: "Amount",
+                                        ),
+                                      ),
+
+                                      /// Delete Button
+                                      index != paymentRows.length - 1
+                                          ? IconButton(
+                                              icon: Icon(
+                                                Icons.delete,
+                                                color: Colors.red,
+                                              ),
+                                              onPressed: () {
+                                                setState(() {
+                                                  paymentRows.removeAt(index);
+                                                });
+                                              },
+                                            )
+                                          : IconButton(
+                                              onPressed: () {
+                                                setState(() {
+                                                  paymentRows.add(
+                                                    PaymentRowModel(),
+                                                  );
+                                                });
+                                              },
+                                              icon: Icon(Icons.add),
+                                            ),
+                                    ],
                                   ),
                                 );
-                              }).toList(),
-
-                              onChanged: (LedgerListModel? v) {
-                                setState(() {
-                                  selectedLedger = v;
-                                });
                               },
-                            ),
-                          ],
-                        ),
-
-                        SizedBox(height: Sizes.height * .02),
-                        Row(
-                          children: [
-                            if (selectedType != "Other")
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Invoice No",
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColor.textColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    CommonSearchableDropdownField<String>(
-                                      hintText: "Select Invoice Number",
-                                      controller: invoiceNoController,
-                                      suggestions: invoiceList
-                                          .map(
-                                            (e) => SearchFieldListItem<String>(
-                                              e,
-                                              item: e,
-                                            ),
-                                          )
-                                          .toList(),
-                                      onSuggestionTap: (item) {
-                                        setState(() {
-                                          invoiceNoController.text =
-                                              item.item ?? "";
-                                        });
-                                        fetchInvoicePending(
-                                          item.item!,
-                                        ); // 🔥 ADD THIS
-                                      },
-                                      suffixIcon:
-                                          selectedType != "Other" &&
-                                              invoiceNoController
-                                                  .text
-                                                  .isNotEmpty
-                                          ? Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.end,
-                                              children: [
-                                                loadingPending
-                                                    ? const SizedBox(
-                                                        height: 10,
-                                                        width: 10,
-                                                        child: GlowLoader(),
-                                                      )
-                                                    : Text(
-                                                        "₹ ${pendingAmount.toStringAsFixed(2)}",
-                                                        style: GoogleFonts.inter(
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                          color:
-                                                              pendingAmount > 0
-                                                              ? Colors.red
-                                                              : Colors.green,
-                                                        ),
-                                                      ),
-
-                                                if (advanceAmount > 0)
-                                                  Text(
-                                                    "Adv: ₹ ${advanceAmount.toStringAsFixed(2)}",
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 11,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: Colors.blue,
-                                                    ),
-                                                  ),
-                                              ],
-                                            )
-                                          : const SizedBox.shrink(),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            if (selectedType != "Other") SizedBox(width: 10),
-                            Expanded(
-                              child: TitleTextFeild(
-                                controller: amountController,
-                                titleText: "Enter Payment Amount",
-                                hintText: "0",
-                              ),
                             ),
                           ],
                         ),
@@ -679,37 +784,6 @@ class _PaymentEntryState extends State<PaymentEntry> {
     );
   }
 
-  Future<void> fetchLedgerData() async {
-    final response = await ApiService.fetchData(
-      "get/ledger",
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-
-    final List data = response['data'] ?? [];
-
-    final allLedgers = data.map((e) => LedgerListModel.fromJson(e)).toList();
-
-    setState(() {
-      /// Bank + Cash
-      ledgerList = allLedgers
-          .where(
-            (e) =>
-                e.ledgerGroup == 'Bank Account' ||
-                e.ledgerGroup == 'Cash In Hand',
-          )
-          .toList();
-
-      /// Customers (Exclude Bank & Cash)
-      supplierList = allLedgers
-          .where(
-            (e) =>
-                e.ledgerGroup != 'Bank Account' &&
-                e.ledgerGroup != 'Cash In Hand',
-          )
-          .toList();
-    });
-  }
-
   Future<void> pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -726,21 +800,57 @@ class _PaymentEntryState extends State<PaymentEntry> {
     }
   }
 
-  Future<void> savePaymentVoucher() async {
-    if (selectedLedger == null || selectedSupplier == null) return;
+  List<Map<String, dynamic>> get ledgerDetails => paymentRows.map((e) {
+    return {
+      "ledger_id": e.ledger?.id,
+      "ledger_name": e.ledger?.ledgerName,
+      "amount": e.amountController.text,
+    };
+  }).toList();
+  double get totalAmount {
+    return paymentRows.fold(
+      0,
+      (sum, e) => sum + (double.tryParse(e.amountController.text) ?? 0),
+    );
+  }
 
+  Future<void> savePaymentVoucher() async {
+    if (selectedSupplier == null) return;
+
+    if (paymentRows.isEmpty) {
+      showCustomSnackbarError(context, "Add at least one payment mode");
+      return;
+    }
+    for (var row in paymentRows) {
+      if (row.ledger == null) {
+        showCustomSnackbarError(context, "Select all payment modes");
+        return;
+      }
+
+      final amt = double.tryParse(row.amountController.text);
+
+      if (amt == null || amt <= 0) {
+        showCustomSnackbarError(context, "Amount must be greater than 0");
+        return;
+      }
+    }
+    final ids = paymentRows.map((e) => e.ledger?.id).toList();
+
+    if (ids.toSet().length != ids.length) {
+      showCustomSnackbarError(context, "Duplicate payment mode not allowed");
+      return;
+    }
     final body = {
       "licence_no": Preference.getint(PrefKeys.licenseNo),
       "branch_id": Preference.getString(PrefKeys.locationId),
-      "ledger_id": selectedLedger!.id,
-      "ledger_name": selectedLedger!.ledgerName,
       "supplier_id": selectedSupplier!.id,
       "supplier_name": selectedSupplier!.ledgerName,
-      "amount": double.parse(amountController.text),
+      "ledger_details": jsonEncode(ledgerDetails),
       if (invoiceNoController.text.isNotEmpty)
         "invoice_no": invoiceNoController.text,
       "date": dateController.text, // yyyy-MM-dd
       "prefix": prefixController.text,
+      "amount2": totalAmount.toString(),
       "vouncher_no": voucherNoController.text,
       "note": noteController.text,
       "type": selectedType,
@@ -778,6 +888,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
     );
     if (response['status'] == true) {
       voucherNoController.text = response['next_no'].toString();
+      prefixController.text = response['prefix'].toString();
     }
   }
 
@@ -795,177 +906,136 @@ class _PaymentEntryState extends State<PaymentEntry> {
       return;
     }
 
-    if (selectedType == "Purchase Invoice") {
+    try {
       final res = await ApiService.fetchData(
-        "get/purchaseinvoice",
+        "get/ledgerreports/${selectedSupplier!.id}",
         licenceNo: Preference.getint(PrefKeys.licenseNo),
       );
 
-      invoiceList = (res['data'] as List)
-          .where((e) => e['supplier_id'] == selectedSupplier!.id)
-          .map((e) => "${e['no']}")
-          .toList();
+      List<String> tempList = [];
+
+      /// 🔥 PURCHASE INVOICE
+      if (selectedType == "Purchase Invoice") {
+        for (var e in res['Purchaseinvoice'] ?? []) {
+          tempList.add("${e['prefix']}${e['no']}");
+        }
+      }
+
+      /// 🔥 SALE RETURN
+      if (selectedType == "Sale Return") {
+        for (var e in res['Salereturn'] ?? []) {
+          tempList.add("${e['prefix']}${e['no']}");
+        }
+      }
+
+      /// 🔥 DEBIT NOTE
+      if (selectedType == "Debit Note") {
+        for (var e in res['Debitnote'] ?? []) {
+          tempList.add("${e['prefix']}${e['no']}");
+        }
+      }
+
+      invoiceList = tempList;
+
+      setState(() {});
+    } catch (e) {
+      invoiceList = [];
+      setState(() {});
     }
-
-    if (selectedType == "Sale Return") {
-      final res = await ApiService.fetchData(
-        "get/returnsale",
-        licenceNo: Preference.getint(PrefKeys.licenseNo),
-      );
-
-      invoiceList = (res['data'] as List)
-          .where((e) => e['customer_id'] == selectedSupplier!.id)
-          .map((e) => "${e['no']}")
-          .toList();
-    }
-
-    if (selectedType == "Debit Note") {
-      final res = await ApiService.fetchData(
-        "get/debitnote",
-        licenceNo: Preference.getint(PrefKeys.licenseNo),
-      );
-
-      invoiceList = (res['data'] as List)
-          .where((e) => e['customer_id'] == selectedSupplier!.id)
-          .map((e) => "${e['no']}")
-          .toList();
-    }
-
-    setState(() {});
   }
 
   Future<void> fetchInvoicePending(String invoiceKey) async {
     try {
       setState(() => loadingPending = true);
 
-      double saleInvoiceAmt = 0;
-      double totalReceipt = 0;
-      double totalSaleReturn = 0;
-      double totalDebitNote = 0;
-      double paymentAgainstReturn = 0;
+      double purchaseInvoiceAmt = 0;
+      double totalPayment = 0;
+      double totalPurchaseReturn = 0;
+      double totalCreditNote = 0;
+      double receiptAgainstReturn = 0;
 
-      /// ================= SALE INVOICE =================
-      final invRes = await ApiService.fetchData(
-        "get/purchaseinvoice",
+      final res = await ApiService.fetchData(
+        "get/ledgerreports/${selectedSupplier!.id}",
         licenceNo: Preference.getint(PrefKeys.licenseNo),
       );
 
-      final saleInvoices = PurchaseInvoiceListResponse.fromJson(invRes).data;
+      /// ================= PURCHASE INVOICE =================
+      for (var e in res['Purchaseinvoice'] ?? []) {
+        print(e);
+        if ("${e['prefix']}${e['no']}" == invoiceKey) {
+          purchaseInvoiceAmt = (e['totle_amo'] as num?)?.toDouble() ?? 0;
+          break;
+        }
+      }
 
-      final invoice = saleInvoices.firstWhere(
-        (e) => "${e.prefix}${e.no}" == invoiceKey,
-        orElse: () => PurchaseInvoiceData(
-          id: "",
-          licenceNo: 0,
-          branchId: "",
-          supplierId: "",
-          supplierName: "",
-          address0: "",
-          address1: "",
-          placeOfSupply: "",
-          mobile: "",
-          prefix: "",
-          purchaseorderName: "",
-          purchaseorderId: 0,
-          no: 0,
-          purchaseInvoiceDate: DateTime.now(),
-          caseSale: false,
-          notes: [],
-          terms: [],
-          subTotal: 0,
-          subGst: 0,
-          autoRound: false,
-          totalAmount: 0,
-          additionalCharges: [],
-          discountLines: [],
-          miscCharges: [],
-          itemDetails: [],
-          signature: "",
-        ),
-      );
+      /// ================= PAYMENTS =================
+      final payments = <PaymentModel>[];
+      for (var e in res['Payment'] ?? []) {
+        if ("${e['invoice_no']}" == invoiceKey) {
+          final model = PaymentModel.fromJson(e);
+          payments.add(model);
+          totalPayment += model.amount;
+        }
+      }
 
-      saleInvoiceAmt = invoice.totalAmount;
+      /// ================= PURCHASE RETURNS =================
+      final purchaseReturns = <PurchaseReturnData>[];
+      for (var e in res['Purchasereturn'] ?? []) {
+        if ("${e['invoice_pre']}${e['invoice_no']}" == invoiceKey) {
+          final model = PurchaseReturnData.fromJson(e);
+          purchaseReturns.add(model);
+          totalPurchaseReturn += model.totalAmount;
+        }
+      }
 
-      /// ================= RECEIPTS =================
-      final recRes = await ApiService.fetchData(
-        "get/payment", // ✅ spelling fixed
-        licenceNo: Preference.getint(PrefKeys.licenseNo),
-      );
+      /// ================= CREDIT NOTES =================
+      final creditNotes = <CreditNoteData>[];
+      for (var e in res['Creditnote'] ?? []) {
+        if ("${e['invoice_pre']}${e['invoice_no']}" == invoiceKey) {
+          final model = CreditNoteData.fromJson(e);
+          creditNotes.add(model);
+          totalCreditNote += model.totalAmount;
+        }
+      }
 
-      final receipts = (recRes['data'] as List? ?? [])
-          .map((e) => PaymentModel.fromJson(e))
-          .where((e) => "${e.prefix}${e.invoiceNo}" == invoiceKey)
-          .toList();
+      /// ================= RECEIPTS AGAINST RETURN =================
+      final receiptsOnReturns = <PaymentModel>[];
 
-      totalReceipt = receipts.fold(0.0, (p, e) => p + e.amount);
+      final returnNos = purchaseReturns.map((e) => "${e.no}").toSet();
 
-      /// ================= SALE RETURNS =================
-      final srRes = await ApiService.fetchData(
-        "get/purchasereturn",
-        licenceNo: Preference.getint(PrefKeys.licenseNo),
-      );
+      for (var e in res['Recipt'] ?? []) {
+        if (returnNos.contains("${e['invoice_no']}")) {
+          final model = PaymentModel.fromJson(e);
+          receiptsOnReturns.add(model);
+          receiptAgainstReturn += model.amount;
+        }
+      }
 
-      final saleReturns = PurchaseReturnListResponse.fromJson(
-        srRes,
-      ).data.where((e) => "${e.transNo}" == invoiceKey).toList();
-
-      totalSaleReturn = saleReturns.fold(0.0, (p, e) => p + e.totalAmount);
-
-      /// ================= DEBIT NOTES =================
-      final dnRes = await ApiService.fetchData(
-        "get/purchasenote",
-        licenceNo: Preference.getint(PrefKeys.licenseNo),
-      );
-      final debitNotes = CreditNoteListResponse.fromJson(dnRes).data.where((e) {
-        return "${e.transNo}" == invoiceKey;
-      }).toList();
-
-      totalDebitNote = debitNotes.fold(0.0, (p, e) => p + e.totalAmount);
-
-      /// ================= PAYMENTS AGAINST RETURN =================
-      final payRes = await ApiService.fetchData(
-        "get/reciept",
-        licenceNo: Preference.getint(PrefKeys.licenseNo),
-      );
-
-      final payments = (payRes['data'] as List? ?? [])
-          .map((e) => PaymentModel.fromJson(e))
-          .toList();
-
-      final relatedReturnNos = saleReturns.map((e) => e.no).toSet();
-
-      final paymentsOnReturns = payments.where(
-        (p) => relatedReturnNos.contains(p.invoiceNo),
-      );
-
-      paymentAgainstReturn = paymentsOnReturns.fold(
-        0.0,
-        (p, e) => p + e.amount,
-      );
-
-      /// ================= FINAL PENDING =================
+      /// ================= FINAL CALCULATION =================
       final rawPending =
-          saleInvoiceAmt -
-          totalReceipt -
-          totalSaleReturn -
-          totalDebitNote +
-          paymentAgainstReturn;
+          purchaseInvoiceAmt -
+          totalPayment -
+          totalPurchaseReturn -
+          totalCreditNote +
+          receiptAgainstReturn;
+
       double pending = rawPending;
       double advance = 0;
 
       if (rawPending < 0) {
-        advance = rawPending.abs(); // customer ne extra de diya
+        advance = rawPending.abs();
         pending = 0;
       }
 
       setState(() {
-        relatedPayments = receipts;
-        relatedPurchaseReturns = saleReturns;
-        relatedCreditNotes = debitNotes;
-        relatedRecieptOnReturn = paymentsOnReturns.toList();
-        showTransactions = true;
+        relatedPayments = payments;
+        relatedPurchaseReturns = purchaseReturns;
+        relatedCreditNotes = creditNotes;
+        relatedRecieptOnReturn = receiptsOnReturns;
+
         pendingAmount = pending;
         advanceAmount = advance;
+        showTransactions = true;
         loadingPending = false;
       });
     } catch (e) {
@@ -1011,4 +1081,35 @@ class _PaymentEntryState extends State<PaymentEntry> {
       ),
     );
   }
+
+  Future<List<LedgerListModel>> searchLedger(
+    String text, {
+    List<String>? groups,
+  }) async {
+    try {
+      final res = await ApiService.fetchData(
+        text.isEmpty ? "get/ledger/search" : "get/ledger/search?search=$text",
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      final data = (res?['data'] as List?) ?? [];
+
+      final list = data.map((e) => LedgerListModel.fromJson(e)).toList();
+
+      // 🔥 group filter (frontend)
+      if (groups != null && groups.isNotEmpty) {
+        return list.where((e) => groups.contains(e.ledgerGroup)).toList();
+      }
+
+      return list;
+    } catch (e) {
+      return [];
+    }
+  }
+}
+
+class PaymentRowModel {
+  LedgerListModel? ledger;
+  TextEditingController amountController = TextEditingController();
+  TextEditingController ledgerController = TextEditingController();
 }

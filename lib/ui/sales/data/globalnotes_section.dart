@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/misc_model.dart';
-import 'package:ims/ui/group/notes.dart';
+import 'package:ims/ui/group/terms_contions.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
@@ -11,21 +10,27 @@ import 'package:ims/utils/textfield.dart';
 /// ----------------------------------------------------
 ///          NOTES SECTION (handles Notes + Terms)
 /// ----------------------------------------------------
-class GlobalNotesSection extends StatelessWidget {
-  final List<String> initialNotes; // <-- NEW
+class GlobalNotesSection extends StatefulWidget {
   final List<String> initialTerms; // <-- NEW
 
-  final Function(List<String>) onNotesChanged;
   final Function(List<String>) onTermsChanged;
+  final TextEditingController? noteController;
+  final String? termId;
 
   const GlobalNotesSection({
     super.key,
-    required this.initialNotes,
     required this.initialTerms,
-    required this.onNotesChanged,
     required this.onTermsChanged,
+    this.noteController,
+    this.termId,
   });
 
+  @override
+  State<GlobalNotesSection> createState() => _GlobalNotesSectionState();
+}
+
+class _GlobalNotesSectionState extends State<GlobalNotesSection> {
+  bool expanded = false;
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -33,17 +38,42 @@ class GlobalNotesSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          NotesTcExpandable(
-            title: "Notes",
-            miscId: "10",
-            initialList: initialNotes, // <-- NEW
-            onSelectedChanged: onNotesChanged,
+          InkWell(
+            onTap: () => setState(() => expanded = !expanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    expanded ? Icons.remove : Icons.add,
+                    size: 20,
+                    color: Colors.deepPurple,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    "Add Noted",
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Colors.deepPurple,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
+
+          if (expanded)
+            TitleTextFeild(
+              controller: widget.noteController,
+              titleText: "Notes",
+              maxLines: 3,
+            ),
           NotesTcExpandable(
             title: "Terms and Conditions",
-            miscId: "11",
-            initialList: initialTerms, // <-- NEW
-            onSelectedChanged: onTermsChanged,
+            miscId: widget.termId ?? "2",
+            initialList: widget.initialTerms, // <-- NEW
+            onSelectedChanged: widget.onTermsChanged,
           ),
         ],
       ),
@@ -89,21 +119,6 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
     _fetch(); // load all misc items
   }
 
-  Future<void> _fetch() async {
-    final res = await ApiService.fetchData(
-      "get/misc",
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-
-    if (res != null && res["status"] == true) {
-      final model = miscResponseFromJson(jsonEncode(res));
-
-      setState(() {
-        list = model.data.where((e) => e.miscId == widget.miscId).toList();
-      });
-    }
-  }
-
   void _openAddDialog() async {
     await showDialog(
       context: context,
@@ -114,12 +129,14 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
         child: SizedBox(
           width: 700,
           height: 550,
-          child: AddNotesScreen(miscId: widget.miscId, name: widget.title),
+          child: ManageTermsConditionsScreen(
+            transactionId: widget.miscId, // 👈 important
+          ),
         ),
       ),
     ).then((updateData) {
       if (updateData != null) {
-        _fetch();
+        _fetch(); // refresh after closing
       }
     });
   }
@@ -190,35 +207,6 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
 
                 const SizedBox(height: 10),
 
-                /// Dropdown list of notes/terms
-                CommonDropdownField<String>(
-                  hintText: "Select ${widget.title}",
-                  value: null,
-                  items: list.map((item) {
-                    return DropdownMenuItem(
-                      value: item.id,
-                      child: Text(item.name ?? ""),
-                    );
-                  }).toList(),
-                  onChanged: (id) {
-                    if (id != null) {
-                      final item = list.firstWhere(
-                        (e) => e.id == id,
-                        orElse: () => list.first,
-                      );
-
-                      if (!selected.contains(item.name)) {
-                        setState(() {
-                          selected.add(item.name ?? "");
-                          widget.onSelectedChanged(selected);
-                        });
-                      }
-                    }
-                  },
-                ),
-
-                const SizedBox(height: 12),
-
                 /// Selected notes/terms list
                 ...selected.map((name) {
                   return Card(
@@ -238,5 +226,41 @@ class _NotesTcExpandableState extends State<NotesTcExpandable> {
         const SizedBox(height: 10),
       ],
     );
+  }
+
+  Future<void> _fetch() async {
+    final res = await ApiService.fetchData(
+      "get/term", // 👈 NEW API
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    if (res != null && res["status"] == true) {
+      final fullList = res["data"] as List;
+
+      final filtered = fullList.where((item) {
+        return (item["id"] ?? "").toString() == widget.miscId.toString();
+      }).toList();
+
+      setState(() {
+        // 👉 dropdown list ke liye
+        list = filtered
+            .map(
+              (e) => MiscItem(
+                id: e["id"],
+                name: e["remark"],
+                miscId: widget.miscId,
+              ),
+            )
+            .toList();
+
+        // 🔥 AUTO SELECT ACTIVE TERMS
+        selected = filtered
+            .where((e) => e["status"] == true)
+            .map<String>((e) => e["remark"].toString())
+            .toList();
+
+        widget.onSelectedChanged(selected);
+      });
+    }
   }
 }

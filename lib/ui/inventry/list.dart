@@ -71,7 +71,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     setState(() => loading = true);
 
     final res = await ApiService.fetchData(
-      'get/item',
+      'get/items',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
@@ -532,27 +532,30 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-Future<void> exportItemsCsv() async {
-  setState(() => isloading = true);
+  Future<void> exportItemsCsv() async {
+    setState(() => isloading = true);
 
-  final items = filteredList;
+    final items = filteredList;
 
-  final buffer = StringBuffer();
+    final buffer = StringBuffer();
 
-  buffer.writeln(
-      "Item Code,Item Name,Selling Price,Purchase Price,GST Rate,Stock Qty,Bin No,HSN Code,Unit,Group");
-
-  for (final item in items) {
     buffer.writeln(
-        "${item.itemNo},${item.itemName},${item.salesPrice},${item.purchasePriceSe},${item.gstRate},${item.stockQty},${item.other1},${item.hsnCode},${item.baseUnit},${item.group}");
+      "Item Code,Item Name,Selling Price,Purchase Price,GST Rate,Stock Qty,Bin No,HSN Code,Unit,Group",
+    );
+
+    for (final item in items) {
+      buffer.writeln(
+        "${item.itemNo},${item.itemName},${item.salesPrice},${item.purchasePriceSe},${item.gstRate},${item.stockQty},${item.other1},${item.hsnCode},${item.baseUnit},${item.group}",
+      );
+    }
+
+    final bytes = Uint8List.fromList(buffer.toString().codeUnits);
+
+    downloadExcel(bytes, fileName: "inventory.csv");
+
+    setState(() => isloading = false);
   }
 
-  final bytes = Uint8List.fromList(buffer.toString().codeUnits);
-
-  downloadExcel(bytes, fileName: "inventory.csv");
-
-  setState(() => isloading = false);
-}
   /// ================== WIDGETS ==================
   Widget _infoCard({
     required String title,

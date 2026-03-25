@@ -107,6 +107,11 @@ class CreditNoteSetTransNo extends CreditNoteEvent {
   CreditNoteSetTransNo(this.number);
 }
 
+class CreditNoteSetTransPrefix extends CreditNoteEvent {
+  final String prefix;
+  CreditNoteSetTransPrefix(this.prefix);
+}
+
 class CreditNoteUpdateEstimateNo extends CreditNoteEvent {
   final String value;
   CreditNoteUpdateEstimateNo(this.value);
@@ -116,6 +121,7 @@ class CreditNoteUpdatePrefix extends CreditNoteEvent {
   final String value;
   CreditNoteUpdatePrefix(this.value);
 }
+
 class CreditNoteSearchTransaction extends CreditNoteEvent {}
 
 /// ------------------- STATE -------------------
@@ -131,6 +137,7 @@ class CreditNoteState {
   final DateTime? creditNoteDate;
   final String transNo; // user input number as string
   final String? transId; // loaded transaction id (from backend) if any
+  final String transPrefix; // user input number as string
   final List<NoteModelItem> rows;
   final List<AdditionalCharge> charges;
   final List<GlobalMiscChargeEntry> miscCharges; // UI entries
@@ -172,6 +179,7 @@ class CreditNoteState {
     this.notes = const [],
     this.terms = const [],
     this.transNo = "",
+    this.transPrefix = "",
     this.transId,
   });
 
@@ -198,6 +206,7 @@ class CreditNoteState {
     List<String>? notes,
     List<String>? terms,
     String? transNo,
+    String? transPrefix,
     String? transId,
   }) {
     return CreditNoteState(
@@ -223,6 +232,7 @@ class CreditNoteState {
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
       transNo: transNo ?? this.transNo,
+      transPrefix: transPrefix ?? this.transPrefix,
       transId: transId ?? this.transId,
     );
   }
@@ -240,6 +250,7 @@ class CreditNoteSaveWithUIData extends CreditNoteEvent {
   final List<String> terms;
   final Uint8List? signatureImage; // NEW
   final bool printAfterSave; // NEW
+  final bool printSignatue; // NEW
 
   CreditNoteSaveWithUIData({
     required this.ledgerName,
@@ -252,6 +263,7 @@ class CreditNoteSaveWithUIData extends CreditNoteEvent {
     this.updateId,
     this.signatureImage,
     required this.printAfterSave,
+    required this.printSignatue,
   });
 }
 
@@ -282,7 +294,7 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
     on<CreditNoteUpdateCharge>(_onUpdateCharge);
     on<CreditNoteAddDiscount>(_onAddDiscount);
     on<CreditNoteRemoveDiscount>(_onRemoveDiscount);
-     on<CreditNoteUpdateEstimateNo>((event, emit) {
+    on<CreditNoteUpdateEstimateNo>((event, emit) {
       emit(state.copyWith(creditNoteNo: event.value));
     });
     on<CreditNoteUpdatePrefix>((event, emit) {
@@ -300,7 +312,9 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
     on<CreditNoteSetTransNo>((e, emit) {
       emit(state.copyWith(transNo: e.number));
     });
-
+    on<CreditNoteSetTransPrefix>((e, emit) {
+      emit(state.copyWith(transPrefix: e.prefix));
+    });
     on<CreditNoteSearchTransaction>(_onSearchTransaction);
   }
 
@@ -309,8 +323,8 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
     Emitter<CreditNoteState> emit,
   ) async {
     try {
-      // final ledgers = await repo.fetchLedger(false);
-      final creditNoteNo = await repo.fetchCreditNoteNo();
+      final ledgers = await repo.searchLedger("", false);
+      final creditNoteNoData = await repo.fetchCreditNoteNo();
       final hsnList = await repo.fetchHsnList();
 
       // fetch misc master list
@@ -323,8 +337,9 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
 
       emit(
         state.copyWith(
-          // ledgers: ledgers,
-          creditNoteNo: creditNoteNo,
+          ledgers: ledgers,
+          creditNoteNo: creditNoteNoData['next_no'] ?? '',
+          prefix: creditNoteNoData['prefix'] ?? '',
           hsnMaster: hsnList,
           miscMasterList: miscMaster,
           // ensure UI has at least one empty row to start
@@ -590,12 +605,14 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
           .getTransByNumberPurchase(
             transNo: transNoInt,
             transType: 'Purchaseinvoice',
+            prefix: state.transPrefix,
           );
 
       // map estimate -> CreditNote state (without touching prefix, CreditNoteNo, CreditNoteDate)
       final newState = _prefillCreditNoteFromTrans(estimate, state).copyWith(
         transId: estimate.id,
         transNo: state.transNo,
+        transPrefix: state.transPrefix,
         transPlaceOfSupply: estimate.placeOfSupply,
       );
 
@@ -711,6 +728,7 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
         "misccharge": miscCharges,
         "discount": discounts,
         "item_details": itemRows,
+        "print_sig": e.printSignatue,
       };
 
       // include trans fields only if present (from search)
@@ -718,8 +736,11 @@ class CreditNoteBloc extends Bloc<CreditNoteEvent, CreditNoteState> {
         payload["purchaseinvoice_id"] = state.transId;
       }
       if (state.transNo.isNotEmpty) {
-        payload["purchaseinvoice_no"] =
-            int.tryParse(state.transNo) ?? state.transNo;
+        payload["purchaseinvoice_no"] = state.transNo;
+      }
+      if (state.transPrefix.isNotEmpty) {
+        payload["purchaseinvoice_pre"] =
+            int.tryParse(state.transPrefix) ?? state.transPrefix;
       }
       if (itemRows.isEmpty) {
         showCustomSnackbarError(

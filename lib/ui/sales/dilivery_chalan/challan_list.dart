@@ -66,7 +66,8 @@ class _DiliveryChallanInvoiceListScreenState
       },
       idGetter: (e) => e.id,
       dateGetter: (e) => e.diliveryChallanDate,
-      numberGetter: (e) => "${e.prefix} ${e.no}",
+      numberGetter: (e) =>
+          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
       mobile: (e) => e.mobile,

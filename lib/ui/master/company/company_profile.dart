@@ -109,7 +109,6 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
         final data = response["data"];
         final company = data is List && data.isNotEmpty ? data.first : data;
 
-      
         setState(() {
           hasExistingProfile = true;
           companyId = company["_id"]; // ✅ store _id
@@ -146,8 +145,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
           hasExistingProfile = false;
         });
       }
-    } catch (e) {
-     }
+    } catch (e) {}
   }
 
   // ---------------- SAVE PROFILE (POST / PUT) ----------------
@@ -547,7 +545,12 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
     );
   }
 
-  Widget uploadBox(String title, Uint8List? file, String target, {double? width}) {
+  Widget uploadBox(
+    String title,
+    Uint8List? file,
+    String target, {
+    double? width,
+  }) {
     String imageUrl = "";
     if (target == 'company') imageUrl = companyLogoUrl;
     if (target == 'other') imageUrl = otherLogoUrl;

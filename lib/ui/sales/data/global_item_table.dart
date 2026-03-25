@@ -8,11 +8,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/inventry/item/create.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/navigation.dart';
+import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:searchfield/searchfield.dart';
 import '../models/global_models.dart';
 
-class GlobalItemsTableSection extends StatelessWidget {
+class GlobalItemsTableSection extends StatefulWidget {
   final String ledgerType;
   const GlobalItemsTableSection({
     super.key,
@@ -44,6 +45,23 @@ class GlobalItemsTableSection extends StatelessWidget {
   final Future<List<ItemServiceModel>> Function(String)? onSearchItem;
   final bool? isReturn;
   final Function()? onAddNextRow;
+
+  @override
+  State<GlobalItemsTableSection> createState() =>
+      _GlobalItemsTableSectionState();
+}
+
+class _GlobalItemsTableSectionState extends State<GlobalItemsTableSection> {
+  bool showBin = false;
+  bool showUnit = false;
+  @override
+  void initState() {
+    super.initState();
+
+    showBin = Preference.getBool("show_bin");
+    showUnit = Preference.getBool("show_unit");
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -68,6 +86,42 @@ class GlobalItemsTableSection extends StatelessWidget {
                 ),
               ),
               Spacer(),
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == "bin") {
+                    setState(() => showBin = !showBin);
+                    Preference.setBool("show_bin", showBin);
+                  }
+
+                  if (value == "unit") {
+                    setState(() => showUnit = !showUnit);
+                    Preference.setBool("show_unit", showUnit);
+                  }
+                },
+                itemBuilder: (context) => [
+                  CheckedPopupMenuItem(
+                    value: "bin",
+                    checked: showBin,
+                    child: const Text("Show Bin"),
+                  ),
+                  CheckedPopupMenuItem(
+                    value: "unit",
+                    checked: showUnit,
+                    child: const Text("Show Unit"),
+                  ),
+                ],
+                child: Container(
+                  height: 32,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColor.primary.withOpacity(.6)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.tune, color: AppColor.primary, size: 18),
+                ),
+              ),
+
+              const SizedBox(width: 10),
 
               InkWell(
                 borderRadius: BorderRadius.circular(8),
@@ -120,27 +174,30 @@ class GlobalItemsTableSection extends StatelessWidget {
           _buildHeader(),
           const Divider(),
           Column(
-            children: rows.map((r) {
+            children: widget.rows.map((r) {
               return _GlobalItemRowWidget(
                 key: ValueKey(r.localId),
                 row: r,
-                rows: rows, // 👈 add
-                catalogue: catalogue,
-                hsnList: hsnList,
-                onUpdate: onUpdateRow,
-                onRemove: () => onRemoveRow(r.localId),
-                onSelectCatalog: (item) => onSelectCatalog(r.localId, item),
-                onSelectHsn: (hsn) => onSelectHsn(r.localId, hsn),
-                onToggleUnit: (v) => onToggleUnit(r.localId, v),
-                isReturn: isReturn,
-                ledgerType: ledgerType,
-                onSearchItem: onSearchItem,
-                onAddNextRow: onAddNextRow, // ✅ add this
+                rows: widget.rows,
+                catalogue: widget.catalogue,
+                hsnList: widget.hsnList,
+                onUpdate: widget.onUpdateRow,
+                onRemove: () => widget.onRemoveRow(r.localId),
+                onSelectCatalog: (item) =>
+                    widget.onSelectCatalog(r.localId, item),
+                onSelectHsn: (hsn) => widget.onSelectHsn(r.localId, hsn),
+                onToggleUnit: (v) => widget.onToggleUnit(r.localId, v),
+                isReturn: widget.isReturn,
+                ledgerType: widget.ledgerType,
+                onSearchItem: widget.onSearchItem,
+                onAddNextRow: widget.onAddNextRow,
+                showBin: showBin,
+                showUnit: showUnit,
               );
             }).toList(),
           ),
           const SizedBox(height: 12),
-          if (isReturn ?? true == true)
+          if (widget.isReturn ?? true == true)
             DottedBorder(
               options: RectDottedBorderOptions(
                 color: AppColor.primarydark,
@@ -148,7 +205,7 @@ class GlobalItemsTableSection extends StatelessWidget {
               ),
 
               child: InkWell(
-                onTap: onAddRow,
+                onTap: widget.onAddRow,
                 child: Container(
                   height: 46,
                   alignment: Alignment.center,
@@ -178,8 +235,15 @@ class GlobalItemsTableSection extends StatelessWidget {
           _gap(),
           Expanded(child: Text('QTY', textAlign: TextAlign.center)),
           _gap(),
-          Expanded(child: Text('UNIT', textAlign: TextAlign.center)),
-          _gap(),
+          if (showUnit) ...[
+            Expanded(child: Text('UNIT', textAlign: TextAlign.center)),
+            _gap(),
+          ],
+
+          if (showBin) ...[
+            Expanded(child: Text('BIN No.', textAlign: TextAlign.center)),
+            _gap(),
+          ],
           Expanded(child: Text('PRICE', textAlign: TextAlign.center)),
           _gap(),
           Expanded(child: Text('DISCOUNT', textAlign: TextAlign.center)),
@@ -211,8 +275,11 @@ class _GlobalItemRowWidget extends StatefulWidget {
     required this.isReturn,
     required this.ledgerType,
     required this.onSearchItem,
+    required this.showBin,
+    required this.showUnit,
   });
-
+  final bool showBin;
+  final bool showUnit;
   final GlobalItemRow row;
   final List<GlobalItemRow> rows;
   final List<ItemServiceModel> catalogue;
@@ -236,6 +303,7 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
   late TextEditingController discCtrl;
   late TextEditingController taxCtrl;
   late TextEditingController hsnCtrl;
+
   SearchFieldListItem<ItemServiceModel>? highlightedSuggestion;
   final TextEditingController itemController = TextEditingController();
   late FocusNode qtyF;
@@ -444,6 +512,7 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
             child: Row(
               children: [
                 IconButton(
+                  focusNode: FocusNode(skipTraversal: true),
                   onPressed: () {
                     if (r.qty > 1) {
                       final updated = r.copyWith(qty: r.qty - 1).recalc();
@@ -462,6 +531,7 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
                   ),
                 ),
                 IconButton(
+                  focusNode: FocusNode(skipTraversal: true),
                   onPressed: () {
                     final updated = r.copyWith(qty: r.qty + 1).recalc();
                     widget.onUpdate(updated);
@@ -473,10 +543,20 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
           ),
           _gap(),
 
-          // UNIT dropdown (only if conversion > 1)
-          Expanded(child: _buildUnitDropdown(r)),
-          _gap(),
+          if (widget.showUnit) ...[
+            Expanded(child: _buildUnitDropdown(r)),
+            _gap(),
+          ],
 
+          if (widget.showBin) ...[
+            Expanded(
+              child: CommonTextField(
+                controller: TextEditingController(text: r.product?.binNo ?? ""),
+                readOnly: true,
+              ),
+            ),
+            _gap(),
+          ],
           // PRICE
           Expanded(
             child: TextField(
@@ -505,6 +585,7 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
               children: [
                 Expanded(
                   child: TextField(
+                    focusNode: FocusNode(skipTraversal: true),
                     controller: taxCtrl,
                     readOnly: true,
                     decoration: input.copyWith(
@@ -537,9 +618,9 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
           ),
 
           // DELETE
-          IconButton(
+          TextButton(
             onPressed: widget.onRemove,
-            icon: const Icon(Icons.cancel, color: Colors.red),
+            child: Icon(Icons.cancel, color: AppColor.red),
           ),
         ],
       ),

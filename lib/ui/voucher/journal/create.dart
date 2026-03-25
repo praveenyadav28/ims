@@ -445,6 +445,7 @@ class _JournalEntryState extends State<JournalEntry> {
     );
     if (res['status'] == true) {
       voucherNoController.text = res['NextNo'].toString();
+      prefixController.text = res['prefix'].toString();
     }
   }
 

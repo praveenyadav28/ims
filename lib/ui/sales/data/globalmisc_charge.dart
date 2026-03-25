@@ -50,9 +50,9 @@ class _GlobalMiscChargesSectionState extends State<GlobalMiscChargesSection> {
 
           /// ADD BUTTON
           InkWell(
-            onTap: () => setState(() => showAdd = true),
+            onTap: () => setState(() => showAdd = !showAdd),
             child: Text(
-              ' + Misc Charges',
+              !showAdd ? ' + Misc Charges' : ' - Misc Charges',
               style: GoogleFonts.roboto(
                 fontSize: 14,
                 color: AppColor.primary,

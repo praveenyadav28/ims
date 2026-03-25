@@ -69,6 +69,9 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
   DateTime pickedPurchaseReturnDate = DateTime.now();
+  final noteController = TextEditingController();
+  final transNoController = TextEditingController();
+  final prefixTransController = TextEditingController();
   final stateController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   SearchFieldListItem<String>? selectedState;
@@ -82,6 +85,13 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
   void onTogglePrint(bool value) {
     setState(() {
       printAfterSave = value;
+    });
+  }
+
+  bool printSignature = true;
+  void onToggleSignature(bool value) {
+    setState(() {
+      printSignature = value;
     });
   }
 
@@ -103,8 +113,14 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
       stateController.text = e.placeOfSupply;
 
       pickedPurchaseReturnDate = e.purchaseReturnDate;
+      if (widget.purchaseReturnData != null) {
+        noteController.text = widget.purchaseReturnData!.notes.join(", ");
+      }
+      transNoController.text = e.transNo.toString() == "0"
+          ? ""
+          : e.transNo.toString();
+      prefixTransController.text = e.transPre.toString();
 
-      selectedNotesList = e.notes;
       selectedTermsList = e.terms;
 
       if (e.caseSale == true) {
@@ -287,36 +303,20 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                         mobile: cashMobileController.text,
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
-                        notes: selectedNotesList,
+                        notes: noteController.text.trim().isEmpty
+                            ? []
+                            : [noteController.text.trim()],
                         terms: selectedTermsList,
                         signatureImage: null,
                         updateId: widget.purchaseReturnData?.id,
                         stateName: stateController.text,
                         printAfterSave: printAfterSave,
+                        printSignatue: printSignature,
                       ),
                     );
                   },
                 ),
                 const SizedBox(width: 10),
-                Checkbox(
-                  fillColor: WidgetStatePropertyAll(AppColor.primary),
-                  shape: ContinuousRectangleBorder(
-                    borderRadius: BorderRadiusGeometry.circular(5),
-                  ),
-                  value: printAfterSave,
-                  onChanged: (v) {
-                    onTogglePrint(v ?? true);
-                    setState(() {});
-                  },
-                ),
-                Text(
-                  "Print   ",
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: AppColor.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ],
             ),
           ],
@@ -400,6 +400,8 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                           context,
                           context.read<PurchaseReturnBloc>(),
                         ),
+                        transNoController: transNoController,
+                        prefixTransController: prefixTransController,
                       ),
                     ),
 
@@ -434,10 +436,10 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                         Expanded(
                           flex: 10,
                           child: GlobalNotesSection(
-                            initialNotes: selectedNotesList,
                             initialTerms: selectedTermsList,
-                            onNotesChanged: (list) => selectedNotesList = list,
+                            noteController: noteController,
                             onTermsChanged: (list) => selectedTermsList = list,
+                            termId: '9',
                           ),
                         ),
 
@@ -489,6 +491,71 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                               ),
 
                               SizedBox(height: Sizes.height * .02),
+                              Row(
+                                children: [
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          fillColor: WidgetStatePropertyAll(
+                                            AppColor.primary,
+                                          ),
+                                          shape: ContinuousRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  5,
+                                                ),
+                                          ),
+                                          value: printAfterSave,
+                                          onChanged: (v) {
+                                            onTogglePrint(v ?? true);
+                                            setState(() {});
+                                          },
+                                        ),
+                                        Text(
+                                          "Print PDF on save",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            color: AppColor.black,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          fillColor: WidgetStatePropertyAll(
+                                            AppColor.primary,
+                                          ),
+                                          shape: ContinuousRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  5,
+                                                ),
+                                          ),
+                                          value: printSignature,
+                                          onChanged: (v) {
+                                            onToggleSignature(v ?? true);
+                                            setState(() {});
+                                          },
+                                        ),
+                                        Text(
+                                          "Print Signature in PDF",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            color: AppColor.black,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         ),

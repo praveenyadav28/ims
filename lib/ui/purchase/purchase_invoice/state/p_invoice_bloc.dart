@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:ims/model/ledger_model.dart';
 import 'package:ims/ui/master/company/company_api.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/data/reuse_print.dart';
@@ -127,13 +126,17 @@ class PurchaseInvoiceSetTransNo extends PurchaseInvoiceEvent {
   PurchaseInvoiceSetTransNo(this.number);
 }
 
+class PurchaseInvoiceSetTransPrefix extends PurchaseInvoiceEvent {
+  final String prefix;
+  PurchaseInvoiceSetTransPrefix(this.prefix);
+}
+
 class PurchaseInvoiceUpdateNo extends PurchaseInvoiceEvent {
   final String value;
   PurchaseInvoiceUpdateNo(this.value);
 }
 
 class PurchaseInvoiceUpdatePrefix extends PurchaseInvoiceEvent {
-
   final String value;
   PurchaseInvoiceUpdatePrefix(this.value);
 }
@@ -141,16 +144,16 @@ class PurchaseInvoiceUpdatePrefix extends PurchaseInvoiceEvent {
 class PurchaseInvoiceSearchTransaction extends PurchaseInvoiceEvent {}
 
 class PurchaseInvoiceSavePayment extends PurchaseInvoiceEvent {
-  final String amount;
+  final List<Map<String, dynamic>> ledgerDetails; // 🔥 multiple rows
   final String voucherNo;
-  final LedgerListModel ledger;
   final DateTime date;
+  final String prefix;
 
   PurchaseInvoiceSavePayment({
-    required this.amount,
+    required this.ledgerDetails,
     required this.voucherNo,
-    required this.ledger,
     required this.date,
+    required this.prefix,
   });
 }
 
@@ -166,6 +169,7 @@ class PurchaseInvoiceState {
   final String? transPlaceOfSupply; // ✅ NEW
   final String transNo; // user input number as string
   final String? transId; // loaded transaction id (from backend) if any
+  final String transPrefix; // user input number as string
   final String purchaseInvoiceNo;
   final DateTime? purchaseInvoiceDate;
   final List<ItemServiceModel> catalogue;
@@ -211,6 +215,7 @@ class PurchaseInvoiceState {
     this.notes = const [],
     this.terms = const [],
     this.transNo = "",
+    this.transPrefix = "",
     this.transId,
   });
 
@@ -239,6 +244,7 @@ class PurchaseInvoiceState {
     List<String>? terms,
     String? transNo,
     String? transId,
+    String? transPrefix,
   }) {
     return PurchaseInvoiceState(
       customers: customers ?? this.customers,
@@ -264,6 +270,7 @@ class PurchaseInvoiceState {
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
       transNo: transNo ?? this.transNo,
+      transPrefix: transPrefix ?? this.transPrefix,
       transId: transId ?? this.transId,
     );
   }
@@ -281,6 +288,7 @@ class PurchaseInvoiceSaveWithUIData extends PurchaseInvoiceEvent {
   final List<String> terms;
   final Uint8List? signatureImage; // NEW
   final bool printAfterSave; // NEW
+  final bool printSignature; // NEW
 
   PurchaseInvoiceSaveWithUIData({
     required this.supplierName,
@@ -293,6 +301,7 @@ class PurchaseInvoiceSaveWithUIData extends PurchaseInvoiceEvent {
     this.updateId,
     this.signatureImage,
     required this.printAfterSave,
+    required this.printSignature,
   });
 }
 
@@ -327,8 +336,11 @@ class PurchaseInvoiceBloc
     on<PurchaseInvoiceUpdateCharge>(_onUpdateCharge);
     on<PurchaseInvoiceAddDiscount>(_onAddDiscount);
     on<PurchaseInvoiceRemoveDiscount>(_onRemoveDiscount);
-     on<PurchaseInvoiceUpdateNo>((event, emit) {
+    on<PurchaseInvoiceUpdateNo>((event, emit) {
       emit(state.copyWith(purchaseInvoiceNo: event.value));
+    });
+    on<PurchaseInvoiceSetTransPrefix>((e, emit) {
+      emit(state.copyWith(transPrefix: e.prefix));
     });
     on<PurchaseInvoiceUpdatePrefix>((event, emit) {
       emit(state.copyWith(prefix: event.value));
@@ -376,10 +388,11 @@ class PurchaseInvoiceBloc
         repo.fetchHsnList(),
         repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
       ]);
-
+      final purchaseInvoiceNoData = results[0] as Map<String, dynamic>;
       emit(
         state.copyWith(
-          purchaseInvoiceNo: results[0] as String,
+          purchaseInvoiceNo: purchaseInvoiceNoData['next_no'] ?? '',
+          prefix: purchaseInvoiceNoData['prefix'] ?? '',
           hsnMaster: results[1] as List<HsnModel>,
           miscMasterList: results[2] as List<MiscChargeModelList>,
           catalogue: const [], // items server search se aayenge
@@ -748,6 +761,7 @@ class PurchaseInvoiceBloc
           .getTransByNumberPurchase(
             transNo: transNoInt,
             transType: 'Purchaseoder',
+            prefix: state.transPrefix,
           );
 
       // map estimate -> PurchaseInvoice state (without touching prefix, PurchaseInvoiceNo, PurchaseInvoiceDate)
@@ -755,6 +769,7 @@ class PurchaseInvoiceBloc
           .copyWith(
             transId: estimate.id,
             transNo: state.transNo,
+            transPrefix: state.transPrefix,
             transPlaceOfSupply: estimate.placeOfSupply,
           );
 
@@ -780,21 +795,39 @@ class PurchaseInvoiceBloc
     final state = this.state;
 
     // ---------- VALIDATIONS ----------
-    if (e.amount.trim().isEmpty || double.tryParse(e.amount) == null) return;
-    if (double.parse(e.amount) <= 0) return;
+    if (e.ledgerDetails.isEmpty) {
+      showCustomSnackbarError(ctx, "Add payment mode");
+      return;
+    }
 
+    for (var row in e.ledgerDetails) {
+      if (row["ledger_id"] == null) {
+        showCustomSnackbarError(ctx, "Select all ledgers");
+        return;
+      }
+
+      final amt = double.tryParse(row["amount"].toString());
+      if (amt == null || amt <= 0) {
+        showCustomSnackbarError(ctx, "Invalid amount");
+        return;
+      }
+    }
     if (state.cashSaleDefault == false && state.selectedCustomer == null) {
       showCustomSnackbarError(ctx, "Select supplier");
       return;
     }
 
     try {
+      final totalAmount = e.ledgerDetails.fold<double>(
+        0,
+        (sum, item) => sum + (double.tryParse(item["amount"].toString()) ?? 0),
+      );
+
       final body = {
         "licence_no": Preference.getint(PrefKeys.licenseNo),
         "branch_id": Preference.getString(PrefKeys.locationId),
 
-        "ledger_id": e.ledger.id,
-        "ledger_name": e.ledger.ledgerName,
+        "ledger_details": jsonEncode(e.ledgerDetails),
 
         "supplier_id": state.cashSaleDefault
             ? null
@@ -803,13 +836,13 @@ class PurchaseInvoiceBloc
             ? "Cash"
             : state.selectedCustomer!.name,
 
-        "amount": double.parse(e.amount),
+        "amount": totalAmount,
         "invoice_no": state.purchaseInvoiceNo,
 
         "date":
             "${e.date.year}-${e.date.month.toString().padLeft(2, '0')}-${e.date.day.toString().padLeft(2, '0')}",
 
-        "prefix": state.prefix,
+        "prefix": e.prefix,
         "vouncher_no": e.voucherNo,
         "type": "Purchase Invoice",
       };
@@ -876,6 +909,7 @@ class PurchaseInvoiceBloc
             "measuring_unit": r.sellInBaseUnit
                 ? r.product!.baseUnit
                 : r.product!.secondaryUnit,
+            'bin_no': r.product?.binNo ?? "",
             "qty": r.qty,
             "amount": r.gross,
             "discount": r.discountPercent,
@@ -944,8 +978,10 @@ class PurchaseInvoiceBloc
         payload["purchaseorder_id"] = state.transId;
       }
       if (state.transNo.isNotEmpty) {
-        payload["purchaseorder_no"] =
-            int.tryParse(state.transNo) ?? state.transNo;
+        payload["purchaseorder_no"] = state.transNo;
+      }
+      if (state.transPrefix.isNotEmpty) {
+        payload["purchaseorder_pre"] = state.transPrefix;
       }
 
       if (itemRows.isEmpty) {
@@ -1114,6 +1150,7 @@ PurchaseInvoiceState _prefillPurchaseInvoiceFromTrans(
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],
@@ -1259,6 +1296,7 @@ PurchaseInvoiceState _prefillPurchaseInvoice(
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],

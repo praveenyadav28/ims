@@ -51,9 +51,9 @@ class _GlobalAdditionalChargesSectionState
 
         children: [
           InkWell(
-            onTap: () => setState(() => showAddRow = true),
+            onTap: () => setState(() => showAddRow = !showAddRow),
             child: Text(
-              ' + Additional Charges',
+              !showAddRow ? ' + Additional Charges' : " - Additional Charges",
               style: GoogleFonts.roboto(
                 fontSize: 14,
                 color: AppColor.primary,
@@ -68,8 +68,7 @@ class _GlobalAdditionalChargesSectionState
               return ListTile(
                 dense: true,
                 title: Text(charge.name),
-                subtitle:
-                    Text('₹ ${charge.amount.toStringAsFixed(2)}'),
+                subtitle: Text('₹ ${charge.amount.toStringAsFixed(2)}'),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
                   onPressed: () => widget.onRemoveCharge(charge.id),

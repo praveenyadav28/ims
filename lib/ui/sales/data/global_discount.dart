@@ -48,9 +48,9 @@ class _GlobalDiscountsSectionState extends State<GlobalDiscountsSection> {
         children: [
           /// ADD BUTTON
           InkWell(
-            onTap: () => setState(() => showAddRow = true),
+            onTap: () => setState(() => showAddRow = !showAddRow),
             child: Text(
-              ' + Add Discount',
+              !showAddRow ? ' + Add Discount' : ' - Add Discount',
               style: GoogleFonts.roboto(
                 fontSize: 14,
                 color: AppColor.primary,

@@ -251,6 +251,7 @@ class PurchaseOrderSaveWithUIData extends PurchaseOrderEvent {
   final String stateName; // ✅ ADD
   final List<String> notes;
   final bool printAfterSave;
+  final bool printSignature;
   final List<String> terms;
   final Uint8List? signatureImage; // NEW
 
@@ -263,6 +264,7 @@ class PurchaseOrderSaveWithUIData extends PurchaseOrderEvent {
     required this.notes,
     required this.terms,
     required this.printAfterSave,
+    required this.printSignature,
     this.updateId,
     this.signatureImage,
   });
@@ -340,10 +342,11 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
         repo.fetchHsnList(),
         repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
       ]);
-
+      final purchaseOrderNoData = results[0] as Map<String, dynamic>;
       emit(
         state.copyWith(
-          purchaseOrderNo: results[0] as String,
+          purchaseOrderNo: purchaseOrderNoData['next_no'] ?? '',
+          prefix: purchaseOrderNoData['prefix'] ?? '',
           hsnMaster: results[1] as List<HsnModel>,
           miscMasterList: results[2] as List<MiscChargeModelList>,
           catalogue: const [], // items server search se aayenge
@@ -767,6 +770,7 @@ class PurchaseOrderBloc extends Bloc<PurchaseOrderEvent, PurchaseOrderState> {
           "measuring_unit": r.sellInBaseUnit
               ? r.product!.baseUnit
               : r.product!.secondaryUnit,
+              'bin_no':r.product?.binNo??"",
           "qty": r.qty,
           "amount": r.gross,
           "discount": r.discountPercent,
@@ -1005,6 +1009,7 @@ PurchaseOrderState _prefillPurchaseOrder(
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],

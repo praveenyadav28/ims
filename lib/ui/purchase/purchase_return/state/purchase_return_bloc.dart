@@ -124,6 +124,11 @@ class PurchaseReturnSetTransNo extends PurchaseReturnEvent {
   PurchaseReturnSetTransNo(this.number);
 }
 
+class PurchaseReturnSetTransPrefix extends PurchaseReturnEvent {
+  final String prefix;
+  PurchaseReturnSetTransPrefix(this.prefix);
+}
+
 class PurchaseReturnUpdateNo extends PurchaseReturnEvent {
   final String value;
   PurchaseReturnUpdateNo(this.value);
@@ -147,6 +152,7 @@ class PurchaseReturnState {
   final String? transPlaceOfSupply; // ✅ NEW
   final String transNo; // user input number as string
   final String? transId; // loaded transaction id (from backend) if any
+  final String transPrefix; // user input number as string
   final DateTime? purchaseReturnDate;
   final List<ItemServiceModel> catalogue;
   final List<GlobalItemRow> rows;
@@ -191,6 +197,7 @@ class PurchaseReturnState {
     this.notes = const [],
     this.terms = const [],
     this.transNo = "",
+    this.transPrefix = "",
     this.transId,
   });
 
@@ -218,6 +225,7 @@ class PurchaseReturnState {
     List<String>? notes,
     List<String>? terms,
     String? transNo,
+    String? transPrefix,
     String? transId,
   }) {
     return PurchaseReturnState(
@@ -244,6 +252,7 @@ class PurchaseReturnState {
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
       transNo: transNo ?? this.transNo,
+      transPrefix: transPrefix ?? this.transPrefix,
       transId: transId ?? this.transId,
     );
   }
@@ -260,6 +269,7 @@ class PurchaseReturnSaveWithUIData extends PurchaseReturnEvent {
   final List<String> notes;
   final List<String> terms;
   final bool printAfterSave;
+  final bool printSignatue;
   final Uint8List? signatureImage; // NEW
 
   PurchaseReturnSaveWithUIData({
@@ -271,6 +281,7 @@ class PurchaseReturnSaveWithUIData extends PurchaseReturnEvent {
     required this.notes,
     required this.terms,
     required this.printAfterSave,
+    required this.printSignatue,
     this.updateId,
     this.signatureImage,
   });
@@ -325,7 +336,9 @@ class PurchaseReturnBloc
     on<PurchaseReturnSetTransNo>((e, emit) {
       emit(state.copyWith(transNo: e.number));
     });
-
+    on<PurchaseReturnSetTransPrefix>((e, emit) {
+      emit(state.copyWith(transPrefix: e.prefix));
+    });
     on<PurchaseReturnSearchTransaction>(_onSearchTransaction);
   }
   Future<void> _onLoad(
@@ -334,11 +347,11 @@ class PurchaseReturnBloc
   ) async {
     try {
       // STEP 1: ledger first (fast UI)
-      // final customers = await repo.fetchLedger(false);
+      final customers = await repo.searchLedger("", false);
 
       emit(
         state.copyWith(
-          // customers: customers,
+          customers: customers,
           rows: [GlobalItemRow(localId: UniqueKey().toString())],
         ),
       );
@@ -349,10 +362,11 @@ class PurchaseReturnBloc
         repo.fetchHsnList(),
         repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
       ]);
-
+      final purchaseReturnNoData = results[0] as Map<String, dynamic>;
       emit(
         state.copyWith(
-          purchaseReturnNo: results[0] as String,
+          purchaseReturnNo: purchaseReturnNoData['next_no'] ?? '',
+          prefix: purchaseReturnNoData['prefix'] ?? '',
           hsnMaster: results[1] as List<HsnModel>,
           miscMasterList: results[2] as List<MiscChargeModelList>,
           catalogue: const [], // item server search use ho raha hai
@@ -721,6 +735,7 @@ class PurchaseReturnBloc
           .getTransByNumberPurchase(
             transNo: transNoInt,
             transType: 'Purchaseinvoice',
+            prefix: state.transPrefix,
           );
 
       // map estimate -> PurchaseReturn state (without touching prefix, PurchaseReturnNo, PurchaseReturnDate)
@@ -728,6 +743,7 @@ class PurchaseReturnBloc
           .copyWith(
             transId: estimate.id,
             transNo: state.transNo,
+            transPrefix: state.transPrefix,
             transPlaceOfSupply: estimate.placeOfSupply,
           );
 
@@ -791,6 +807,7 @@ class PurchaseReturnBloc
             "measuring_unit": r.sellInBaseUnit
                 ? r.product!.baseUnit
                 : r.product!.secondaryUnit,
+            'bin_no': r.product?.binNo,
             "qty": r.qty,
             "amount": r.gross,
             "discount": r.discountPercent,
@@ -852,14 +869,18 @@ class PurchaseReturnBloc
         "misccharge": miscCharges,
         "discount": discounts,
         "item_details": itemRows,
+        "print_sig": e.printSignatue,
       };
       // include trans fields only if present (from search)
       if (state.transId != null && state.transId!.isNotEmpty) {
         payload["purchaseinvoice_id"] = state.transId;
       }
       if (state.transNo.isNotEmpty) {
-        payload["purchaseinvoice_no"] =
-            int.tryParse(state.transNo) ?? state.transNo;
+        payload["purchaseinvoice_no"] = state.transNo;
+      }
+      if (state.transPrefix.isNotEmpty) {
+        payload["purchaseinvoice_pre"] =
+            int.tryParse(state.transPrefix) ?? state.transPrefix;
       }
 
       if (itemRows.isEmpty) {
@@ -1032,6 +1053,7 @@ PurchaseReturnState _prefillPurchaseReturnFromTrans(
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],
@@ -1177,6 +1199,7 @@ PurchaseReturnState _prefillPurchaseReturn(
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],

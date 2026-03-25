@@ -6,7 +6,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:ims/model/ledger_model.dart';
 import 'package:ims/ui/master/company/company_api.dart';
 import 'package:ims/ui/sales/data/global_repository.dart';
 import 'package:ims/ui/sales/data/reuse_print.dart';
@@ -136,6 +135,11 @@ class SaleInvoiceSetTransNo extends SaleInvoiceEvent {
   SaleInvoiceSetTransNo(this.number);
 }
 
+class SaleInvoiceSetTransPrefix extends SaleInvoiceEvent {
+  final String prefix;
+  SaleInvoiceSetTransPrefix(this.prefix);
+}
+
 class SaleInvoiceSearchTransaction extends SaleInvoiceEvent {}
 
 class SaleInvoiceLoadCustomers extends SaleInvoiceEvent {}
@@ -151,16 +155,18 @@ class SaleInvoiceUpdatePrefix extends SaleInvoiceEvent {
 }
 
 class SaleInvoiceSavePayment extends SaleInvoiceEvent {
-  final String amount;
+  final List<Map<String, dynamic>> ledgerDetails; // 🔥 multiple rows
   final String voucherNo;
-  final LedgerListModel ledger;
   final DateTime date;
+  final String prefix;
+  final String? reminderDate;
 
   SaleInvoiceSavePayment({
-    required this.amount,
+    required this.ledgerDetails,
     required this.voucherNo,
-    required this.ledger,
     required this.date,
+    required this.prefix,
+    this.reminderDate,
   });
 }
 
@@ -197,6 +203,7 @@ class SaleInvoiceState {
   final String transType; // e.g. "Estimate", "Performa", "Challan"
   final String transNo; // user input number as string
   final String? transId; // loaded transaction id (from backend) if any
+  final String transPrefix; // user input number as string
 
   SaleInvoiceState({
     this.customers = const [],
@@ -223,6 +230,7 @@ class SaleInvoiceState {
     this.terms = const [],
     this.transType = "Estimate",
     this.transNo = "",
+    this.transPrefix = "",
     this.transId,
   });
 
@@ -251,6 +259,7 @@ class SaleInvoiceState {
     List<String>? terms,
     String? transType,
     String? transNo,
+    String? transPrefix,
     String? transId,
   }) {
     return SaleInvoiceState(
@@ -278,6 +287,7 @@ class SaleInvoiceState {
       terms: terms ?? this.terms,
       transType: transType ?? this.transType,
       transNo: transNo ?? this.transNo,
+      transPrefix: transPrefix ?? this.transPrefix,
       transId: transId ?? this.transId,
     );
   }
@@ -295,6 +305,8 @@ class SaleInvoiceSaveWithUIData extends SaleInvoiceEvent {
   final List<String> terms;
   final Uint8List? signatureImage; // NEW
   final bool printAfterSave;
+  final bool printSignature;
+  final bool sendWhatsApp;
 
   SaleInvoiceSaveWithUIData({
     required this.customerName,
@@ -304,6 +316,8 @@ class SaleInvoiceSaveWithUIData extends SaleInvoiceEvent {
     required this.stateName, // ✅,
     required this.notes,
     required this.printAfterSave,
+    required this.printSignature,
+    required this.sendWhatsApp,
     required this.terms,
     this.updateId,
     this.signatureImage,
@@ -363,7 +377,9 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
     on<SaleInvoiceSetTransNo>((e, emit) {
       emit(state.copyWith(transNo: e.number));
     });
-
+    on<SaleInvoiceSetTransPrefix>((e, emit) {
+      emit(state.copyWith(transPrefix: e.prefix));
+    });
     on<SaleInvoiceSearchTransaction>(_onSearchTransaction);
     on<SaleInvoiceSavePayment>(_onSaveRecieptVoucher);
     on<SaleInvoiceLoadCustomers>((event, emit) async {
@@ -394,10 +410,11 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
         repo.fetchHsnList(),
         repo.fetchMiscMaster().catchError((_) => []),
       ]);
-
+      final saleInvoiceNoData = results[0] as Map<String, dynamic>;
       emit(
         state.copyWith(
-          saleInvoiceNo: results[0] as String,
+          saleInvoiceNo: saleInvoiceNoData['next_no'] as String,
+          prefix: saleInvoiceNoData['prefix'] as String,
           hsnMaster: results[1] as List<HsnModel>,
           miscMasterList: results[2] as List<MiscChargeModelList>,
           // catalogue: results[1] as List<ItemServiceModel>,
@@ -756,6 +773,7 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
       final GlobalDataAll estimate = await repo.getTransByNumber(
         transNo: transNoInt,
         transType: state.transType,
+        prefix: state.transPrefix,
       );
 
       // map estimate -> saleInvoice state (without touching prefix, saleInvoiceNo, saleInvoiceDate)
@@ -763,6 +781,7 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
         transId: estimate.id,
         transNo: state.transNo,
         transType: state.transType,
+        transPrefix: state.transPrefix,
         transPlaceOfSupply: estimate.placeOFSupply,
       );
 
@@ -788,8 +807,23 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
     final state = this.state;
 
     // ---------- VALIDATIONS ----------
-    if (e.amount.trim().isEmpty || double.tryParse(e.amount) == null) return;
-    if (double.parse(e.amount) <= 0) return;
+    if (e.ledgerDetails.isEmpty) {
+      showCustomSnackbarError(ctx, "Add receive mode");
+      return;
+    }
+
+    for (var row in e.ledgerDetails) {
+      if (row["ledger_id"] == null) {
+        showCustomSnackbarError(ctx, "Select all ledgers");
+        return;
+      }
+
+      final amt = double.tryParse(row["amount"].toString());
+      if (amt == null || amt <= 0) {
+        showCustomSnackbarError(ctx, "Invalid amount");
+        return;
+      }
+    }
 
     if (state.cashSaleDefault == false && state.selectedCustomer == null) {
       showCustomSnackbarError(ctx, "Select customer");
@@ -797,29 +831,40 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
     }
 
     try {
+      final totalAmount = e.ledgerDetails.fold<double>(
+        0,
+        (sum, item) => sum + (double.tryParse(item["amount"].toString()) ?? 0),
+      );
+
       final body = {
         "licence_no": Preference.getint(PrefKeys.licenseNo),
         "branch_id": Preference.getString(PrefKeys.locationId),
 
-        "ledger_id": e.ledger.id,
-        "ledger_name": e.ledger.ledgerName,
+        // 🔥 MULTIPLE LEDGERS
+        "ledger_details": jsonEncode(e.ledgerDetails),
 
         "customer_id": state.cashSaleDefault
             ? null
             : state.selectedCustomer!.id,
+
         "customer_name": state.cashSaleDefault
             ? "Cash"
             : state.selectedCustomer!.name,
 
-        "amount": double.parse(e.amount),
+        "amount": totalAmount,
+
         "invoice_no": state.saleInvoiceNo,
 
         "date":
             "${e.date.year}-${e.date.month.toString().padLeft(2, '0')}-${e.date.day.toString().padLeft(2, '0')}",
 
-        "prefix": state.prefix,
+        "prefix": e.prefix,
         "vouncher_no": e.voucherNo,
         "type": "Sale Invoice",
+
+        // 🔥 NEW FIELD
+        if (e.reminderDate != null && e.reminderDate!.isNotEmpty)
+          "reminder_date": e.reminderDate,
       };
 
       final res = await ApiService.postData(
@@ -833,8 +878,8 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
       } else {
         showCustomSnackbarError(ctx, res?['message'] ?? "Payment failed");
       }
-    } catch (e) {
-      showCustomSnackbarError(ctx, e.toString());
+    } catch (err) {
+      showCustomSnackbarError(ctx, err.toString());
     }
   }
 
@@ -885,6 +930,7 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
             "measuring_unit": r.sellInBaseUnit
                 ? r.product!.baseUnit
                 : r.product!.secondaryUnit,
+            'bin_no': r.product?.binNo ?? "",
             "qty": r.qty,
             "amount": r.gross,
             "discount": r.discountPercent,
@@ -962,6 +1008,8 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
         "discount": discounts,
         "item_details": itemRows,
         "service_details": serviceRows,
+        "print_sig": e.printSignature,
+        "whatsapp_msg": e.sendWhatsApp,
       };
 
       // include trans fields only if present (from search)
@@ -969,7 +1017,10 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
         payload["trans_id"] = state.transId;
       }
       if (state.transNo.isNotEmpty) {
-        payload["trans_no"] = int.tryParse(state.transNo) ?? state.transNo;
+        payload["trans_no"] = state.transNo;
+      }
+      if (state.transPrefix.isNotEmpty) {
+        payload["trans_pre"] = state.transPrefix;
       }
       if (state.transType.isNotEmpty) {
         payload["trans_type"] = state.transType;
@@ -1147,6 +1198,7 @@ SaleInvoiceState _prefillSaleInvoiceFromTrans(
       gstIncluded: false,
       gstIncludedPurchase: false,
       baseUnit: '',
+      binNo: '',
       secondaryUnit: '',
       conversion: 1,
       variants: [],
@@ -1168,6 +1220,7 @@ SaleInvoiceState _prefillSaleInvoiceFromTrans(
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],
@@ -1334,6 +1387,7 @@ SaleInvoiceState _prefillSaleInvoice(SaleInvoiceData data, SaleInvoiceState s) {
       gstIncluded: false,
       gstIncludedPurchase: false,
       baseUnit: '',
+      binNo: '',
       secondaryUnit: '',
       conversion: 1,
       variants: [],
@@ -1356,6 +1410,7 @@ SaleInvoiceState _prefillSaleInvoice(SaleInvoiceData data, SaleInvoiceState s) {
       gstIncludedPurchase: false,
       baseUnit: i.unit,
       secondaryUnit: i.unit,
+      binNo: i.binNo,
       conversion: 1,
       variants: [],
       variantValue: '',

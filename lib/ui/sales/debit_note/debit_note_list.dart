@@ -38,7 +38,7 @@ class _DebitNoteInvoiceListScreenState
       key: listKey,
       title: "Credit Note",
       fetchData: repo.getDebitNote,
-       onView: (e) async {
+      onView: (e) async {
         final doc = e.toPrintModel(); // ✅ no dynamic
 
         final companyApi = await CompanyProfileAPi.getCompanyProfile();
@@ -65,7 +65,8 @@ class _DebitNoteInvoiceListScreenState
       onDelete: repo.deleteDebitNote,
       idGetter: (e) => e.id,
       dateGetter: (e) => e.debitNoteDate,
-      numberGetter: (e) => "${e.prefix} ${e.no}",
+      numberGetter: (e) =>
+          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
       mobile: (e) => e.mobile,

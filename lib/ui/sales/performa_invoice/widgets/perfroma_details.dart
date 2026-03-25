@@ -12,12 +12,16 @@ class PerformaDetailsCard extends StatelessWidget {
     required this.perfromaNoController,
     required this.pickedPerformaDate,
     required this.onTapPerfromaDate,
+    required this.transNoController,
+    required this.prefixTransController,
   });
 
   final TextEditingController prefixController;
   final TextEditingController perfromaNoController;
   final DateTime? pickedPerformaDate;
   final VoidCallback onTapPerfromaDate;
+  final TextEditingController transNoController;
+  final TextEditingController prefixTransController;
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +36,10 @@ class PerformaDetailsCard extends StatelessWidget {
                 child: CommonTextField(
                   controller: prefixController,
                   hintText: 'Prefix',
-                   onChanged: (value) {
-                    context.read<PerformaBloc>().add(PerformaUpdatePrefix(value));
+                  onChanged: (value) {
+                    context.read<PerformaBloc>().add(
+                      PerformaUpdatePrefix(value),
+                    );
                   },
                 ),
               ),
@@ -43,7 +49,9 @@ class PerformaDetailsCard extends StatelessWidget {
                   controller: perfromaNoController,
                   hintText: 'Performa No',
                   onChanged: (value) {
-                    context.read<PerformaBloc>().add(PerformaUpdatePerformaNo(value));
+                    context.read<PerformaBloc>().add(
+                      PerformaUpdatePerformaNo(value),
+                    );
                   },
                 ),
               ),
@@ -77,21 +85,40 @@ class PerformaDetailsCard extends StatelessWidget {
         SizedBox(height: Sizes.height * .03),
         nameField(
           text: "Estimate No",
-          child: CommonTextField(
-            hintText: 'Number',
-            suffixIcon: IconButton(
-              onPressed: () {
-                final bloc = context.read<PerformaBloc>();
-                bloc.add(PerformaSearchTransaction());
-              },
-              icon: Icon(Icons.search),
-            ),
-            onChanged: (v) {
-              context.read<PerformaBloc>().add(PerformaSetTransNo(v));
-            },
-            onFieldSubmitted: (v) {
-              context.read<PerformaBloc>().add(PerformaSearchTransaction());
-            },
+          child: Row(
+            children: [
+              Expanded(
+                child: CommonTextField(
+                  controller: prefixTransController,
+                  hintText: 'Prefix',
+                  onChanged: (v) {
+                    context.read<PerformaBloc>().add(PerformaSetTransPrefix(v));
+                  },
+                ),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: CommonTextField(
+                  controller: transNoController,
+                  hintText: 'Number',
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      final bloc = context.read<PerformaBloc>();
+                      bloc.add(PerformaSearchTransaction());
+                    },
+                    icon: Icon(Icons.search),
+                  ),
+                  onChanged: (v) {
+                    context.read<PerformaBloc>().add(PerformaSetTransNo(v));
+                  },
+                  onFieldSubmitted: (v) {
+                    context.read<PerformaBloc>().add(
+                      PerformaSearchTransaction(),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
 
           flix: 30,

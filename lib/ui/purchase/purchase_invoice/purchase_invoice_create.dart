@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -18,6 +19,7 @@ import 'package:ims/ui/sales/data/globalmisc_charge.dart';
 import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/sales/data/globalsummary_card.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
+import 'package:ims/ui/sales/sale_invoice/saleinvoice_create.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -72,15 +74,19 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
   final cashMobileController = TextEditingController();
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
-  final payingAmtController = TextEditingController();
   final voucherNoController = TextEditingController();
   DateTime pickedPurchaseInvoiceDate = DateTime.now();
+  final noteController = TextEditingController();
+  final transNoController = TextEditingController();
+  final prefixTransController = TextEditingController();
+  final voucherPrefixController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
   List<LedgerListModel> ledgerList = [];
-  LedgerListModel? selectedLedger;
+  Timer? _ledgerDebounce;
+  Timer? _itemDebounce;
 
   List<String> selectedNotesList = [];
   List<String> selectedTermsList = [];
@@ -103,7 +109,16 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
     });
   }
 
+  bool printSignature = true;
+  void onToggleSignature(bool value) {
+    setState(() {
+      printSignature = value;
+    });
+  }
+
   final FocusNode _customerFocus = FocusNode();
+  List<InvoicePaymentRow> paymentRows = [];
+  final reminderController = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -121,8 +136,13 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
       stateController.text = e.placeOfSupply;
 
       pickedPurchaseInvoiceDate = e.purchaseInvoiceDate;
-
-      selectedNotesList = e.notes;
+      transNoController.text = e.purchaseorderNo.toString() == "0"
+          ? ""
+          : e.purchaseorderNo.toString();
+      prefixTransController.text = e.purchaseorderPre.toString();
+      if (widget.purchaseInvoiceData != null) {
+        noteController.text = widget.purchaseInvoiceData!.notes.join(", ");
+      }
       selectedTermsList = e.terms;
 
       if (e.caseSale == true) {
@@ -156,6 +176,9 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
           }
         });
       }
+    }
+    if (paymentRows.isEmpty) {
+      paymentRows.add(InvoicePaymentRow());
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _customerFocus.requestFocus();
@@ -309,51 +332,44 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
                         stateName: stateController.text,
-                        notes: selectedNotesList,
+                        notes: noteController.text.trim().isEmpty
+                            ? []
+                            : [noteController.text.trim()],
                         terms: selectedTermsList,
                         signatureImage: null,
                         updateId: widget.purchaseInvoiceData?.id,
                         printAfterSave: printAfterSave,
+                        printSignature: printSignature,
                       ),
                     );
-                    if (widget.purchaseInvoiceData == null) {
-                      // 🔥 Payment voucher only if amount > 0
-                      if (payingAmtController.text.isNotEmpty &&
-                          double.tryParse(payingAmtController.text) != null &&
-                          double.parse(payingAmtController.text) > 0 &&
-                          selectedLedger != null) {
-                        bloc.add(
-                          PurchaseInvoiceSavePayment(
-                            voucherNo: voucherNoController.text,
-                            amount: payingAmtController.text,
-                            ledger: selectedLedger!,
-                            date: pickedPurchaseInvoiceDate,
-                          ),
-                        );
-                      }
+                    final validRows = paymentRows.where((e) {
+                      return e.ledger?.id != null &&
+                          e.ledger?.ledgerName != null &&
+                          e.amountController.text.trim().isNotEmpty &&
+                          double.tryParse(e.amountController.text) != null &&
+                          double.parse(e.amountController.text) > 0;
+                    }).toList();
+                    if (validRows.isNotEmpty) {
+                      final ledgerDetails = validRows.map((e) {
+                        return {
+                          "ledger_id": e.ledger?.id,
+                          "ledger_name": e.ledger?.ledgerName,
+                          "amount": e.amountController.text,
+                        };
+                      }).toList();
+
+                      bloc.add(
+                        PurchaseInvoiceSavePayment(
+                          ledgerDetails: ledgerDetails,
+                          voucherNo: voucherNoController.text,
+                          date: pickedPurchaseInvoiceDate,
+                          prefix: voucherPrefixController.text,
+                        ),
+                      );
                     }
                   },
                 ),
                 const SizedBox(width: 10),
-                Checkbox(
-                  fillColor: WidgetStatePropertyAll(AppColor.primary),
-                  shape: ContinuousRectangleBorder(
-                    borderRadius: BorderRadiusGeometry.circular(5),
-                  ),
-                  value: printAfterSave,
-                  onChanged: (v) {
-                    onTogglePrint(v ?? true);
-                    setState(() {});
-                  },
-                ),
-                Text(
-                  "Print   ",
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: AppColor.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ],
             ),
           ],
@@ -377,8 +393,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                         focusNode: _customerFocus,
                         selectedCustomer: state.selectedCustomer,
                         stateController: stateController,
-                        onSearchLedger: (text) =>
-                            repo.searchLedger(text, false),
+                        onSearchLedger: (text) => _searchLedgerDebounced(text),
                         cusNameController: cusNameController,
                         mobileController: cashMobileController,
                         billingController: cashBillingController,
@@ -439,6 +454,8 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                               context,
                               context.read<PurchaseInvoiceBloc>(),
                             ),
+                        transNoController: transNoController,
+                        prefixTransController: prefixTransController,
                       ),
                     ),
 
@@ -473,7 +490,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                           }
                         });
                       },
-                      onSearchItem: (text) => repo.searchItems(text),
+                      onSearchItem: (text) => _searchItemDebounced(text),
                       onSelectHsn: (id, hsn) =>
                           bloc.add(PurchaseInvoiceApplyHsnToRow(id, hsn)),
                       onToggleUnit: (id, value) =>
@@ -487,10 +504,10 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                         Expanded(
                           flex: 10,
                           child: GlobalNotesSection(
-                            initialNotes: selectedNotesList,
                             initialTerms: selectedTermsList,
-                            onNotesChanged: (list) => selectedNotesList = list,
+                            noteController: noteController,
                             onTermsChanged: (list) => selectedTermsList = list,
+                            termId: '8',
                           ),
                         ),
 
@@ -542,20 +559,12 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                               ),
 
                               SizedBox(height: Sizes.height * .02),
-                              if (widget.purchaseInvoiceData == null)
-                                Column(
-                                  children: [
-                                    SizedBox(height: Sizes.height * .02),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
+                              Row(
+                                children: [
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Row(
                                       children: [
-                                        Text(
-                                          "Mark as fully paid",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
                                         Checkbox(
                                           fillColor: WidgetStatePropertyAll(
                                             AppColor.primary,
@@ -566,183 +575,257 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                                                   5,
                                                 ),
                                           ),
-                                          value: fullyPaid,
+                                          value: printAfterSave,
                                           onChanged: (v) {
-                                            onToggleFPaid(v ?? true);
+                                            onTogglePrint(v ?? true);
                                             setState(() {});
-                                            payingAmtController.text = state
-                                                .totalAmount
-                                                .toString();
                                           },
                                         ),
-                                      ],
-                                    ),
-                                    SizedBox(height: Sizes.height * .02),
-                                    Row(
-                                      children: [
                                         Text(
-                                          "Amount Paid",
+                                          "Print PDF on save",
                                           style: GoogleFonts.inter(
-                                            fontSize: 15,
+                                            fontSize: 14,
+                                            color: AppColor.black,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
-                                        Spacer(flex: 2),
-                                        Expanded(
-                                          flex: 3,
-                                          child: Row(
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          fillColor: WidgetStatePropertyAll(
+                                            AppColor.primary,
+                                          ),
+                                          shape: ContinuousRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  5,
+                                                ),
+                                          ),
+                                          value: printSignature,
+                                          onChanged: (v) {
+                                            onToggleSignature(v ?? true);
+                                            setState(() {});
+                                          },
+                                        ),
+                                        Text(
+                                          "Print Signature in PDF",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: AppColor.black,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (widget.purchaseInvoiceData == null)
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  margin: const EdgeInsets.only(top: 10),
+                                  decoration: BoxDecoration(
+                                    color: AppColor.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: AppColor.borderColor,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xff171a1f14),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, .5),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            "Payment Details",
+                                            style: GoogleFonts.inter(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const Spacer(),
+
+                                          /// FULLY PAID
+                                          Row(
                                             children: [
-                                              Container(
-                                                height: 45,
-                                                width: 30,
-                                                decoration: BoxDecoration(
-                                                  color:
-                                                      AppColor.backgroundColor,
-                                                  border: Border.all(
-                                                    color: AppColor.borderColor,
-                                                  ),
-                                                ),
-                                                child: Icon(
-                                                  Icons.currency_rupee_sharp,
-                                                  color: Color(0xff565D6D),
-                                                  size: 18,
+                                              Text(
+                                                "Fully Paid",
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 14,
                                                 ),
                                               ),
-                                              Expanded(
-                                                child: Container(
-                                                  height: 45,
-                                                  decoration: BoxDecoration(
-                                                    border: Border.all(
-                                                      color:
-                                                          AppColor.borderColor,
-                                                    ),
-                                                  ),
-                                                  alignment: Alignment.center,
-                                                  child: TextField(
-                                                    controller:
-                                                        payingAmtController,
-                                                    readOnly: fullyPaid,
-                                                    onChanged: (v) {
-                                                      setState(() {
-                                                        balanceAmt =
-                                                            "${state.totalAmount - double.parse(v)}";
-                                                      });
-                                                    },
-                                                    style: GoogleFonts.inter(
-                                                      color: AppColor.text,
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                    ),
-                                                    decoration: InputDecoration(
-                                                      hintText: "0",
-                                                      contentPadding:
-                                                          EdgeInsets.symmetric(
-                                                            vertical: 4,
-                                                            horizontal: 10,
-                                                          ),
-                                                      border:
-                                                          OutlineInputBorder(
-                                                            borderSide:
-                                                                BorderSide.none,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: Container(
-                                                  height: 45,
-                                                  decoration: BoxDecoration(
-                                                    border: Border.all(
-                                                      color:
-                                                          AppColor.borderColor,
-                                                    ),
-                                                  ),
-                                                  alignment: Alignment.center,
-                                                  child: DropdownButton<LedgerListModel>(
-                                                    padding:
-                                                        EdgeInsets.symmetric(
-                                                          vertical: 4,
-                                                          horizontal: 10,
-                                                        ),
-                                                    underline: const SizedBox(),
-                                                    isExpanded: true,
-                                                    icon: const Icon(
-                                                      Icons.keyboard_arrow_down,
-                                                    ),
+                                              Checkbox(
+                                                value: fullyPaid,
+                                                onChanged: (v) {
+                                                  onToggleFPaid(v ?? true);
+                                                  setState(() {});
 
-                                                    value: selectedLedger,
+                                                  if (fullyPaid) {
+                                                    final total =
+                                                        state.totalAmount;
 
-                                                    hint: Text(
-                                                      "Select Ledger",
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                      ),
-                                                    ),
-                                                    items: ledgerList.map((
-                                                      ledger,
-                                                    ) {
-                                                      return DropdownMenuItem<
-                                                        LedgerListModel
-                                                      >(
-                                                        value: ledger,
-                                                        child: Text(
-                                                          ledger.ledgerName ??
-                                                              "",
-                                                          style:
-                                                              GoogleFonts.inter(
-                                                                fontSize: 14,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w500,
-                                                                color: AppColor
-                                                                    .textColor,
-                                                              ),
-                                                        ),
-                                                      );
-                                                    }).toList(),
-
-                                                    onChanged:
-                                                        (LedgerListModel? v) {
-                                                          setState(() {
-                                                            selectedLedger = v;
-                                                          });
-                                                        },
-                                                  ),
-                                                ),
+                                                    if (paymentRows
+                                                        .isNotEmpty) {
+                                                      paymentRows
+                                                          .first
+                                                          .amountController
+                                                          .text = total
+                                                          .toString();
+                                                    }
+                                                  }
+                                                },
                                               ),
                                             ],
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: Sizes.height * .02),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          "Voucher Number",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 15,
-                                            color: Color(0xff22C55E),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        Spacer(),
-                                        Expanded(
-                                          child: CommonTextField(
-                                            hintText: "Voucher No",
-                                            controller: voucherNoController,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: 14),
+
+                                      /// 🔥 PAYMENT ROWS
+                                      ListView.builder(
+                                        shrinkWrap: true,
+                                        physics:
+                                            const NeverScrollableScrollPhysics(),
+                                        itemCount: paymentRows.length,
+                                        itemBuilder: (context, index) {
+                                          final row = paymentRows[index];
+
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 10,
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                /// LEDGER
+                                                Expanded(
+                                                  flex: 3,
+                                                  child:
+                                                      CommonDropdownField<
+                                                        LedgerListModel
+                                                      >(
+                                                        value: row.ledger,
+
+                                                        hintText:
+                                                            "Payment Mode",
+
+                                                        items: ledgerList.map((
+                                                          e,
+                                                        ) {
+                                                          return DropdownMenuItem(
+                                                            value: e,
+                                                            child: Text(
+                                                              e.ledgerName ??
+                                                                  "",
+                                                            ),
+                                                          );
+                                                        }).toList(),
+                                                        onChanged: (v) {
+                                                          setState(
+                                                            () =>
+                                                                row.ledger = v,
+                                                          );
+                                                        },
+                                                      ),
+                                                ),
+
+                                                const SizedBox(width: 10),
+
+                                                /// AMOUNT
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: CommonTextField(
+                                                    controller:
+                                                        row.amountController,
+                                                    readOnly: fullyPaid,
+
+                                                    hintText: "Amount",
+
+                                                    onChanged: (v) {
+                                                      final amt =
+                                                          double.tryParse(v) ??
+                                                          0;
+                                                      setState(() {
+                                                        balanceAmt =
+                                                            (state.totalAmount -
+                                                                    amt)
+                                                                .toStringAsFixed(
+                                                                  2,
+                                                                );
+                                                      });
+                                                    },
+                                                  ),
+                                                ),
+
+                                                /// DELETE
+                                                if (paymentRows.length > 1)
+                                                  IconButton(
+                                                    icon: const Icon(
+                                                      Icons.delete,
+                                                      color: Colors.red,
+                                                    ),
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        paymentRows.removeAt(
+                                                          index,
+                                                        );
+                                                      });
+                                                    },
+                                                  ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
                                 ),
 
-                              SizedBox(height: Sizes.height * .02),
+                              /// ADD BUTTON
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      paymentRows.add(InvoicePaymentRow());
+                                    });
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text("Add Receive Mode"),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TitleTextFeild(
+                                      controller: voucherPrefixController,
+                                      hintText: "Prefix",
+                                      titleText: "Prefix",
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: TitleTextFeild(
+                                      controller: voucherNoController,
+                                      hintText: "Voucher No",
+                                      titleText: "Voucher No",
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -848,6 +931,32 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
     });
   }
 
+  Future<List<LedgerModelDrop>> _searchLedgerDebounced(String text) async {
+    if (_ledgerDebounce?.isActive ?? false) _ledgerDebounce!.cancel();
+
+    final completer = Completer<List<LedgerModelDrop>>();
+
+    _ledgerDebounce = Timer(const Duration(milliseconds: 500), () async {
+      final result = await repo.searchLedger(text, false);
+      completer.complete(result);
+    });
+
+    return completer.future;
+  }
+
+  Future<List<ItemServiceModel>> _searchItemDebounced(String text) async {
+    if (_itemDebounce?.isActive ?? false) _itemDebounce!.cancel();
+
+    final completer = Completer<List<ItemServiceModel>>();
+
+    _itemDebounce = Timer(const Duration(milliseconds: 500), () async {
+      final result = await repo.searchItems(text);
+      completer.complete(result);
+    });
+
+    return completer.future;
+  }
+
   Future getAutoVoucherApi() async {
     var response = await ApiService.fetchData(
       "get/autono",
@@ -855,6 +964,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
     );
     if (response['status'] == true) {
       voucherNoController.text = response['next_no'].toString();
+      voucherPrefixController.text = response['prefix'].toString();
     }
   }
 }

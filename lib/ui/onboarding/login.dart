@@ -194,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       showCustomSnackbarError(
         context,
-        "Something went wrong while fetching branches.",
+        "Something went wrong while fetching your data.",
       );
     }
   }

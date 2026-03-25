@@ -59,7 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       loadPurchaseTotal(),
       loadCustomers(),
       fetchExpenses(),
-      loadRemindersData(), // 🔥 ADD
+      loadRemindersData(),
     ]);
 
     buildOutstanding();

@@ -43,10 +43,12 @@ class PurchaseReturnData {
   final String prefix;
   final int no;
   final String transId;
-  final int transNo;
+  final String transNo;
+  final String transPre;
   final DateTime purchaseReturnDate;
 
   final bool caseSale;
+  final bool printSig;
 
   final List<String> notes;
   final List<String> terms;
@@ -78,6 +80,8 @@ class PurchaseReturnData {
     required this.no,
     required this.transId,
     required this.transNo,
+    required this.transPre,
+    required this.printSig,
     required this.purchaseReturnDate,
     required this.caseSale,
     required this.notes,
@@ -103,12 +107,13 @@ class PurchaseReturnData {
         address0: j["address_0"],
         address1: j["address_1"],
         placeOfSupply: j["place_of_supply"],
-        mobile: j["mobile"].toString(),
-
+        mobile: (j["mobile"] ?? "").toString(),
         prefix: j["prefix"],
+        printSig: j["print_sig"] ?? true,
         no: j["no"],
         transId: j["purchaseinvoice_id"],
-        transNo: j["purchaseinvoice_no"],
+        transNo: (j["purchaseinvoice_no"] ?? "").toString(),
+        transPre: j["purchaseinvoice_pre"],
         purchaseReturnDate: DateTime.parse(j["purchasereturn_date"]),
 
         caseSale: j["case_sale"] ?? false,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ims/ui/sales/sale_return/state/return_bloc.dart';
+import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
@@ -12,12 +13,16 @@ class SaleReturnDetailsCard extends StatelessWidget {
     required this.invoiceNoController,
     required this.pickedInvoiceDate,
     required this.onTapInvoiceDate,
+    required this.transNoController,
+    required this.prefixTransController,
   });
 
   final TextEditingController prefixController;
   final TextEditingController invoiceNoController;
   final DateTime? pickedInvoiceDate;
   final VoidCallback onTapInvoiceDate;
+  final TextEditingController transNoController;
+  final TextEditingController prefixTransController;
 
   @override
   Widget build(BuildContext context) {
@@ -80,22 +85,48 @@ class SaleReturnDetailsCard extends StatelessWidget {
         SizedBox(height: Sizes.height * .03),
         nameField(
           text: "Sale Invoice No",
-          child: CommonTextField(
-            hintText: 'Number',
-            suffixIcon: IconButton(
-              onPressed: () {
-                final bloc = context.read<SaleReturnBloc>();
-                bloc.add(SaleReturnSearchTransaction());
-              },
-              icon: Icon(Icons.search),
-            ),
-            onFieldSubmitted: (v) {
-              final bloc = context.read<SaleReturnBloc>();
-              bloc.add(SaleReturnSearchTransaction());
-            },
-            onChanged: (v) {
-              context.read<SaleReturnBloc>().add(SaleReturnSetTransNo(v));
-            },
+          child: Row(
+            children: [
+              Expanded(
+                child: CommonTextField(
+                  controller: prefixTransController,
+                  hintText: 'Prefix',
+                  onChanged: (v) {
+                    context.read<SaleReturnBloc>().add(
+                      SaleReturnSetTransPrefix(v),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.centerRight,
+                  children: [
+                    CommonTextField(
+                      controller: transNoController,
+                      hintText: 'Number',
+                      onFieldSubmitted: (v) {
+                        final bloc = context.read<SaleReturnBloc>();
+                        bloc.add(SaleReturnSearchTransaction());
+                      },
+                      onChanged: (v) {
+                        context.read<SaleReturnBloc>().add(
+                          SaleReturnSetTransNo(v),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        final bloc = context.read<SaleReturnBloc>();
+                        bloc.add(SaleReturnSearchTransaction());
+                      },
+                      icon: Icon(Icons.search, color: AppColor.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
 
           flix: 30,

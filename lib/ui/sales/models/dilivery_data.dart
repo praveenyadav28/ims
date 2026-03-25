@@ -43,8 +43,12 @@ class DiliveryChallanData {
   final String prefix;
   final int no;
   final DateTime diliveryChallanDate;
+  final String transNo;
+  final String transPre;
+  final String transType;
 
   final bool caseSale;
+  final bool printSig;
 
   final List<String> notes;
   final List<String> terms;
@@ -78,7 +82,11 @@ class DiliveryChallanData {
     required this.diliveryChallanDate,
     required this.caseSale,
     required this.notes,
+    required this.printSig,
     required this.terms,
+    required this.transNo,
+    required this.transPre,
+    required this.transType,
     required this.subTotal,
     required this.subGst,
     required this.autoRound,
@@ -101,10 +109,13 @@ class DiliveryChallanData {
         address0: j["address_0"],
         address1: j["address_1"],
         placeOfSupply: j["place_of_supply"],
-        mobile: j["mobile"].toString(),
-
+        mobile: j["mobile"].toString() == "null" ? "" : j["mobile"].toString(),
         prefix: j["prefix"],
         no: j["no"],
+        transPre: j["trans_pre"] ?? "",
+        transType: j["trans_type"] ?? "",
+        printSig: j["print_sig"] ?? true,
+        transNo: j["trans_no"] ?? "",
         diliveryChallanDate: DateTime.parse(j["dilvery_date"]),
 
         caseSale: j["case_sale"] ?? false,

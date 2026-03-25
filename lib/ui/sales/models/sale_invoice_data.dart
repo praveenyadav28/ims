@@ -40,7 +40,8 @@ class SaleInvoiceData {
   final String placeOfSupply;
   final String mobile;
   final String transId;
-  final int transNo;
+  final String transNo;
+  final String transPre;
   final String transType;
 
   final String prefix;
@@ -49,6 +50,7 @@ class SaleInvoiceData {
 
   final int paymentTerms;
   final bool caseSale;
+  final bool printSig;
 
   final List<String> notes;
   final List<String> terms;
@@ -80,6 +82,8 @@ class SaleInvoiceData {
     required this.prefix,
     required this.transId,
     required this.transNo,
+    required this.transPre,
+    required this.printSig,
     required this.transType,
     required this.no,
     required this.saleInvoiceDate,
@@ -111,7 +115,9 @@ class SaleInvoiceData {
     mobile: (j["mobile"] ?? "").toString(),
     transType: j["trans_type"] ?? "",
     transId: j["trans_id"] ?? "",
-    transNo: j["trans_no"] ?? 0,
+    transNo: (j["trans_no"] ?? "").toString(),
+    transPre: j["trans_pre"] ?? "",
+    printSig: j["print_sig"] ?? true,
 
     prefix: j["prefix"] ?? "",
     no: j["no"],

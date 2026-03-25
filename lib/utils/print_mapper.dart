@@ -14,7 +14,7 @@ extension EstimatePrintMapper on EstimateData {
   PrintDocModel toPrintModel() {
     return PrintDocModel(
       title: "Estimate",
-      number: "$prefix $no",
+      number: "$prefix${prefix.isEmpty ? "" : "-"}$no",
       date: estimateDate,
       partyName: customerName,
       mobile: mobile,
@@ -27,6 +27,7 @@ extension EstimatePrintMapper on EstimateData {
       grandTotal: totalAmount,
       notes: notes,
       terms: terms,
+      printSign: printSig,
     );
   }
 }
@@ -35,7 +36,7 @@ extension PerformaPrintMapper on PerformaData {
   PrintDocModel toPrintModel() {
     return PrintDocModel(
       title: "Performa Invoice",
-      number: "$prefix $no",
+      number: "$prefix${prefix.isEmpty ? "" : "-"}$no",
       date: performaDate,
       partyName: customerName,
       mobile: mobile,
@@ -48,6 +49,7 @@ extension PerformaPrintMapper on PerformaData {
       grandTotal: totalAmount,
       notes: notes,
       terms: terms,
+      printSign: printSign,
     );
   }
 }
@@ -56,7 +58,7 @@ extension DeliveryChallanPrintMapper on DiliveryChallanData {
   PrintDocModel toPrintModel() {
     return PrintDocModel(
       title: "Delivery Challan",
-      number: "$prefix $no",
+      number: "$prefix${prefix.isEmpty ? "" : "-"}$no",
       date: diliveryChallanDate,
       partyName: customerName,
       mobile: mobile,
@@ -69,6 +71,7 @@ extension DeliveryChallanPrintMapper on DiliveryChallanData {
       grandTotal: totalAmount,
       notes: notes,
       terms: terms,
+      printSign: printSig,
     );
   }
 }
@@ -77,7 +80,7 @@ extension SaleInvoicePrintMapper on SaleInvoiceData {
   PrintDocModel toPrintModel() {
     return PrintDocModel(
       title: "Sale Invoice",
-      number: "$prefix $no",
+      number: "$prefix${prefix.isEmpty ? "" : "-"}$no",
       date: saleInvoiceDate,
       partyName: customerName,
       mobile: mobile,
@@ -90,6 +93,7 @@ extension SaleInvoicePrintMapper on SaleInvoiceData {
       grandTotal: totalAmount,
       notes: notes,
       terms: terms,
+      printSign: printSig,
     );
   }
 }
@@ -98,7 +102,7 @@ extension SaleReturnPrintMapper on SaleReturnData {
   PrintDocModel toPrintModel() {
     return PrintDocModel(
       title: "Sale Return",
-      number: "$prefix $no",
+      number: "$prefix${prefix.isEmpty ? "" : "-"}$no",
       date: saleReturnDate,
       partyName: customerName,
       mobile: mobile,
@@ -111,6 +115,7 @@ extension SaleReturnPrintMapper on SaleReturnData {
       grandTotal: totalAmount,
       notes: notes,
       terms: terms,
+      printSign: printSig,
     );
   }
 }
@@ -119,7 +124,7 @@ extension CreditNotePrintMapper on CreditNoteData {
   PrintDocModel toPrintModel() {
     return PrintDocModel(
       title: "Credit Note",
-      number: "$prefix $no",
+      number: "$prefix${prefix.isEmpty ? "" : "-"}$no",
       date: creditNoteDate,
       partyName: ledgerName,
       mobile: mobile,
@@ -132,6 +137,7 @@ extension CreditNotePrintMapper on CreditNoteData {
       grandTotal: totalAmount,
       notes: notes,
       terms: terms,
+      printSign: printSig,
     );
   }
 }
@@ -140,7 +146,7 @@ extension PurchaseOrderPrintMapper on PurchaseOrderData {
   PrintDocModel toPrintModel() {
     return PrintDocModel(
       title: "Purchase Order",
-      number: "$prefix $no",
+      number: "$prefix${prefix.isEmpty ? "" : "-"}$no",
       date: purchaseOrderDate,
       partyName: supplierName,
       mobile: mobile,
@@ -153,6 +159,7 @@ extension PurchaseOrderPrintMapper on PurchaseOrderData {
       grandTotal: totalAmount,
       notes: notes,
       terms: terms,
+      printSign: printSig,
     );
   }
 }
@@ -161,7 +168,7 @@ extension PurchaseInvoicePrintMapper on PurchaseInvoiceData {
   PrintDocModel toPrintModel() {
     return PrintDocModel(
       title: "Purchase Invoice",
-      number: "$prefix $no",
+      number: "$prefix${prefix.isEmpty ? "" : "-"}$no",
       date: purchaseInvoiceDate,
       partyName: supplierName,
       mobile: mobile,
@@ -174,6 +181,7 @@ extension PurchaseInvoicePrintMapper on PurchaseInvoiceData {
       grandTotal: totalAmount,
       notes: notes,
       terms: terms,
+      printSign: printSig
     );
   }
 }
@@ -182,7 +190,7 @@ extension PurchaseReturnPrintMapper on PurchaseReturnData {
   PrintDocModel toPrintModel() {
     return PrintDocModel(
       title: "Purchase Return",
-      number: "$prefix $no",
+      number: "$prefix${prefix.isEmpty ? "" : "-"}$no",
       date: purchaseReturnDate,
       partyName: supplierName,
       mobile: mobile,
@@ -195,6 +203,7 @@ extension PurchaseReturnPrintMapper on PurchaseReturnData {
       grandTotal: totalAmount,
       notes: notes,
       terms: terms,
+      printSign: printSig
     );
   }
 }
@@ -203,7 +212,7 @@ extension DebitNotePrintMapper on DebitNoteData {
   PrintDocModel toPrintModel() {
     return PrintDocModel(
       title: "Debit Note",
-      number: "$prefix $no",
+      number: "$prefix${prefix.isEmpty ? "" : "-"}$no",
       date: debitNoteDate,
       partyName: customerName,
       mobile: mobile,
@@ -216,6 +225,7 @@ extension DebitNotePrintMapper on DebitNoteData {
       grandTotal: totalAmount,
       notes: notes,
       terms: terms,
+      printSign: printSig
     );
   }
 }

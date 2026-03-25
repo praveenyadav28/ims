@@ -100,7 +100,14 @@ class VoucherPdfEngine {
 
     final logo = await _loadNetImage(company.logoUrl);
     final otherLogo = await _loadNetImage(company.otherlogoUrl);
+    String receivername = "";
+    if (receivedFrom.contains('~')) {
+      List<String> parts = receivedFrom.split('~');
 
+      receivername = parts[0];
+    } else {
+      receivername = receivedFrom;
+    }
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -118,7 +125,7 @@ class VoucherPdfEngine {
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
               ),
               pw.SizedBox(height: 6),
-              _voucherTable(refNo, date, receivedFrom),
+              _voucherTable(refNo, date, receivername),
               pw.SizedBox(height: 6),
               _amountBlock(amount),
               pw.SizedBox(height: 6),

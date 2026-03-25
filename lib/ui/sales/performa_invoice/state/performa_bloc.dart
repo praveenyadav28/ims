@@ -119,6 +119,11 @@ class PerformaSetTransNo extends PerformaEvent {
   PerformaSetTransNo(this.number);
 }
 
+class PerformaSetTransPrefix extends PerformaEvent {
+  final String prefix;
+  PerformaSetTransPrefix(this.prefix);
+}
+
 class PerformaSearchTransaction extends PerformaEvent {}
 
 class PerfromaSave extends PerformaEvent {}
@@ -170,6 +175,8 @@ class PerformaState {
   final List<String> notes;
   final List<String> terms;
   final String transNo;
+
+  final String transPrefix;
   final String? transId;
   final String? transPlaceOfSupply;
 
@@ -198,6 +205,7 @@ class PerformaState {
     this.notes = const [],
     this.terms = const [],
     this.transNo = "",
+    this.transPrefix = "",
     this.transId,
     this.transPlaceOfSupply,
   });
@@ -227,6 +235,7 @@ class PerformaState {
     List<String>? notes,
     List<String>? terms,
     String? transNo,
+    String? transPrefix,
     String? transId,
     String? transPlaceOfSupply,
   }) {
@@ -255,6 +264,7 @@ class PerformaState {
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
       transNo: transNo ?? this.transNo,
+      transPrefix: transPrefix ?? this.transPrefix,
       transId: transId ?? this.transId,
       transPlaceOfSupply: transPlaceOfSupply ?? this.transPlaceOfSupply,
     );
@@ -273,6 +283,8 @@ class PerfromaSaveWithUIData extends PerformaEvent {
   final List<String> terms;
   final Uint8List? signatureImage; // NEW
   final bool printAfterSave;
+  final bool printSignature;
+  final bool sendWhatsApp;
 
   PerfromaSaveWithUIData({
     required this.customerName,
@@ -283,6 +295,8 @@ class PerfromaSaveWithUIData extends PerformaEvent {
     required this.notes,
     required this.terms,
     required this.printAfterSave,
+    required this.printSignature,
+    required this.sendWhatsApp,
     this.updateId,
     this.signatureImage,
   });
@@ -332,6 +346,9 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
     on<PerformaSetTransNo>((e, emit) {
       emit(state.copyWith(transNo: e.number));
     });
+    on<PerformaSetTransPrefix>((e, emit) {
+      emit(state.copyWith(transPrefix: e.prefix));
+    });
 
     on<PerformaSearchTransaction>(_onSearchTransaction);
     on<PerfromaToggleRoundOff>(_onToggleRoundOff);
@@ -351,11 +368,12 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
         repo.fetchHsnList(),
         repo.fetchMiscMaster().catchError((_) => []),
       ]);
-
+      final performaNoData = results[0] as Map<String, dynamic>;
       emit(
         state.copyWith(
           customers: customers,
-          performaNo: results[0] as String,
+          performaNo: performaNoData['next_no'] as String,
+          prefix: performaNoData['prefix'] as String,
           hsnMaster: results[1] as List<HsnModel>,
           miscMasterList: results[2] as List<MiscChargeModelList>,
           catalogue: const [], // server search use ho raha hai
@@ -700,12 +718,14 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
       final GlobalDataAll estimate = await repo.getTransByNumber(
         transNo: transNoInt,
         transType: 'Estimate',
+        prefix: state.transPrefix,
       );
 
       // map estimate -> saleReturn state (without touching prefix, saleReturnNo, saleReturnDate)
       final newState = _prefillPerformaFromTrans(estimate, state).copyWith(
         transId: estimate.id,
         transNo: state.transNo,
+        transPrefix: state.transPrefix,
         transPlaceOfSupply: estimate.placeOFSupply,
       );
 
@@ -770,6 +790,7 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
             "measuring_unit": r.sellInBaseUnit
                 ? r.product!.baseUnit
                 : r.product!.secondaryUnit,
+            'bin_no': r.product?.binNo ?? "",
             "qty": r.qty,
             "amount": r.gross,
             "discount": r.discountPercent,
@@ -828,7 +849,6 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-
         "place_of_supply": e.stateName.isNotEmpty
             ? e.stateName
             : Preference.getString(PrefKeys.state),
@@ -852,8 +872,18 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
         "discount": discounts,
         "item_details": itemRows,
         "service_details": serviceRows,
+        "print_sig": e.printSignature,
+        "whatsapp_msg": e.sendWhatsApp,
       };
-
+      if (state.transId != null && state.transId!.isNotEmpty) {
+        payload["estimate_id"] = state.transId;
+      }
+      if (state.transNo.isNotEmpty) {
+        payload["estimate_no"] = state.transNo;
+      }
+      if (state.transPrefix.isNotEmpty) {
+        payload["estimate_pre"] = state.transPrefix;
+      }
       if (itemRows.isEmpty && serviceRows.isEmpty) {
         showCustomSnackbarError(
           perfromaNavigatorKey.currentContext!,
@@ -1020,6 +1050,7 @@ PerformaState _prefillPerformaFromTrans(GlobalDataAll data, PerformaState s) {
       gstIncluded: false,
       gstIncludedPurchase: false,
       baseUnit: '',
+      binNo: '',
       secondaryUnit: '',
       conversion: 1,
       variants: [],
@@ -1041,6 +1072,7 @@ PerformaState _prefillPerformaFromTrans(GlobalDataAll data, PerformaState s) {
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],
@@ -1205,6 +1237,7 @@ PerformaState _prefillPerforma(PerformaData data, PerformaState s) {
       gstIncluded: false,
       gstIncludedPurchase: false,
       baseUnit: '',
+      binNo: "",
       secondaryUnit: '',
       conversion: 1,
       variants: [],
@@ -1226,6 +1259,7 @@ PerformaState _prefillPerforma(PerformaData data, PerformaState s) {
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],

@@ -108,6 +108,11 @@ class DebitNoteSetTransNo extends DebitNoteEvent {
   DebitNoteSetTransNo(this.number);
 }
 
+class DebitNoteSetTransPrefix extends DebitNoteEvent {
+  final String prefix;
+  DebitNoteSetTransPrefix(this.prefix);
+}
+
 class DebitNoteUpdateNo extends DebitNoteEvent {
   final String value;
   DebitNoteUpdateNo(this.value);
@@ -117,6 +122,7 @@ class DebitNoteUpdatePrefix extends DebitNoteEvent {
   final String value;
   DebitNoteUpdatePrefix(this.value);
 }
+
 class DebitNoteSearchTransaction extends DebitNoteEvent {}
 
 class DebitNoteSavePayment extends DebitNoteEvent {
@@ -143,6 +149,7 @@ class DebitNoteState {
   final String debitNoteNo;
   final String? transPlaceOfSupply; // ✅ NEW
   final String transNo; // user input number as string
+  final String transPrefix; // user input number as string
   final String? transId; // loaded transaction id (from backend) if any
   final DateTime? debitNoteDate;
   final DateTime? validityDate;
@@ -190,6 +197,7 @@ class DebitNoteState {
     this.notes = const [],
     this.terms = const [],
     this.transNo = "",
+    this.transPrefix = "",
     this.transId,
   });
 
@@ -218,6 +226,7 @@ class DebitNoteState {
     List<String>? notes,
     List<String>? terms,
     String? transNo,
+    String? transPrefix,
     String? transId,
   }) {
     return DebitNoteState(
@@ -245,6 +254,7 @@ class DebitNoteState {
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
       transNo: transNo ?? this.transNo,
+      transPrefix: transPrefix ?? this.transPrefix,
       transId: transId ?? this.transId,
     );
   }
@@ -262,6 +272,7 @@ class DebitNoteSaveWithUIData extends DebitNoteEvent {
   final List<String> terms;
 
   final bool printAfterSave;
+  final bool printSignatue;
   final Uint8List? signatureImage; // NEW
 
   DebitNoteSaveWithUIData({
@@ -273,6 +284,7 @@ class DebitNoteSaveWithUIData extends DebitNoteEvent {
     required this.notes,
     required this.terms,
     required this.printAfterSave,
+    required this.printSignatue,
     this.updateId,
     this.signatureImage,
   });
@@ -305,7 +317,7 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
     on<DebitNoteUpdateCharge>(_onUpdateCharge);
     on<DebitNoteAddDiscount>(_onAddDiscount);
     on<DebitNoteRemoveDiscount>(_onRemoveDiscount);
-     on<DebitNoteUpdateNo>((event, emit) {
+    on<DebitNoteUpdateNo>((event, emit) {
       emit(state.copyWith(debitNoteNo: event.value));
     });
     on<DebitNoteUpdatePrefix>((event, emit) {
@@ -323,6 +335,9 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
     on<DebitNoteSetTransNo>((e, emit) {
       emit(state.copyWith(transNo: e.number));
     });
+    on<DebitNoteSetTransPrefix>((e, emit) {
+      emit(state.copyWith(transPrefix: e.prefix));
+    });
 
     on<DebitNoteSearchTransaction>(_onSearchTransaction);
     on<DebitNoteSavePayment>(_onSavePaymentVoucher);
@@ -333,8 +348,8 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
     Emitter<DebitNoteState> emit,
   ) async {
     try {
-      // final customers = await repo.fetchLedger(true);
-      final debitNoteNo = await repo.fetchDebitNoteNo();
+      final customers = await repo.searchLedger("", true);
+      final debitNoteNoData = await repo.fetchDebitNoteNo();
       final hsnList = await repo.fetchHsnList();
 
       // fetch misc master list
@@ -347,8 +362,9 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
 
       emit(
         state.copyWith(
-          // customers: customers,
-          debitNoteNo: debitNoteNo,
+          customers: customers,
+          debitNoteNo: debitNoteNoData['next_no'] ?? '',
+          prefix: debitNoteNoData['prefix'] ?? '',
           hsnMaster: hsnList,
           miscMasterList: miscMaster,
           // ensure UI has at least one empty row to start
@@ -607,12 +623,14 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
       final GlobalDataAll estimate = await repo.getTransByNumber(
         transNo: transNoInt,
         transType: 'Invoice',
+        prefix: state.transPrefix,
       );
 
       // map estimate -> DebitNote state (without touching prefix, DebitNoteNo, DebitNoteDate)
       final newState = _prefillDebitNoteFromTrans(estimate, state).copyWith(
         transId: estimate.id,
         transNo: state.transNo,
+        transPrefix: state.transPrefix,
         transPlaceOfSupply: estimate.placeOFSupply,
       );
 
@@ -766,8 +784,11 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-      
-        "place_of_supply": e.stateName.isNotEmpty ? e.stateName : Preference.getString(PrefKeys.state),  "prefix": state.prefix,
+
+        "place_of_supply": e.stateName.isNotEmpty
+            ? e.stateName
+            : Preference.getString(PrefKeys.state),
+        "prefix": state.prefix,
         "no": int.tryParse(state.debitNoteNo),
         "debitnote_date": DateFormat(
           'yyyy-MM-dd',
@@ -785,6 +806,7 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
         "misccharge": miscCharges,
         "discount": discounts,
         "item_details": itemRows,
+        "print_sig": e.printSignatue,
       };
 
       // include trans fields only if present (from search)
@@ -793,6 +815,10 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
       }
       if (state.transNo.isNotEmpty) {
         payload["invoice_no"] = int.tryParse(state.transNo) ?? state.transNo;
+      }
+      if (state.transPrefix.isNotEmpty) {
+        payload["invoice_pre"] =
+            int.tryParse(state.transPrefix) ?? state.transPrefix;
       }
       final res = await repo.saveDebitNote(
         payload: payload,

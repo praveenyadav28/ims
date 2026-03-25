@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/utils/navigation.dart';
@@ -60,8 +61,9 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
   };
 
   List<String> favouriteReports = [];
+  void toggleFavourite(String name) async {
+    final prefs = await SharedPreferences.getInstance();
 
-  void toggleFavourite(String name) {
     setState(() {
       if (favouriteReports.contains(name)) {
         favouriteReports.remove(name);
@@ -69,12 +71,27 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
         favouriteReports.add(name);
       }
     });
+
+    await prefs.setStringList('fav_reports', favouriteReports);
   }
 
   List<String> getCategoryItems(String category) {
     return reports[category]!
         .where((e) => !favouriteReports.contains(e))
         .toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavourites();
+  }
+
+  Future<void> _loadFavourites() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      favouriteReports = prefs.getStringList('fav_reports') ?? [];
+    });
   }
 
   @override

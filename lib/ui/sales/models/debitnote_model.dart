@@ -39,14 +39,16 @@ class DebitNoteData {
   final String address1;
   final String placeOfSupply;
   final String mobile;
-  final int invoiceNo;
-  final String invoiceId;
+  final String transNo;
+  final String transPre;
+  final String transId;
 
   final String prefix;
   final int no;
   final DateTime debitNoteDate;
 
   final bool caseSale;
+  final bool printSig;
 
   final List<String> notes;
   final List<String> terms;
@@ -77,11 +79,13 @@ class DebitNoteData {
     required this.prefix,
     required this.no,
     required this.debitNoteDate,
-    required this.invoiceNo,
-    required this.invoiceId,
+    required this.transNo,
+    required this.transPre,
+    required this.transId,
     required this.caseSale,
     required this.notes,
     required this.terms,
+    required this.printSig,
     required this.subTotal,
     required this.subGst,
     required this.autoRound,
@@ -103,14 +107,15 @@ class DebitNoteData {
     address1: j["address_1"],
     placeOfSupply: j["place_of_supply"],
     mobile: (j["mobile"] ?? "").toString(),
-
     prefix: j["prefix"],
     no: j["no"],
-    invoiceId: j["invoice_id"],
-    invoiceNo: j["invoice_no"],
+    transId: j["invoice_id"] ?? "",
+    transNo: (j["invoice_no"] ?? "").toString(),
+    transPre: j["invoice_pre"] ?? "",
     debitNoteDate: DateTime.parse(j["debitnote_date"]),
 
     caseSale: j["case_sale"] ?? false,
+    printSig: j["print_sig"] ?? true,
 
     notes: List<String>.from(j["add_note"] ?? []),
     terms: List<String>.from(j["te_co"] ?? []),

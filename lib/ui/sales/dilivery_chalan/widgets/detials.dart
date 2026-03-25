@@ -13,12 +13,16 @@ class DiliveryChallanDetailsCard extends StatelessWidget {
     required this.invoiceNoController,
     required this.pickedInvoiceDate,
     required this.onTapInvoiceDate,
+    required this.transNoController,
+    required this.prefixTransController,
   });
 
   final TextEditingController prefixController;
   final TextEditingController invoiceNoController;
   final DateTime? pickedInvoiceDate;
   final VoidCallback onTapInvoiceDate;
+  final TextEditingController transNoController;
+  final TextEditingController prefixTransController;
 
   @override
   Widget build(BuildContext context) {
@@ -119,25 +123,46 @@ class DiliveryChallanDetailsCard extends StatelessWidget {
 
         nameField(
           text: "Transaction No",
-          child: CommonTextField(
-            hintText: 'Number',
-            suffixIcon: IconButton(
-              icon: Icon(Icons.search),
-              onPressed: () {
-                final bloc = context.read<DiliveryChallanBloc>();
-                bloc.add(DiliveryChallanSearchTransaction());
-              },
-            ),
-            onFieldSubmitted: (v) {
-              final bloc = context.read<DiliveryChallanBloc>();
-              bloc.add(DiliveryChallanSearchTransaction());
-            },
-            onChanged: (v) {
-              context.read<DiliveryChallanBloc>().add(
-                DiliveryChallanSetTransNo(v),
-              );
-            },
+          child: Row(
+            children: [
+              Expanded(
+                child: CommonTextField(
+                  controller: prefixTransController,
+                  hintText: 'Prefix',
+                  onChanged: (v) {
+                    context.read<DiliveryChallanBloc>().add(
+                      DiliveryChallanSetTransPrefix(v),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: CommonTextField(
+                  controller: transNoController,
+                  hintText: 'Number',
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      final bloc = context.read<DiliveryChallanBloc>();
+                      bloc.add(DiliveryChallanSearchTransaction());
+                    },
+                    icon: Icon(Icons.search),
+                  ),
+                  onChanged: (v) {
+                    context.read<DiliveryChallanBloc>().add(
+                      DiliveryChallanSetTransNo(v),
+                    );
+                  },
+                  onFieldSubmitted: (v) {
+                    context.read<DiliveryChallanBloc>().add(
+                      DiliveryChallanSearchTransaction(),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
+
           flix: 30,
         ),
         SizedBox(height: Sizes.height * .03),

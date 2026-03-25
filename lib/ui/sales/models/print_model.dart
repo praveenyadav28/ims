@@ -10,6 +10,7 @@ class PrintDocModel {
   final String address0;
   final String address1;
   final String placeOfSupply;
+  final bool printSign;
 
   final List<ItemDetail> items;
 
@@ -35,5 +36,6 @@ class PrintDocModel {
     required this.grandTotal,
     required this.notes,
     required this.terms,
+    required this.printSign,
   });
 }

@@ -129,6 +129,14 @@ class PdfEngine {
   // ================= PARTY DETAILS =================
 
   static pw.Widget _partyAndInvoice(PrintDocModel d) {
+    String ledgername = "";
+    if (d.partyName.contains('~')) {
+      List<String> parts = d.partyName.split('~');
+
+      ledgername = parts[0];
+    } else {
+      ledgername = d.partyName;
+    }
     return pw.Table(
       border: pw.TableBorder.all(),
       columnWidths: const {
@@ -141,7 +149,7 @@ class PdfEngine {
         pw.TableRow(
           children: [
             _cell("Party Name"),
-            _cell(d.partyName),
+            _cell(ledgername),
             _cell("Invoice No"),
             _cell(d.number),
           ],
@@ -326,7 +334,7 @@ class PdfEngine {
           children: [
             pw.Text("For ${c.name}"),
             pw.SizedBox(height: 30),
-            if (sign != null) pw.Image(sign, height: 40),
+            if (sign != null && p.printSign) pw.Image(sign, height: 40),
             pw.Text("Authorised Signatory"),
           ],
         ),

@@ -13,10 +13,14 @@ class SaleInvoiceDetailsCard extends StatelessWidget {
     required this.invoiceNoController,
     required this.pickedInvoiceDate,
     required this.onTapInvoiceDate,
+    required this.transNoController,
+    required this.prefixTransController,
   });
 
   final TextEditingController prefixController;
   final TextEditingController invoiceNoController;
+  final TextEditingController transNoController;
+  final TextEditingController prefixTransController;
   final DateTime? pickedInvoiceDate;
   final VoidCallback onTapInvoiceDate;
 
@@ -34,7 +38,9 @@ class SaleInvoiceDetailsCard extends StatelessWidget {
                   controller: prefixController,
                   hintText: 'Prefix',
                   onChanged: (value) {
-                    context.read<SaleInvoiceBloc>().add(SaleInvoiceUpdatePrefix(value));
+                    context.read<SaleInvoiceBloc>().add(
+                      SaleInvoiceUpdatePrefix(value),
+                    );
                   },
                 ),
               ),
@@ -43,8 +49,10 @@ class SaleInvoiceDetailsCard extends StatelessWidget {
                 child: CommonTextField(
                   controller: invoiceNoController,
                   hintText: 'Invoice No',
-                 onChanged: (value) {
-                    context.read<SaleInvoiceBloc>().add(SaleInvoiceUpdateInvoiceNo(value));
+                  onChanged: (value) {
+                    context.read<SaleInvoiceBloc>().add(
+                      SaleInvoiceUpdateInvoiceNo(value),
+                    );
                   },
                 ),
               ),
@@ -79,6 +87,9 @@ class SaleInvoiceDetailsCard extends StatelessWidget {
         nameField(
           text: "Transaction Type",
           child: CommonDropdownField<String>(
+            value: context.select(
+              (SaleInvoiceBloc bloc) => bloc.state.transType,
+            ),
             hintText: "Select Type",
             items: [
               DropdownMenuItem(
@@ -127,22 +138,43 @@ class SaleInvoiceDetailsCard extends StatelessWidget {
 
         nameField(
           text: "Transaction No",
-          child: CommonTextField(
-            hintText: 'Number',
-            suffixIcon: IconButton(
-              icon: Icon(Icons.search),
-              onPressed: () {
-                final bloc = context.read<SaleInvoiceBloc>();
-                bloc.add(SaleInvoiceSearchTransaction());
-              },
-            ),
-             onFieldSubmitted: (v) {
-                final bloc = context.read<SaleInvoiceBloc>();
-                bloc.add(SaleInvoiceSearchTransaction());
-              },
-            onChanged: (v) {
-              context.read<SaleInvoiceBloc>().add(SaleInvoiceSetTransNo(v));
-            },
+          child: Row(
+            children: [
+              Expanded(
+                child: CommonTextField(
+                  controller: prefixTransController,
+                  hintText: 'Prefix',
+                  onChanged: (value) {
+                    context.read<SaleInvoiceBloc>().add(
+                      SaleInvoiceSetTransPrefix(value),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: CommonTextField(
+                  controller: transNoController,
+                  hintText: 'Number',
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.search),
+                    onPressed: () {
+                      final bloc = context.read<SaleInvoiceBloc>();
+                      bloc.add(SaleInvoiceSearchTransaction());
+                    },
+                  ),
+                  onFieldSubmitted: (v) {
+                    final bloc = context.read<SaleInvoiceBloc>();
+                    bloc.add(SaleInvoiceSearchTransaction());
+                  },
+                  onChanged: (v) {
+                    context.read<SaleInvoiceBloc>().add(
+                      SaleInvoiceSetTransNo(v),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
           flix: 30,
         ),

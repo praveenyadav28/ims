@@ -42,11 +42,13 @@ class PurchaseInvoiceData {
 
   final String prefix;
   final int no;
-  final int purchaseorderId;
-  final String purchaseorderName;
+  final String purchaseorderId;
+  final String purchaseorderNo;
+  final String purchaseorderPre;
   final DateTime purchaseInvoiceDate;
 
   final bool caseSale;
+  final bool printSig;
 
   final List<String> notes;
   final List<String> terms;
@@ -76,10 +78,12 @@ class PurchaseInvoiceData {
     required this.address1,
     required this.placeOfSupply,
     required this.mobile,
+    required this.printSig,
     required this.prefix,
     required this.no,
     required this.purchaseorderId,
-    required this.purchaseorderName,
+    required this.purchaseorderNo,
+    required this.purchaseorderPre,
     required this.purchaseInvoiceDate,
     required this.caseSale,
     required this.notes,
@@ -107,12 +111,14 @@ class PurchaseInvoiceData {
         address0: j["address_0"],
         address1: j["address_1"],
         placeOfSupply: j["place_of_supply"],
-        mobile: j["mobile"].toString(),
+        mobile: (j["mobile"] ?? "").toString(),
 
         prefix: j["prefix"],
         no: j["no"],
-        purchaseorderId: j["purchaseorder_id"] ?? 0,
-        purchaseorderName: j["purchaseorder_name"] ?? "",
+        printSig: j["print_sig"] ?? true,
+        purchaseorderId: j["purchaseorder_id"] ?? "",
+        purchaseorderNo: (j["purchaseorder_no"] ?? "").toString(),
+        purchaseorderPre: j["purchaseorder_pre"] ?? "",
         purchaseInvoiceDate: DateTime.parse(j["purchaseinvoice_date"]),
 
         caseSale: j["case_sale"] ?? false,

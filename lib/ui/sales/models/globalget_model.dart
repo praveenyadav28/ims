@@ -11,6 +11,7 @@ class ItemDetail {
   final String hsn;
   final double gstRate;
   final String unit;
+  final String binNo;
   final double qty;
   final double amount;
   final double discount;
@@ -25,6 +26,7 @@ class ItemDetail {
     required this.hsn,
     required this.gstRate,
     required this.unit,
+    required this.binNo,
     required this.qty,
     required this.amount,
     required this.discount,
@@ -40,6 +42,7 @@ class ItemDetail {
     hsn: j["hsn_code"],
     gstRate: (j["gst_tax_rate"] ?? 0).toDouble(),
     unit: j["measuring_unit"] ?? "",
+    binNo: j["bin_no"] ?? "",
     qty: (j["qty"] ?? 0).toDouble(),
     amount: (j["amount"] ?? 0).toDouble(),
     discount: (j["discount"] ?? 0).toDouble(),

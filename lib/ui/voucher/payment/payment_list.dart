@@ -69,9 +69,19 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
 
     if (ledgerCtrl.text.isNotEmpty) {
       final q = ledgerCtrl.text.toLowerCase();
+
       temp = temp.where((e) {
-        return e.supplierName.toLowerCase().contains(q) ||
-            e.ledgerName.toLowerCase().contains(q);
+        // 1️⃣ Supplier name match
+        bool supplierMatch = e.supplierName.toLowerCase().contains(q);
+
+        // 2️⃣ Ledger names match (multiple)
+        bool ledgerMatch =
+            e.ledgerDetails != null &&
+            e.ledgerDetails!.any(
+              (l) => (l.ledgerName ?? '').toLowerCase().contains(q),
+            );
+
+        return supplierMatch || ledgerMatch;
       }).toList();
     }
 
@@ -320,6 +330,7 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
           Expanded(flex: 2, child: Text("Date")),
           Expanded(flex: 2, child: Text("Payment Number")),
           Expanded(flex: 3, child: Text("Party Name")),
+          Expanded(flex: 3, child: Text("Payment Mode")),
           Expanded(flex: 2, child: Text("Amount")),
           Expanded(flex: 2, child: Text("Type")),
           Expanded(flex: 2, child: Text("Invoice No.")),
@@ -339,8 +350,34 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
             flex: 2,
             child: Text(DateFormat('yyyy-MM-dd').format(p.date)),
           ),
-          Expanded(flex: 2, child: Text("${p.prefix} ${p.voucherNo}")),
-          Expanded(flex: 3, child: Text(p.supplierName)),
+          Expanded(
+            flex: 2,
+            child: Text(
+              "${p.prefix}${p.prefix.isNotEmpty ? '-' : ''}${p.voucherNo}",
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              p.supplierName,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (p.ledgerDetails != null && p.ledgerDetails!.isNotEmpty)
+                  ...p.ledgerDetails!.map((e) {
+                    return Text(
+                      "${e.ledgerName ?? ''} - ₹${e.amount ?? 0}",
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    );
+                  }).toList(),
+              ],
+            ),
+          ),
           Expanded(
             flex: 2,
             child: Text(

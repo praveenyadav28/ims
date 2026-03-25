@@ -347,15 +347,15 @@ class _GstSaleReportScreenState extends State<GstSaleReportScreen> {
         double gst;
         double total;
 
-        if (item.inclusive) {
+        // if (item.inclusive) {
           taxable = item.amount / (1 + (item.gstRate / 100));
           gst = item.amount - taxable;
           total = item.amount;
-        } else {
-          taxable = item.amount;
-          gst = taxable * item.gstRate / 100;
-          total = taxable + gst;
-        }
+        // } else {
+        //   taxable = item.amount;
+        //   gst = taxable * item.gstRate / 100;
+        //   total = taxable + gst;
+        // }
 
         final igst = isSameState ? 0 : gst;
         final cgst = isSameState ? gst / 2 : 0;

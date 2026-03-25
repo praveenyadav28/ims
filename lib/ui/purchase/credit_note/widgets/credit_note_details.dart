@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ims/ui/purchase/credit_note/state/credit_note_bloc.dart';
+import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
@@ -12,12 +13,16 @@ class CreditNoteDetailsCard extends StatelessWidget {
     required this.creditNoteNoController,
     required this.pickedCreditNoteDate,
     required this.onTapCreditNoteDate,
+    required this.transNoController,
+    required this.prefixTransController,
   });
 
   final TextEditingController prefixController;
   final TextEditingController creditNoteNoController;
   final DateTime? pickedCreditNoteDate;
   final VoidCallback onTapCreditNoteDate;
+  final TextEditingController transNoController;
+  final TextEditingController prefixTransController;
 
   @override
   Widget build(BuildContext context) {
@@ -83,24 +88,50 @@ class CreditNoteDetailsCard extends StatelessWidget {
         SizedBox(height: Sizes.height * .03),
         nameField(
           text: "Purchase Invoice No",
-          child: CommonTextField(
-            hintText: 'Number',
-            suffixIcon: IconButton(
-              onPressed: () {
-                final bloc = context.read<CreditNoteBloc>();
-                bloc.add(CreditNoteSearchTransaction());
-              },
-              icon: Icon(Icons.search),
-            ),
-            onFieldSubmitted: (v) {
-              final bloc = context.read<CreditNoteBloc>();
-              bloc.add(CreditNoteSearchTransaction());
-            },
-            onChanged: (v) {
-              context.read<CreditNoteBloc>().add(CreditNoteSetTransNo(v));
-            },
+          child: Row(
+            children: [
+              Expanded(
+                child: CommonTextField(
+                  controller: prefixTransController,
+                  hintText: 'Prefix',
+                  onChanged: (v) {
+                    context.read<CreditNoteBloc>().add(
+                      CreditNoteSetTransPrefix(v),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.centerRight,
+                  children: [
+                    CommonTextField(
+                      controller: transNoController,
+                      hintText: 'Number',
+                      onFieldSubmitted: (v) {
+                        final bloc = context.read<CreditNoteBloc>();
+                        bloc.add(CreditNoteSearchTransaction());
+                      },
+                      onChanged: (v) {
+                        context.read<CreditNoteBloc>().add(
+                          CreditNoteSetTransNo(v),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        final bloc = context.read<CreditNoteBloc>();
+                        bloc.add(CreditNoteSearchTransaction());
+                      },
+                      icon: Icon(Icons.search, color: AppColor.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-
+      
           flix: 30,
         ),
 

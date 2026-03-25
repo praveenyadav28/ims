@@ -29,6 +29,7 @@ class CreateCusSup extends StatefulWidget {
 class _CreateCusSupState extends State<CreateCusSup>
     with SingleTickerProviderStateMixin {
   TextEditingController companyNameController = TextEditingController();
+  TextEditingController spIdController = TextEditingController();
   TextEditingController firstNameController = TextEditingController();
   TextEditingController lastNameController = TextEditingController();
   TextEditingController firstNameGuardianController = TextEditingController();
@@ -116,8 +117,17 @@ class _CreateCusSupState extends State<CreateCusSup>
       selectedType = c.customerType;
       selectedTitle = c.title;
       selectedTitleParent = c.related;
+      String fullName = c.companyName;
 
-      companyNameController.text = c.companyName;
+      if (fullName.contains('~')) {
+        List<String> parts = fullName.split('~');
+
+        companyNameController.text = parts[0]; // Customer Name
+        spIdController.text = parts[1]; // Special ID
+      } else {
+        companyNameController.text = fullName; // Only Name
+        spIdController.text = ''; // No Special ID
+      }
       firstNameController.text = c.firstName;
       lastNameController.text = c.lastName;
       firstNameGuardianController.text = c.parents;
@@ -243,11 +253,27 @@ class _CreateCusSupState extends State<CreateCusSup>
               text: selectedType == "Individual"
                   ? "Party Name"
                   : "Company Name",
-              child: CommonTextField(
-                controller: companyNameController,
-                hintText: selectedType == "Individual"
-                    ? "Party Name"
-                    : "Company Name",
+              child:
+               Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: CommonTextField(
+                      controller: companyNameController,
+                      hintText: selectedType == "Individual"
+                          ? "Party Name"
+                          : "Company Name",
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    flex: 1,
+                    child: CommonTextField(
+                      controller: spIdController,
+                      hintText: "Special ID",
+                    ),
+                  ),
+                ],
               ),
             ),
             SizedBox(height: Sizes.height * .02),
@@ -806,7 +832,13 @@ class _CreateCusSupState extends State<CreateCusSup>
         MapEntry("related", selectedTitleParent),
         MapEntry("parents", firstNameGuardianController.text.trim()),
         MapEntry("parents_last", lastNameGuardianController.text.trim()),
-        MapEntry("company_name", companyNameController.text.trim()),
+        MapEntry(
+          "company_name",
+          companyNameController.text.trim() +
+              (spIdController.text.trim().isNotEmpty
+                  ? "~${spIdController.text.trim()}"
+                  : ""), // Append SP ID if provided
+        ),
         MapEntry("email", emailController.text.trim()),
         MapEntry("phone", workPhoneController.text.trim()),
         if (mobileController.text.isNotEmpty)

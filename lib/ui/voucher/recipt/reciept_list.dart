@@ -70,8 +70,10 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
     if (ledgerCtrl.text.isNotEmpty) {
       final q = ledgerCtrl.text.toLowerCase();
       temp = temp.where((e) {
-        return e.supplierName.toLowerCase().contains(q) ||
-            e.ledgerName.toLowerCase().contains(q);
+        return e.supplierName.toLowerCase().contains(q) 
+        // ||
+        //     e.ledgerName.toLowerCase().contains(q)
+            ;
       }).toList();
     }
 
@@ -338,7 +340,12 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
             flex: 2,
             child: Text(DateFormat('yyyy-MM-dd').format(p.date)),
           ),
-          Expanded(flex: 2, child: Text("${p.prefix} ${p.voucherNo}")),
+          Expanded(
+            flex: 2,
+            child: Text(
+              "${p.prefix}${p.prefix.isNotEmpty ? '-' : ''}${p.voucherNo}",
+            ),
+          ),
           Expanded(flex: 3, child: Text(p.supplierName)),
           Expanded(
             flex: 2,

@@ -26,6 +26,7 @@ class GlobalBillToCard extends StatefulWidget {
     required this.onCreateCustomer,
     required this.ispurchase,
     required this.focusNode,
+    this.isSaleReturn,
     this.isReturn,
   });
 
@@ -48,6 +49,7 @@ class GlobalBillToCard extends StatefulWidget {
   final VoidCallback onCreateCustomer;
   final bool ispurchase;
   final FocusNode? focusNode;
+  final bool? isSaleReturn;
   final bool? isReturn;
 
   @override
@@ -175,6 +177,8 @@ class _GlobalBillToCardState extends State<GlobalBillToCard> {
           ),
         ),
         widget.ispurchase
+            ? Container()
+            : widget.isSaleReturn ?? false
             ? Container()
             : OutlinedButton(
                 style: OutlinedButton.styleFrom(

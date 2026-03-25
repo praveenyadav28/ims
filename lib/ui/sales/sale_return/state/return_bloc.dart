@@ -128,6 +128,11 @@ class SaleReturnSetTransNo extends SaleReturnEvent {
   SaleReturnSetTransNo(this.number);
 }
 
+class SaleReturnSetTransPrefix extends SaleReturnEvent {
+  final String prefix;
+  SaleReturnSetTransPrefix(this.prefix);
+}
+
 class SaleReturnUpdateNo extends SaleReturnEvent {
   final String value;
   SaleReturnUpdateNo(this.value);
@@ -157,6 +162,7 @@ class SaleReturnState {
   final List<AdditionalCharge> charges;
   final List<GlobalMiscChargeEntry> miscCharges; // UI entries
   final String transNo; // user input number as string
+  final String transPrefix; // user input number as string
   final String? transId; // loaded transaction id (from backend) if any
   final List<DiscountLine> discounts;
   final double subtotal;
@@ -199,6 +205,7 @@ class SaleReturnState {
     this.notes = const [],
     this.terms = const [],
     this.transNo = "",
+    this.transPrefix = "",
     this.transId,
   });
 
@@ -228,6 +235,7 @@ class SaleReturnState {
     List<String>? notes,
     List<String>? terms,
     String? transNo,
+    String? transPrefix,
     String? transId,
   }) {
     return SaleReturnState(
@@ -256,6 +264,7 @@ class SaleReturnState {
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
       transNo: transNo ?? this.transNo,
+      transPrefix: transPrefix ?? this.transPrefix,
       transId: transId ?? this.transId,
     );
   }
@@ -273,6 +282,7 @@ class SaleReturnSaveWithUIData extends SaleReturnEvent {
   final List<String> terms;
   final Uint8List? signatureImage; // NEW
   final bool printAfterSave;
+  final bool printSignatue;
 
   SaleReturnSaveWithUIData({
     required this.customerName,
@@ -283,6 +293,7 @@ class SaleReturnSaveWithUIData extends SaleReturnEvent {
     required this.notes,
     required this.terms,
     required this.printAfterSave,
+    required this.printSignatue,
     this.updateId,
     this.signatureImage,
   });
@@ -336,6 +347,9 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
     on<SaleReturnSetTransNo>((e, emit) {
       emit(state.copyWith(transNo: e.number));
     });
+    on<SaleReturnSetTransPrefix>((e, emit) {
+      emit(state.copyWith(transPrefix: e.prefix));
+    });
 
     on<SaleReturnSearchTransaction>(_onSearchTransaction);
   }
@@ -344,18 +358,19 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
     Emitter<SaleReturnState> emit,
   ) async {
     try {
-      // final customers = await repo.fetchLedger(true);
+      final customers = await repo.searchLedger('', true);
 
       final results = await Future.wait([
         repo.fetchSaleReturnNo(),
         repo.fetchHsnList(),
         repo.fetchMiscMaster().catchError((_) => []),
       ]);
-
+      final saleReturnNoData = results[0] as Map<String, dynamic>;
       emit(
         state.copyWith(
-          // customers: customers,
-          saleReturnNo: results[0] as String,
+          customers: customers,
+          saleReturnNo: saleReturnNoData['next_no'] as String,
+          prefix: saleReturnNoData['prefix'] as String,
           hsnMaster: results[1] as List<HsnModel>,
           miscMasterList: results[2] as List<MiscChargeModelList>,
           rows: [GlobalItemRow(localId: UniqueKey().toString())],
@@ -710,12 +725,14 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
       final GlobalDataAll estimate = await repo.getTransByNumber(
         transNo: transNoInt,
         transType: 'Invoice',
+        prefix: state.transPrefix,
       );
 
       // map estimate -> saleReturn state (without touching prefix, saleReturnNo, saleReturnDate)
       final newState = _prefillSaleReturnFromTrans(estimate, state).copyWith(
         transId: estimate.id,
         transNo: state.transNo,
+        transPrefix: state.transPrefix,
         transPlaceOfSupply: estimate.placeOFSupply,
       );
 
@@ -780,6 +797,7 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
             "measuring_unit": r.sellInBaseUnit
                 ? r.product!.baseUnit
                 : r.product!.secondaryUnit,
+            'bin_no': r.product?.binNo ?? "",
             "qty": r.qty,
             "amount": r.gross,
             "discount": r.discountPercent,
@@ -859,6 +877,7 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
         "discount": discounts,
         "item_details": itemRows,
         "service_details": serviceRows,
+        "print_sig": e.printSignatue,
       };
 
       // include trans fields only if present (from search)
@@ -866,7 +885,11 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
         payload["invoice_id"] = state.transId;
       }
       if (state.transNo.isNotEmpty) {
-        payload["invoice_no"] = int.tryParse(state.transNo) ?? state.transNo;
+        payload["invoice_no"] = state.transNo;
+      }
+      if (state.transPrefix.isNotEmpty) {
+        payload["invoice_pre"] =
+            int.tryParse(state.transPrefix) ?? state.transPrefix;
       }
 
       if (itemRows.isEmpty && serviceRows.isEmpty) {
@@ -1039,6 +1062,7 @@ SaleReturnState _prefillSaleReturnFromTrans(
       gstIncluded: false,
       gstIncludedPurchase: false,
       baseUnit: '',
+      binNo: '',
       secondaryUnit: '',
       conversion: 1,
       variants: [],
@@ -1060,6 +1084,7 @@ SaleReturnState _prefillSaleReturnFromTrans(
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],
@@ -1224,6 +1249,7 @@ SaleReturnState _prefillSaleReturn(SaleReturnData data, SaleReturnState s) {
       gstIncluded: false,
       gstIncludedPurchase: false,
       baseUnit: '',
+      binNo: '',
       secondaryUnit: '',
       conversion: 1,
       variants: [],
@@ -1245,6 +1271,7 @@ SaleReturnState _prefillSaleReturn(SaleReturnData data, SaleReturnState s) {
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],

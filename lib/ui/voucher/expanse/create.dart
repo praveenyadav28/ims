@@ -463,6 +463,7 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
     );
     if (res['status'] == true) {
       voucherNoController.text = res['NextNo'].toString();
+      prefixController.text = res['prefix'].toString();
     }
   }
 

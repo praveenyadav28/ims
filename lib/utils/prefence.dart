@@ -46,6 +46,8 @@ class PrefKeys {
   static const savedUserId = "savedUserId";
   static const savedPassword = "savedPassword";
   static const savedLicence = "savedLicence";
+  static const showBin = "show_bin";
+  static const showUnit = "show_unit";
 }
 
 logoutPrefData() async {

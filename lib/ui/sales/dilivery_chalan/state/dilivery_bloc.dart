@@ -114,6 +114,11 @@ class DiliveryChallanSetTransNo extends DiliveryChallanEvent {
   DiliveryChallanSetTransNo(this.number);
 }
 
+class DiliveryChallanSetTransPrefix extends DiliveryChallanEvent {
+  final String prefix;
+  DiliveryChallanSetTransPrefix(this.prefix);
+}
+
 class DiliveryChallanSetTransType extends DiliveryChallanEvent {
   final String type;
   DiliveryChallanSetTransType(this.type);
@@ -174,6 +179,7 @@ class DiliveryChallanState {
   final List<String> terms;
   final String transType;
   final String transNo;
+  final String transPrefix;
   final String? transId;
   final String? transPlaceOfSupply;
 
@@ -203,6 +209,7 @@ class DiliveryChallanState {
     this.terms = const [],
     this.transType = "Estimate",
     this.transNo = "",
+    this.transPrefix = "",
     this.transId,
     this.transPlaceOfSupply,
   });
@@ -233,6 +240,7 @@ class DiliveryChallanState {
     List<String>? terms,
     String? transType,
     String? transNo,
+    String? transPrefix,
     String? transId,
     String? transPlaceOfSupply,
   }) {
@@ -262,6 +270,7 @@ class DiliveryChallanState {
       terms: terms ?? this.terms,
       transType: transType ?? this.transType,
       transNo: transNo ?? this.transNo,
+      transPrefix: transPrefix ?? this.transPrefix,
       transId: transId ?? this.transId,
       transPlaceOfSupply: transPlaceOfSupply ?? this.transPlaceOfSupply,
     );
@@ -280,6 +289,8 @@ class DiliveryChallanSaveWithUIData extends DiliveryChallanEvent {
   final List<String> terms;
 
   final bool printAfterSave;
+  final bool printSignature;
+  final bool sendWhatsApp;
   final Uint8List? signatureImage; // NEW
 
   DiliveryChallanSaveWithUIData({
@@ -291,6 +302,8 @@ class DiliveryChallanSaveWithUIData extends DiliveryChallanEvent {
     required this.notes,
     required this.terms,
     required this.printAfterSave,
+    required this.printSignature,
+    required this.sendWhatsApp,
     this.updateId,
     this.signatureImage,
   });
@@ -334,6 +347,9 @@ class DiliveryChallanBloc
     on<DiliveryChallanSetTransNo>((e, emit) {
       emit(state.copyWith(transNo: e.number));
     });
+    on<DiliveryChallanSetTransPrefix>((e, emit) {
+      emit(state.copyWith(transPrefix: e.prefix));
+    });
     on<DiliveryChallanUpdateNo>((event, emit) {
       emit(state.copyWith(diliveryChallanNo: event.value));
     });
@@ -375,10 +391,11 @@ class DiliveryChallanBloc
         repo.fetchHsnList(),
         repo.fetchMiscMaster().catchError((_) => <MiscChargeModelList>[]),
       ]);
-
+      final diliveryChallanNoData = results[0] as Map<String, dynamic>;
       emit(
         state.copyWith(
-          diliveryChallanNo: results[0] as String,
+          diliveryChallanNo: diliveryChallanNoData['next_no'] ?? '',
+          prefix: diliveryChallanNoData['prefix'] ?? '',
           hsnMaster: results[1] as List<HsnModel>,
           miscMasterList: results[2] as List<MiscChargeModelList>,
           catalogue: const [], // item search API use ho rahi hai
@@ -748,12 +765,14 @@ class DiliveryChallanBloc
       final GlobalDataAll trans = await repo.getTransByNumber(
         transNo: transNoInt,
         transType: state.transType,
+        prefix: state.transPrefix,
       );
 
       final newState = _prefillDiliveryChallanFromTrans(trans, state).copyWith(
         transId: trans.id,
         transNo: state.transNo,
         transType: state.transType,
+        transPrefix: state.transPrefix,
         transPlaceOfSupply: trans.placeOFSupply,
       );
 
@@ -820,6 +839,7 @@ class DiliveryChallanBloc
             "measuring_unit": r.sellInBaseUnit
                 ? r.product!.baseUnit
                 : r.product!.secondaryUnit,
+            'bin_no': r.product?.binNo ?? "",
             "qty": r.qty,
             "amount": r.gross,
             "discount": r.discountPercent,
@@ -878,7 +898,6 @@ class DiliveryChallanBloc
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
-
         "place_of_supply": e.stateName.isNotEmpty
             ? e.stateName
             : Preference.getString(PrefKeys.state),
@@ -899,7 +918,21 @@ class DiliveryChallanBloc
         "discount": discounts,
         "item_details": itemRows,
         "service_details": serviceRows,
+        "print_sig": e.printSignature,
+        "whatsapp_msg": e.sendWhatsApp,
       };
+      if (state.transId != null && state.transId!.isNotEmpty) {
+        payload["trans_id"] = state.transId;
+      }
+      if (state.transNo.isNotEmpty) {
+        payload["trans_no"] = state.transNo;
+      }
+      if (state.transPrefix.isNotEmpty) {
+        payload["trans_pre"] = state.transPrefix;
+      }
+      if (state.transType.isNotEmpty) {
+        payload["trans_type"] = state.transType;
+      }
 
       if (itemRows.isEmpty && serviceRows.isEmpty) {
         showCustomSnackbarError(
@@ -1070,6 +1103,7 @@ DiliveryChallanState _prefillDiliveryChallanFromTrans(
       gstIncluded: false,
       gstIncludedPurchase: false,
       baseUnit: '',
+      binNo: '',
       secondaryUnit: '',
       conversion: 1,
       variants: [],
@@ -1091,6 +1125,7 @@ DiliveryChallanState _prefillDiliveryChallanFromTrans(
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],
@@ -1258,6 +1293,7 @@ DiliveryChallanState _prefillDiliveryChallan(
       gstIncluded: false,
       gstIncludedPurchase: false,
       baseUnit: '',
+      binNo: '',
       secondaryUnit: '',
       conversion: 1,
       variants: [],
@@ -1279,6 +1315,7 @@ DiliveryChallanState _prefillDiliveryChallan(
       gstIncluded: i.inclusive,
       gstIncludedPurchase: false,
       baseUnit: i.unit,
+      binNo: i.binNo,
       secondaryUnit: i.unit,
       conversion: 1,
       variants: [],

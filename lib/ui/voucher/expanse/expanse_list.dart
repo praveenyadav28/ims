@@ -334,7 +334,7 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
             flex: 2,
             child: Text(DateFormat('yyyy-MM-dd').format(p.date)),
           ),
-          Expanded(flex: 3, child: Text("${p.prefix} ${p.voucherNo}")),
+          Expanded(flex: 3, child: Text("${p.prefix}${p.prefix.isNotEmpty ? '-' : ''}${p.voucherNo}")),
           Expanded(flex: 3, child: Text(p.supplierName)),
           Expanded(flex: 3, child: Text(p.ledgerName)),
           Expanded(

@@ -29,7 +29,7 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
       key: listKey,
       title: "Purchase Return",
       fetchData: repo.getPurchaseReturn,
-        onView: (e) async {
+      onView: (e) async {
         final doc = e.toPrintModel(); // ✅ no dynamic
 
         final companyApi = await CompanyProfileAPi.getCompanyProfile();
@@ -57,7 +57,8 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
       /// EXTRACTORS — REQUIRED
       idGetter: (e) => e.id,
       dateGetter: (e) => e.purchaseReturnDate,
-      numberGetter: (e) => "${e.prefix} ${e.no}",
+      numberGetter: (e) =>
+          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
       customerGetter: (e) => e.supplierName,
       amountGetter: (e) => e.totalAmount,
       gstGetter: (e) => e.subGst,

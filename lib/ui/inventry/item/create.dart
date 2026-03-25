@@ -2152,7 +2152,9 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
       if (minStockController.text.isNotEmpty)
         'm_s_qty': minStockController.text,
       'whole_sale_price': wholeSalePriceController.text.trim().isEmpty
-          ? salePriceController.text
+          ? salePriceController.text.isEmpty
+                ? "0"
+                : salePriceController.text
           : wholeSalePriceController.text.trim(),
       if (mfgDateController.text.isNotEmpty) 'mfg_date': mfgDateController.text,
       if (expDateController.text.isNotEmpty)

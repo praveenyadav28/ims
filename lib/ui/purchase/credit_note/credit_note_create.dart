@@ -63,6 +63,9 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
   DateTime pickedCreditNoteDate = DateTime.now();
+  final noteController = TextEditingController();
+  final transNoController = TextEditingController();
+  final prefixTransController = TextEditingController();
   final stateController = TextEditingController();
   SearchFieldListItem<String>? selectedState;
   late List<String> statesSuggestions;
@@ -75,6 +78,13 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
   void onTogglePrint(bool value) {
     setState(() {
       printAfterSave = value;
+    });
+  }
+
+  bool printSignature = true;
+  void onToggleSignature(bool value) {
+    setState(() {
+      printSignature = value;
     });
   }
 
@@ -96,8 +106,14 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
       stateController.text = e.placeOfSupply;
 
       pickedCreditNoteDate = e.creditNoteDate;
+      if (widget.creditNoteData != null) {
+        noteController.text = widget.creditNoteData!.notes.join(", ");
+      }
+      transNoController.text = e.transNo.toString() == "0"
+          ? ""
+          : e.transNo.toString();
+      prefixTransController.text = e.transPre.toString();
 
-      selectedNotesList = e.notes;
       selectedTermsList = e.terms;
 
       if (e.caseSale == true) {
@@ -273,35 +289,19 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                         billingAddress: cashBillingController.text,
                         shippingAddress: cashShippingController.text,
                         stateName: stateController.text,
-                        notes: selectedNotesList,
+                        notes: noteController.text.trim().isEmpty
+                            ? []
+                            : [noteController.text.trim()],
                         terms: selectedTermsList,
                         signatureImage: null,
                         updateId: widget.creditNoteData?.id,
                         printAfterSave: printAfterSave,
+                        printSignatue: printSignature,
                       ),
                     );
                   },
                 ),
                 const SizedBox(width: 10),
-                Checkbox(
-                  fillColor: WidgetStatePropertyAll(AppColor.primary),
-                  shape: ContinuousRectangleBorder(
-                    borderRadius: BorderRadiusGeometry.circular(5),
-                  ),
-                  value: printAfterSave,
-                  onChanged: (v) {
-                    onTogglePrint(v ?? true);
-                    setState(() {});
-                  },
-                ),
-                Text(
-                  "Print   ",
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: AppColor.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ],
             ),
           ],
@@ -375,6 +375,8 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                         context,
                         context.read<CreditNoteBloc>(),
                       ),
+                      transNoController: transNoController,
+                      prefixTransController: prefixTransController,
                     ),
                   ),
 
@@ -396,10 +398,10 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                       Expanded(
                         flex: 10,
                         child: GlobalNotesSection(
-                          initialNotes: selectedNotesList,
                           initialTerms: selectedTermsList,
-                          onNotesChanged: (list) => selectedNotesList = list,
+                          noteController: noteController,
                           onTermsChanged: (list) => selectedTermsList = list,
+                          termId: '10',
                         ),
                       ),
 
@@ -448,6 +450,67 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                             ),
 
                             SizedBox(height: Sizes.height * .02),
+                            Row(
+                              children: [
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Checkbox(
+                                        fillColor: WidgetStatePropertyAll(
+                                          AppColor.primary,
+                                        ),
+                                        shape: ContinuousRectangleBorder(
+                                          borderRadius:
+                                              BorderRadiusGeometry.circular(5),
+                                        ),
+                                        value: printAfterSave,
+                                        onChanged: (v) {
+                                          onTogglePrint(v ?? true);
+                                          setState(() {});
+                                        },
+                                      ),
+                                      Text(
+                                        "Print PDF on save",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          color: AppColor.black,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Checkbox(
+                                        fillColor: WidgetStatePropertyAll(
+                                          AppColor.primary,
+                                        ),
+                                        shape: ContinuousRectangleBorder(
+                                          borderRadius:
+                                              BorderRadiusGeometry.circular(5),
+                                        ),
+                                        value: printSignature,
+                                        onChanged: (v) {
+                                          onToggleSignature(v ?? true);
+                                          setState(() {});
+                                        },
+                                      ),
+                                      Text(
+                                        "Print Signature in PDF",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          color: AppColor.black,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),

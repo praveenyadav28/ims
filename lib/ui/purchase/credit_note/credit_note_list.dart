@@ -55,7 +55,7 @@ class _CreditNoteListScreenState extends State<CreditNoteListScreen> {
       /// EXTRACTORS — REQUIRED
       idGetter: (e) => e.id,
       dateGetter: (e) => e.creditNoteDate,
-      numberGetter: (e) => "${e.prefix} ${e.no}",
+      numberGetter: (e) => "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
       customerGetter: (e) => e.ledgerName,
       amountGetter: (e) => e.totalAmount,
       gstGetter: (e) => e.subGst,

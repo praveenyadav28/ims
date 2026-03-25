@@ -64,7 +64,7 @@ class _GstPurchaseReportScreenState extends State<GstPurchaseReportScreen> {
       "get/purchaseinvoice",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-
+    print(res);
     final data = PurchaseInvoiceListResponse.fromJson(res).data;
 
     // Prepare filter masters
@@ -346,15 +346,15 @@ class _GstPurchaseReportScreenState extends State<GstPurchaseReportScreen> {
         double gst;
         double total;
 
-        if (item.inclusive) {
-          taxable = item.amount / (1 + (item.gstRate / 100));
-          gst = item.amount - taxable;
-          total = item.amount;
-        } else {
-          taxable = item.amount;
-          gst = taxable * item.gstRate / 100;
-          total = taxable + gst;
-        }
+        // if (item.inclusive) {
+        taxable = item.amount / (1 + (item.gstRate / 100));
+        gst = item.amount - taxable;
+        total = item.amount;
+        // } else {
+        //   taxable = item.amount;
+        //   gst = taxable * item.gstRate / 100;
+        //   total = taxable + gst;
+        // }
 
         final igst = isSameState ? 0 : gst;
         final cgst = isSameState ? gst / 2 : 0;
