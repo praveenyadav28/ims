@@ -58,6 +58,21 @@ class PerfromaSelectVariantForRow extends PerformaEvent {
   PerfromaSelectVariantForRow(this.rowId, this.variant);
 }
 
+class PerformaSetDate extends PerformaEvent {
+  final DateTime date;
+  PerformaSetDate(this.date);
+}
+
+class PerformaSelectSalesPerson extends PerformaEvent {
+  final String name;
+  PerformaSelectSalesPerson(this.name);
+}
+
+class PerformaSelectSalesPersonId extends PerformaEvent {
+  final String salesPersonId;
+  PerformaSelectSalesPersonId(this.salesPersonId);
+}
+
 class PerfromaToggleUnitForRow extends PerformaEvent {
   final String rowId;
   final bool sellInBase;
@@ -167,6 +182,8 @@ class PerformaState {
   final double cgst;
   final double totalAmount;
   final bool autoRound;
+  final String? salesPerson;
+  final String? salesPersonId;
 
   // master list from get/misccharge (for lookup)
   final List<MiscChargeModelList> miscMasterList;
@@ -208,6 +225,8 @@ class PerformaState {
     this.transPrefix = "",
     this.transId,
     this.transPlaceOfSupply,
+    this.salesPerson,
+    this.salesPersonId,
   });
 
   PerformaState copyWith({
@@ -238,6 +257,8 @@ class PerformaState {
     String? transPrefix,
     String? transId,
     String? transPlaceOfSupply,
+    String? salesPerson,
+    String? salesPersonId,
   }) {
     return PerformaState(
       customers: customers ?? this.customers,
@@ -267,6 +288,8 @@ class PerformaState {
       transPrefix: transPrefix ?? this.transPrefix,
       transId: transId ?? this.transId,
       transPlaceOfSupply: transPlaceOfSupply ?? this.transPlaceOfSupply,
+      salesPerson: salesPerson ?? this.salesPerson,
+      salesPersonId: salesPersonId ?? this.salesPersonId,
     );
   }
 }
@@ -338,7 +361,15 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
     on<PerformaUpdatePrefix>((event, emit) {
       emit(state.copyWith(prefix: event.value));
     });
-
+    on<PerformaSetDate>((event, emit) {
+      emit(state.copyWith(perfromaDate: event.date));
+    });
+    on<PerformaSelectSalesPerson>((event, emit) {
+      emit(state.copyWith(salesPerson: event.name));
+    });
+    on<PerformaSelectSalesPersonId>((event, emit) {
+      emit(state.copyWith(salesPersonId: event.salesPersonId));
+    });
     // misc
     on<PerformaAddMiscCharge>(_onAddMiscCharge);
     on<PerfromaRemoveMiscCharge>(_onRemoveMiscCharge);
@@ -853,6 +884,8 @@ class PerformaBloc extends Bloc<PerformaEvent, PerformaState> {
             ? e.stateName
             : Preference.getString(PrefKeys.state),
         "prefix": state.prefix,
+        "employeename": state.salesPerson,
+        "employeeid": state.salesPersonId,
         "no": int.tryParse(state.performaNo),
         "proforma_date": DateFormat(
           'yyyy-MM-dd',

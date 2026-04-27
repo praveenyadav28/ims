@@ -183,7 +183,7 @@ class _SaleInvoiceAdvancedReportScreenState
   // =========================================================
   // =========================== UI ==========================
   // =========================================================
-
+  bool showFilter = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -196,13 +196,24 @@ class _SaleInvoiceAdvancedReportScreenState
             color: AppColor.white,
           ),
         ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                showFilter = !showFilter;
+              });
+            },
+            icon: Icon(showFilter ? Icons.filter_alt_off : Icons.filter_alt),
+          ),
+        ],
         backgroundColor: AppColor.primary,
       ),
       body: loading
           ? Center(child: GlowLoader())
           : Column(
               children: [
-                _filterBar(),
+                if (showFilter) ...[_filterBar()],
+                SizedBox(height: Sizes.height * .02),
                 _summaryBar(),
                 Expanded(child: _table()),
               ],

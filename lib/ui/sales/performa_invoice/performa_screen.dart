@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/model/employee_model.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/data/create_cust_dialogue.dart';
 import 'package:ims/ui/sales/data/global_additionalcharge.dart';
@@ -65,6 +66,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
   final perfromaNoController = TextEditingController();
   final cusNameController = TextEditingController();
   final cashMobileController = TextEditingController();
+  final salesPersonController = TextEditingController();
   final cashBillingController = TextEditingController();
   final cashShippingController = TextEditingController();
   final noteController = TextEditingController();
@@ -115,6 +117,13 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
       stateController.text = e.placeOfSupply;
+      salesPersonController.text = e.salePerson;
+      context.read<PerformaBloc>().add(
+        PerformaSelectSalesPersonId(widget.performaData!.salePersonId),
+      );
+      context.read<PerformaBloc>().add(
+        PerformaSelectSalesPerson(widget.performaData!.salePerson),
+      );
       pickedPerformaDate = e.performaDate;
       if (widget.performaData != null) {
         noteController.text = widget.performaData!.notes.join(", ");
@@ -156,6 +165,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
     });
     // fetch misc etc.
     fetchMiscCharges();
+    fetchEmployee();
   }
 
   @override
@@ -178,6 +188,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
     );
     if (date != null) {
       pickedPerformaDate = date;
+      bloc.add(PerformaSetDate(date));
       bloc.add(PerfromaCalculate());
       setState(() {});
     }
@@ -196,6 +207,21 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
           .toList();
       setState(() {});
     }
+  }
+
+  List<EmployeeModel> employeeList = [];
+  Future<void> fetchEmployee() async {
+    var response = await ApiService.fetchData(
+      "get/employee",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    List responseData = response['data'] ?? [];
+    setState(() {
+      employeeList = responseData
+          .map((e) => EmployeeModel.fromJson(e))
+          .toList();
+    });
   }
 
   // ---------------- UI ----------------
@@ -277,7 +303,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
                   text:
-                      "${widget.performaData == null ? "Create" : "Update"} Proforma  Invoice",
+                      "${widget.performaData == null ? "Save" : "Update"} Proforma  Invoice",
                   height: 40,
                   width: 190,
                   onTap: () {
@@ -387,6 +413,8 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
                           context,
                           context.read<PerformaBloc>(),
                         ),
+                        salesPersonController: salesPersonController,
+                        employeeList: employeeList,
                         transNoController: transNoController,
                         prefixTransController: prefixTransController,
                       ),
@@ -416,7 +444,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
                           if (_scrollController.hasClients) {
                             _scrollController.animateTo(
                               _scrollController.offset + 75,
-                              duration: const Duration(milliseconds: 300),
+                              duration: const Duration(milliseconds: 200),
                               curve: Curves.ease,
                             );
                           }
@@ -675,7 +703,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
 
     final completer = Completer<List<LedgerModelDrop>>();
 
-    _ledgerDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _ledgerDebounce = Timer(const Duration(milliseconds: 200), () async {
       final result = await repo.searchLedger(text, false);
       completer.complete(result);
     });
@@ -688,7 +716,7 @@ class _CreatePerformaViewState extends State<CreatePerformaView> {
 
     final completer = Completer<List<ItemServiceModel>>();
 
-    _itemDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _itemDebounce = Timer(const Duration(milliseconds: 200), () async {
       final result = await repo.searchItems(text);
       completer.complete(result);
     });

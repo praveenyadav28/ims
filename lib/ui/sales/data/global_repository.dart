@@ -1,4 +1,6 @@
 import 'dart:typed_data';
+import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/models/common_data.dart';
 import 'package:ims/ui/sales/models/credit_note_data.dart';
@@ -21,17 +23,14 @@ class GLobalRepository {
     bool isCustomer,
   ) async {
     final res = await ApiService.fetchData(
-      text.isEmpty ? "get/ledger/search" : "get/ledger/search?search=$text",
+      text.isEmpty
+          ? "get/ledger/search?group=${isCustomer ? 'Sundry Debtor' : 'Sundry Creditor'}"
+          : "get/ledger/search?search=$text&group=${isCustomer ? 'Sundry Debtor' : 'Sundry Creditor'}",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
     final data = (res?['data'] as List?) ?? [];
     return data
-        .where(
-          (e) =>
-              e['ledger_group'] ==
-              (isCustomer ? 'Sundry Debtor' : 'Sundry Creditor'),
-        )
         .map((e) => LedgerModelDrop.fromMap(Map<String, dynamic>.from(e)))
         .toList();
   }
@@ -73,7 +72,6 @@ class GLobalRepository {
       'get/returnsale_no',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    print(res);
     final num = (res?['next_no'].toString()) ?? '';
     final prefix = (res?['prefix'].toString()) ?? '';
     return {'next_no': num, 'prefix': prefix};
@@ -160,20 +158,6 @@ class GLobalRepository {
 
   Future<List<ItemServiceModel>> fetchTopItems() async {
     return searchItems("");
-  }
-
-  Future<List<ItemServiceModel>> fetchOnyItem() async {
-    final items = await ApiService.fetchData(
-      'get/item',
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-
-    final itemList = (items?['data'] as List?) ?? [];
-    final combined = <ItemServiceModel>[];
-    for (var it in itemList) {
-      combined.add(ItemServiceModel.fromItem(Map<String, dynamic>.from(it)));
-    }
-    return combined;
   }
 
   Future<List<MiscChargeModelList>> fetchMiscMaster() async {
@@ -472,8 +456,7 @@ class GLobalRepository {
     return parsed.data;
   }
 
-  //
-  //Get By number
+  //// Get By Number
   Future<GlobalDataAll> getTransByNumber({
     required int transNo,
     required String transType,
@@ -485,7 +468,15 @@ class GLobalRepository {
       "prefix": prefix ?? "",
       "licence_no": Preference.getint(PrefKeys.licenseNo),
     }, licenceNo: Preference.getint(PrefKeys.licenseNo));
-    return GlobalDataAll.fromJson(res['data']);
+
+    /// warning + data merge karke model me bhejna
+    final Map<String, dynamic> finalJson = {
+      ...res["data"],
+      "warning": res["warning"] ?? false,
+      "warning_message": res["warning_message"] ?? "",
+    };
+
+    return GlobalDataAll.fromJson(finalJson);
   }
 
   Future<GlobalDataAllPurchase> getTransByNumberPurchase({
@@ -496,100 +487,144 @@ class GLobalRepository {
     final res = await ApiService.postData("get/getreletedrecode", {
       "trans_no": transNo,
       "trans_type": transType,
+      "prefix": prefix,
       "licence_no": Preference.getint(PrefKeys.licenseNo),
     }, licenceNo: Preference.getint(PrefKeys.licenseNo));
-    return GlobalDataAllPurchase.fromJson(res['data']);
+
+    /// warning + data merge karke model me bhejna
+    final Map<String, dynamic> finalJson = {
+      ...res["data"],
+      "warning": res["warning"] ?? false,
+      "warning_message": res["warning_message"] ?? "",
+    };
+
+    return GlobalDataAllPurchase.fromJson(finalJson);
   }
 
   //
   //Delete
-  Future<bool> deleteEstimate(String id) async {
+  Future<Map<String, dynamic>> deleteEstimate(String id) async {
     final res = await ApiService.deleteData(
       "estimate/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    return (res?["status"] == true);
+    return res;
   }
 
-  Future<bool> deleteSaleInvoice(String id) async {
+  Future<Map<String, dynamic>> deleteSaleInvoice(String id) async {
     final res = await ApiService.deleteData(
       "invoice/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    return (res?["status"] == true);
+    return res;
   }
 
-  Future<bool> deleteSaleReturn(String id) async {
+  Future<Map<String, dynamic>> deleteSaleReturn(String id) async {
     final res = await ApiService.deleteData(
       "returnsale/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    return (res?["status"] == true);
+    return res;
   }
 
-  Future<bool> deletePerforma(String id) async {
+  Future<Map<String, dynamic>> deletePerforma(String id) async {
     final res = await ApiService.deleteData(
       "proforma/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    return (res?["status"] == true);
+    return res;
   }
 
-  Future<bool> deleteDiliveryChallan(String id) async {
+  Future<Map<String, dynamic>> deleteDiliveryChallan(String id) async {
     final res = await ApiService.deleteData(
       "dilverychallan/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    return (res?["status"] == true);
+    return res;
   }
 
-  Future<bool> deleteDebitNote(String id) async {
+  Future<Map<String, dynamic>> deleteDebitNote(String id) async {
     final res = await ApiService.deleteData(
       "debitnote/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    return (res?["status"] == true);
+    return res;
   }
 
-  Future<bool> deletePurchaseOrder(String id) async {
+  Future<Map<String, dynamic>> deletePurchaseOrder(String id) async {
     final res = await ApiService.deleteData(
       "purchaseoder/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    return (res?["status"] == true);
+    return res;
   }
 
-  Future<bool> deletePurchaseInvoice(String id) async {
+  Future<Map<String, dynamic>> deletePurchaseInvoice(String id) async {
     final res = await ApiService.deleteData(
       "purchaseinvoice/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    return (res?["status"] == true);
+    return res;
   }
 
-  Future<bool> deletePurchaseReturn(String id) async {
+  Future<Map<String, dynamic>> deletePurchaseReturn(String id) async {
     final res = await ApiService.deleteData(
       "purchasereturn/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    return (res?["status"] == true);
+    return res;
   }
 
-  Future<bool> deleteCreditNote(String id) async {
+  Future<Map<String, dynamic>> deleteCreditNote(String id) async {
     final res = await ApiService.deleteData(
       "purchasenote/$id",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    return (res?["status"] == true);
+    return res;
+  }
+
+  Future<void> sendWhatsAppApi({
+    required Uint8List pdfBytes,
+    required String mobile,
+    required String customerName,
+  }) async {
+    try {
+      FormData formData = FormData.fromMap({
+        "mobile": mobile,
+        "msg": "Dear $customerName, your estimate is here",
+
+        // 👇 IMPORTANT
+        "file": MultipartFile.fromBytes(
+          pdfBytes,
+          filename: "estimate.pdf",
+          contentType: http.MediaType("application", "pdf"),
+        ),
+      });
+
+      final response = await Dio().post(
+        "http://192.168.1.21:4000/api/whatsapp", // 👈 full URL use karo
+        data: formData,
+        options: Options(
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "Authorization": "Bearer ${Preference.getString(PrefKeys.token)}",
+            'licence_no': Preference.getint(PrefKeys.licenseNo).toString(),
+          },
+          validateStatus: (status) => true, // 👈 error response bhi milega
+        ),
+      );
+    } catch (e) {
+      print("WhatsApp Error: $e");
+    }
   }
 }

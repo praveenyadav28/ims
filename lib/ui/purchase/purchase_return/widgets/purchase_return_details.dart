@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ims/ui/purchase/purchase_return/state/purchase_return_bloc.dart';
+import 'package:ims/utils/api.dart';
 import 'package:ims/utils/colors.dart';
+import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
@@ -37,10 +39,48 @@ class PurchaseReturnDetailsCard extends StatelessWidget {
                 child: CommonTextField(
                   controller: prefixController,
                   hintText: 'Prefix',
-                  onChanged: (value) {
+                  onChanged: (value) async {
                     context.read<PurchaseReturnBloc>().add(
                       PurchaseReturnUpdatePrefix(value),
                     );
+
+                    final currentText = value;
+
+                    Future.delayed(const Duration(milliseconds: 300), () async {
+                      // user ne aur type kiya ho to old request ignore
+                      if (prefixController.text.trim() != currentText.trim())
+                        return;
+
+                      final res = await ApiService.postData(
+                        'get/nexttranseno',
+                        {
+                          "trans_type": "Purchasereturn",
+                          "prefix": currentText.trim(),
+                        },
+                        licenceNo: Preference.getint(PrefKeys.licenseNo),
+                      );
+
+                      // latest text hi chale
+                      if (prefixController.text.trim() != currentText.trim())
+                        return;
+
+                      if (res != null && res['status'] == true) {
+                        final newNo = res['next_no'].toString();
+
+                        purchaseReturnNoController.value = TextEditingValue(
+                          text: newNo,
+                          selection: TextSelection.collapsed(
+                            offset: newNo.length,
+                          ),
+                        );
+
+                        context.read<PurchaseReturnBloc>().add(
+                          PurchaseReturnUpdateNo(newNo),
+                        );
+                      } else {
+                        purchaseReturnNoController.clear();
+                      }
+                    });
                   },
                 ),
               ),
@@ -61,7 +101,7 @@ class PurchaseReturnDetailsCard extends StatelessWidget {
           flix: 30,
         ),
 
-        SizedBox(height: Sizes.height * .03),
+        SizedBox(height: Sizes.height * .02),
         nameField(
           text: "Purchase Return Date",
           child: Row(
@@ -84,7 +124,7 @@ class PurchaseReturnDetailsCard extends StatelessWidget {
           ),
           flix: 30,
         ),
-        SizedBox(height: Sizes.height * .03),
+        SizedBox(height: Sizes.height * .02),
         nameField(
           text: "Purchase Invoice No",
           child: Row(
@@ -132,7 +172,6 @@ class PurchaseReturnDetailsCard extends StatelessWidget {
           ),
           flix: 30,
         ),
-        SizedBox(height: Sizes.height * .03),
       ],
     );
   }

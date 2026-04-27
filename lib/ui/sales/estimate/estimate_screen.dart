@@ -129,7 +129,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
-      salesPersonController.text = e.other1;
+      salesPersonController.text = e.salePerson;
       stateController.text = e.placeOfSupply;
 
       // set estimate dates & validity
@@ -207,6 +207,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
     );
     if (date != null) {
       pickedEstimateDate = date;
+      bloc.add(EstimateSetDate(date));
       final days = int.tryParse(validForController.text) ?? 0;
       pickedValidityDate = days > 0
           ? date.add(Duration(days: days))
@@ -359,7 +360,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
                   text:
-                      "${widget.estimateData == null ? "Create" : "Update"} Estimate",
+                      "${widget.estimateData == null ? "Save" : "Update"} Estimate",
                   height: 40,
                   width: 160,
                   onTap: () {
@@ -398,7 +399,10 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
               trackVisibility: true,
               child: SingleChildScrollView(
                 controller: _scrollController,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -473,23 +477,23 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
                         onValidForChanged: (value) {
                           final days = int.tryParse(value) ?? 0;
-                          pickedValidityDate = pickedEstimateDate.add(
-                            Duration(days: days),
-                          );
-                          // inform bloc about validForDays (keep state consistent)
-                          bloc.emit(
-                            state.copyWith(
-                              validForDays: days,
-                              validityDate: pickedValidityDate,
-                            ),
-                          );
-                          bloc.add(EstCalculate());
-                          setState(() {});
+
+                          context.read<EstBloc>().add(EstUpdateValidDays(days));
+
+                          setState(() {
+                            pickedValidityDate = pickedEstimateDate.add(
+                              Duration(days: days),
+                            );
+
+                            validityDateController.text = DateFormat(
+                              'yyyy-MM-dd',
+                            ).format(pickedValidityDate!);
+                          });
                         },
                       ),
                     ),
 
-                    SizedBox(height: Sizes.height * .03),
+                    SizedBox(height: Sizes.height * .02),
                     GlobalItemsTableSection(
                       rows: state.rows,
                       ledgerType:
@@ -508,7 +512,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                           if (_scrollController.hasClients) {
                             _scrollController.animateTo(
                               _scrollController.offset + 75,
-                              duration: const Duration(milliseconds: 300),
+                              duration: const Duration(milliseconds: 200),
                               curve: Curves.ease,
                             );
                           }
@@ -663,7 +667,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
                                           },
                                         ),
                                         Text(
-                                          "Send PdF on Whatsapp",
+                                          "Send PDF on Whatsapp",
                                           style: GoogleFonts.inter(
                                             fontSize: 14,
                                             color: AppColor.black,
@@ -765,7 +769,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
     final completer = Completer<List<LedgerModelDrop>>();
 
-    _ledgerDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _ledgerDebounce = Timer(const Duration(milliseconds: 200), () async {
       final result = await repo.searchLedger(text, true);
       completer.complete(result);
     });
@@ -778,7 +782,7 @@ class _CreateEstimateViewState extends State<CreateEstimateView> {
 
     final completer = Completer<List<ItemServiceModel>>();
 
-    _itemDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _itemDebounce = Timer(const Duration(milliseconds: 200), () async {
       final result = await repo.searchItems(text);
       completer.complete(result);
     });

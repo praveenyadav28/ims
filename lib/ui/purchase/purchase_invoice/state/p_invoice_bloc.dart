@@ -289,6 +289,10 @@ class PurchaseInvoiceSaveWithUIData extends PurchaseInvoiceEvent {
   final Uint8List? signatureImage; // NEW
   final bool printAfterSave; // NEW
   final bool printSignature; // NEW
+  final List<Map<String, dynamic>> ledgerDetails; // 🔥 multiple rows
+  final String voucherNo;
+  final DateTime date;
+  final String prefix;
 
   PurchaseInvoiceSaveWithUIData({
     required this.supplierName,
@@ -302,6 +306,10 @@ class PurchaseInvoiceSaveWithUIData extends PurchaseInvoiceEvent {
     this.signatureImage,
     required this.printAfterSave,
     required this.printSignature,
+    required this.ledgerDetails,
+    required this.voucherNo,
+    required this.date,
+    required this.prefix,
   });
 }
 
@@ -837,7 +845,7 @@ class PurchaseInvoiceBloc
             : state.selectedCustomer!.name,
 
         "amount": totalAmount,
-        "invoice_no": state.purchaseInvoiceNo,
+        "invoice_no": "${state.prefix}${state.purchaseInvoiceNo}",
 
         "date":
             "${e.date.year}-${e.date.month.toString().padLeft(2, '0')}-${e.date.day.toString().padLeft(2, '0')}",
@@ -998,10 +1006,21 @@ class PurchaseInvoiceBloc
         );
 
         if (res?['status'] == true) {
+          final ctx = purchaseInvoiceNavigatorKey.currentContext!;
           showCustomSnackbarSuccess(
             purchaseInvoiceNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+          if (e.ledgerDetails.isNotEmpty) {
+            add(
+              PurchaseInvoiceSavePayment(
+                ledgerDetails: e.ledgerDetails,
+                voucherNo: e.voucherNo,
+                date: e.date,
+                prefix: e.prefix,
+              ),
+            );
+          }
           if (e.printAfterSave) {
             final data = PurchaseInvoiceData.fromJson(res!['data']);
             final doc = data.toPrintModel(); // ✅ no dynamic
@@ -1010,7 +1029,6 @@ class PurchaseInvoiceBloc
             await PdfEngine.printPremiumInvoice(doc: doc, company: company);
           }
 
-          final ctx = purchaseInvoiceNavigatorKey.currentContext!;
           Navigator.of(ctx).pop(true);
         } else {
           showCustomSnackbarError(

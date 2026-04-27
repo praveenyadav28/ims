@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/user_model.dart';
 import 'package:ims/ui/master/user/create_user.dart';
+import 'package:ims/utils/access.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -73,18 +74,19 @@ class _UserEmpTableScreenState extends State<UserEmpTableScreen> {
           ),
         ),
         actions: [
-          Center(
-            child: defaultButton(
-              height: 40,
-              width: 150,
-              onTap: () async {
-                var data = await pushTo(UserScreenCreate());
-                if (data != null) loadData();
-              },
-              text: "Create",
-              buttonColor: AppColor.blue,
+          if (hasModuleAccess("User", "create"))
+            Center(
+              child: defaultButton(
+                height: 40,
+                width: 150,
+                onTap: () async {
+                  var data = await pushTo(UserScreenCreate());
+                  if (data != null) loadData();
+                },
+                text: "Create",
+                buttonColor: AppColor.blue,
+              ),
             ),
-          ),
           const SizedBox(width: 12),
         ],
       ),
@@ -219,8 +221,14 @@ class _UserEmpTableScreenState extends State<UserEmpTableScreen> {
       width: 110,
       child: Row(
         children: [
+          if (hasModuleAccess("User", "update"))
+            _iconBtn(Icons.edit, AppColor.primary, () async {
+              var data = await pushTo(UserScreenCreate(user: c));
+              if (data != null) loadData();
+            }),
           const SizedBox(width: 10),
-          _iconBtn(Icons.delete, Colors.red, () => _confirmDelete(c.id)),
+          if (hasModuleAccess("User", "delete"))
+            _iconBtn(Icons.delete, Colors.red, () => _confirmDelete(c.id)),
         ],
       ),
     );

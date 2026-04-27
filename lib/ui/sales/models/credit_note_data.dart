@@ -117,7 +117,7 @@ class CreditNoteData {
     no: j["no"],
     transId: j["purchaseinvoice_id"],
     transNo: (j["purchaseinvoice_no"] ?? "").toString(),
-    transPre: j["purchaseinvoice_pre"],
+    transPre: j["purchaseinvoice_pre"] ?? "",
     creditNoteDate: DateTime.parse(j["purchasenote_date"]),
 
     caseSale: j["case_sale"] ?? false,

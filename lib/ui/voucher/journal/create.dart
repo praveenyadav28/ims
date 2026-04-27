@@ -114,8 +114,6 @@ class _JournalEntryState extends State<JournalEntry> {
         ),
 
         actions: [
-        
-
           Row(
             children: [
               defaultButton(
@@ -134,26 +132,27 @@ class _JournalEntryState extends State<JournalEntry> {
                 text: widget.contraModel != null ? "Update" : "Save",
                 height: 40,
                 width: 113,
-              ),  const SizedBox(width: 10),
-                Checkbox(
-                  fillColor: WidgetStatePropertyAll(AppColor.primary),
-                  shape: ContinuousRectangleBorder(
-                    borderRadius: BorderRadiusGeometry.circular(5),
-                  ),
-                  value: printAfterSave,
-                  onChanged: (v) {
-                    onTogglePrint(v ?? true);
-                    setState(() {});
-                  },
+              ),
+              const SizedBox(width: 10),
+              Checkbox(
+                fillColor: WidgetStatePropertyAll(AppColor.primary),
+                shape: ContinuousRectangleBorder(
+                  borderRadius: BorderRadiusGeometry.circular(5),
                 ),
-                Text(
-                  "Print   ",
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: AppColor.black,
-                    fontWeight: FontWeight.w600,
-                  ),
+                value: printAfterSave,
+                onChanged: (v) {
+                  onTogglePrint(v ?? true);
+                  setState(() {});
+                },
+              ),
+              Text(
+                "Print   ",
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  color: AppColor.black,
+                  fontWeight: FontWeight.w600,
                 ),
+              ),
             ],
           ),
         ],
@@ -234,6 +233,36 @@ class _JournalEntryState extends State<JournalEntry> {
                 child: TitleTextFeild(
                   controller: prefixController,
                   titleText: "Prefix",
+                  onChanged: (value) async {
+                    final currentText = value;
+
+                    Future.delayed(const Duration(milliseconds: 300), () async {
+                      if (prefixController.text.trim() != currentText.trim())
+                        return;
+
+                      final res = await ApiService.postData(
+                        'get/transno',
+                        {"trans_type": "Journal", "prefix": currentText.trim()},
+                        licenceNo: Preference.getint(PrefKeys.licenseNo),
+                      );
+
+                      if (prefixController.text.trim() != currentText.trim())
+                        return;
+
+                      if (res != null && res['status'] == true) {
+                        final newNo = res['next_no'].toString();
+
+                        voucherNoController.value = TextEditingValue(
+                          text: newNo,
+                          selection: TextSelection.collapsed(
+                            offset: newNo.length,
+                          ),
+                        );
+                      } else {
+                        voucherNoController.clear();
+                      }
+                    });
+                  },
                 ),
               ),
               const SizedBox(width: 20),
@@ -444,7 +473,7 @@ class _JournalEntryState extends State<JournalEntry> {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     if (res['status'] == true) {
-      voucherNoController.text = res['NextNo'].toString();
+      voucherNoController.text = res['next_no'].toString();
       prefixController.text = res['prefix'].toString();
     }
   }

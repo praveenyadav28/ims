@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:excel/excel.dart' hide Border;
 import 'package:open_filex/open_filex.dart';
@@ -42,25 +43,43 @@ class _CashBookReportScreenState extends State<CashBookReportScreen> {
 
   List<LedgerRow> rows = [];
 
+  Timer? _ledgerDebounce;
   @override
   void initState() {
     super.initState();
+    setFinancialYear();
     fromCtrl.text = df.format(fromDate);
     toCtrl.text = df.format(toDate);
-    ledgerApi();
+    ledgerApi("");
+  }
+
+  void setFinancialYear() {
+    final now = DateTime.now();
+
+    if (now.month >= 4) {
+      fromDate = DateTime(now.year, 4, 1);
+      toDate = DateTime(now.year + 1, 3, 31);
+    } else {
+      fromDate = DateTime(now.year - 1, 4, 1);
+      toDate = DateTime(now.year, 3, 31);
+    }
+
+    fromCtrl.text = DateFormat("dd/MM/yyyy").format(fromDate);
+    toCtrl.text = DateFormat("dd/MM/yyyy").format(toDate);
   }
 
   // ================= LEDGER LIST =================
-  Future<void> ledgerApi() async {
+  Future<void> ledgerApi(String text) async {
     final res = await ApiService.fetchData(
-      "get/ledger",
+      text.isEmpty
+          ? "get/ledger/search?group=Cash In Hand"
+          : "get/ledger/search?search=$text&group=Cash In Hand",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
     setState(() {
       ledgerList = (res['data'] as List)
           .map((e) => LedgerListModel.fromJson(e))
-          .where((e) => e.ledgerGroup == 'Cash In Hand')
           .toList();
     });
   }
@@ -78,11 +97,9 @@ class _CashBookReportScreenState extends State<CashBookReportScreen> {
     );
 
     /// ================= OPENING =================
-    double opening = (res['Ledger']['opening_balance'] ?? 0).toDouble();
-    String openingType = res['Ledger']['opening_type'] ?? "DR";
 
     // DR = debit , CR = credit
-    openingBalance = openingType == "DR" ? opening : -opening;
+    openingBalance = (res['Ledger']['opening_balance'] ?? 0).toDouble();
 
     /// ================= COMMON HANDLER =================
     void addRow({
@@ -118,24 +135,42 @@ class _CashBookReportScreenState extends State<CashBookReportScreen> {
 
     // ================= RECEIPT =================
     for (var e in res['Recipt'] ?? []) {
+      double debitAmt = 0;
+
+      for (var l in (e['ledger_details'] ?? [])) {
+        if (l['ledger_id'] == selectedLedger!.id) {
+          debitAmt = (l['amount'] ?? 0).toDouble();
+          break;
+        }
+      }
+
       addRow(
         date: DateTime.parse(e['date']),
         type: "Receipt",
         party: e['customer_name'],
-        debit: e['amount'].toDouble(),
-        credit: 0,
-        no: e['vouncher_no'].toString(),
+        debit: 0,
+        credit: debitAmt,
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['vouncher_no'].toString()}",
       );
     }
 
     for (var e in res['Payment'] ?? []) {
+      double creditAmt = 0;
+
+      for (var l in (e['ledger_details'] ?? [])) {
+        if (l['ledger_id'] == selectedLedger!.id) {
+          creditAmt = (l['amount'] ?? 0).toDouble();
+          break;
+        }
+      }
+
       addRow(
         date: DateTime.parse(e['date']),
         type: "Payment",
         party: e['supplier_name'],
-        debit: 0,
-        credit: e['amount'].toDouble(),
-        no: e['vouncher_no'].toString(),
+        debit: creditAmt,
+        credit: 0,
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['vouncher_no'].toString()}",
       );
     }
 
@@ -147,13 +182,13 @@ class _CashBookReportScreenState extends State<CashBookReportScreen> {
         party: e['account_name'] == selectedLedger!.ledgerName
             ? e['ledger_name']
             : e['account_name'],
-        debit: e['account_name'] == selectedLedger!.ledgerName
+        credit: e['account_name'] == selectedLedger!.ledgerName
             ? e['amount'].toDouble()
             : 0,
-        credit: e['account_name'] == selectedLedger!.ledgerName
+        debit: e['account_name'] == selectedLedger!.ledgerName
             ? 0
             : e['amount'].toDouble(),
-        no: e['vouncher_no'].toString(),
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['vouncher_no'].toString()}",
       );
     }
 
@@ -163,9 +198,9 @@ class _CashBookReportScreenState extends State<CashBookReportScreen> {
         date: DateTime.parse(e['date']),
         type: "Expense",
         party: e['account_name'],
-        debit: 0,
-        credit: e['amount'].toDouble(),
-        no: e['vouncher_no'].toString(),
+        credit: 0,
+        debit: e['amount'].toDouble(),
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['vouncher_no'].toString()}",
       );
     }
 
@@ -177,13 +212,13 @@ class _CashBookReportScreenState extends State<CashBookReportScreen> {
         party: e['account_name'] == selectedLedger!.ledgerName
             ? e['ledger_name']
             : e['account_name'],
-        debit: e['account_name'] == selectedLedger!.ledgerName
+        credit: e['account_name'] == selectedLedger!.ledgerName
             ? e['amount'].toDouble()
             : 0,
-        credit: e['account_name'] == selectedLedger!.ledgerName
+        debit: e['account_name'] == selectedLedger!.ledgerName
             ? 0
             : e['amount'].toDouble(),
-        no: e['vouncher_no'].toString(),
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['vouncher_no'].toString()}",
       );
     }
 
@@ -220,7 +255,7 @@ class _CashBookReportScreenState extends State<CashBookReportScreen> {
     return Row(
       children: [
         Expanded(
-          child: CommonSearchableDropdownField<LedgerListModel>(
+          child: CommonSearchableDropdownChange<LedgerListModel>(
             controller: ledgerCtrl,
             hintText: "Select Cash In Hand",
             suggestions: ledgerList
@@ -229,6 +264,12 @@ class _CashBookReportScreenState extends State<CashBookReportScreen> {
             onSuggestionTap: (v) {
               selectedLedger = v.item;
               ledgerCtrl.text = v.item!.ledgerName!;
+            },
+            onChanged: (v) {
+              if (_ledgerDebounce?.isActive ?? false) _ledgerDebounce!.cancel();
+              _ledgerDebounce = Timer(const Duration(milliseconds: 200), () {
+                ledgerApi(v);
+              });
             },
           ),
         ),
@@ -370,7 +411,7 @@ class _CashBookReportScreenState extends State<CashBookReportScreen> {
   }
 
   Widget _summary() {
-    final balance = openingBalance + debitTotal - creditTotal;
+    final balance = openingBalance + creditTotal - debitTotal;
 
     return Container(
       padding: const EdgeInsets.all(12),

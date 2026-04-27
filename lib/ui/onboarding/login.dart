@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/component/full_screen.dart';
@@ -28,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
   TextEditingController userIdController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   bool rememberMe = false;
+  bool obscureText = true;
   BranchList? _selectedBranch;
   List<BranchList> branchList = [];
   @override
@@ -84,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: licenceNoController,
                 prefixIcon: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: SvgPicture.asset('assets/icons/hash.svg', height: 20),
+                  child: Icon(Icons.receipt_long, size: 20),
                 ),
               ),
               SizedBox(height: Sizes.height * 0.02),
@@ -95,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 prefixIcon: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: SvgPicture.asset(
-                    'assets/icons/userID.svg',
+                    'assets/icons/userId.svg',
                     height: 20,
                   ),
                 ),
@@ -115,6 +118,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 onFieldSubmitted: (value) {
                   getBranches();
                 },
+                obscureText: obscureText,
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      obscureText = !obscureText;
+                    });
+                  },
+                  icon: Icon(
+                    obscureText ? Icons.visibility_off : Icons.visibility,
+                    size: 20,
+                  ),
+                ),
               ),
               SizedBox(height: Sizes.height * 0.02),
               Row(
@@ -173,13 +188,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response['status'] == true) {
         final data = response['data'];
 
-        // ✅ Ensure data is a List before parsing
         if (data is List) {
           branchList = branchListFromJson(data);
 
           if (branchList.length == 1) {
             _selectedBranch = branchList.first;
-            // Optionally trigger next step:
             postLogin();
           }
         } else {
@@ -200,71 +213,98 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future postLogin() async {
-    var response = await ApiService.postData(
-      'user/login',
-      {
-        'licence_no': int.parse(licenceNoController.text.trim().toString()),
-        'branch_id': _selectedBranch?.id,
-        'username': userIdController.text.trim().toString(),
-        'password': passwordController.text.trim().toString(),
-      },
-      licenceNo: int.parse(licenceNoController.text.trim().toString()),
-    );
-    if (response["status"] == true) {
-      Preference.setBool(PrefKeys.loginStatus, rememberMe);
-
-      if (rememberMe) {
-        Preference.setString(PrefKeys.savedUserId, userIdController.text);
-        Preference.setString(PrefKeys.savedPassword, passwordController.text);
-        Preference.setString(PrefKeys.savedLicence, licenceNoController.text);
-      } else {
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.remove(PrefKeys.savedUserId);
-        await prefs.remove(PrefKeys.savedPassword);
-        await prefs.remove(PrefKeys.savedLicence);
-      }
-      Preference.setString(PrefKeys.token, response['token']);
-      Preference.setInt(
-        PrefKeys.licenseNo,
-        int.parse(licenceNoController.text.trim()),
+    try {
+      var response = await ApiService.postData(
+        'user/login',
+        {
+          'licence_no': int.parse(licenceNoController.text.trim().toString()),
+          'branch_id': _selectedBranch?.id,
+          'username': userIdController.text.trim().toString(),
+          'password': passwordController.text.trim().toString(),
+        },
+        licenceNo: int.parse(licenceNoController.text.trim().toString()),
       );
-      Preference.setString(PrefKeys.locationId, response['user']['branch_id']);
-      Preference.setString(
-        PrefKeys.branchName,
-        response['user']['branch_name'],
-      );
-      Preference.setString(PrefKeys.branchAddress, response['user']['address']);
-      Preference.setString(PrefKeys.state, response['user']['state']);
-      Preference.setString(
-        PrefKeys.amcDueDate,
-        DateFormat(
-          'dd-MM-yyyy',
-        ).format(DateTime.parse(response['user']['amc_due_date'])),
-      );
-      showCustomSnackbarSuccess(context, response['message']);
-      // await fetchAndSaveActiveSessionId();
-      pushNdRemove(FullScreen());
-    } else {
-      showCustomSnackbarError(context, response['message']);
-    }
-  }
-
-  Future<void> fetchAndSaveActiveSessionId() async {
-    var response = await ApiService.fetchData(
-      "session?licence_no=${Preference.getint(PrefKeys.licenseNo)}&branch_id=${_selectedBranch!.id}",
-    );
-    if (response["status"] == true) {
-      List sessions = response['data'];
-      for (var session in sessions) {
-        if (session['is_active'] == 1) {
-          await Preference.setInt(PrefKeys.sessionId, session['id']);
-          await Preference.setString(
-            PrefKeys.sessionDate,
-            "${session['session_start_date']} - ${session['session_end_date']}",
-          );
-          break;
+      print(response);
+      if (response["status"] == true) {
+        Preference.setBool(PrefKeys.loginStatus, rememberMe);
+        if (rememberMe) {
+          Preference.setString(PrefKeys.savedUserId, userIdController.text);
+          Preference.setString(PrefKeys.savedPassword, passwordController.text);
+          Preference.setString(PrefKeys.savedLicence, licenceNoController.text);
+        } else {
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.remove(PrefKeys.savedUserId);
+          await prefs.remove(PrefKeys.savedPassword);
+          await prefs.remove(PrefKeys.savedLicence);
         }
+        Preference.setString(PrefKeys.token, response['token']);
+        Preference.setInt(
+          PrefKeys.loginTime,
+          DateTime.now().millisecondsSinceEpoch,
+        );
+        Preference.setInt(
+          PrefKeys.licenseNo,
+          int.parse(licenceNoController.text.trim()),
+        );
+        Preference.setString(
+          PrefKeys.rights,
+          jsonEncode(response['user']['right_list']),
+        );
+
+        // single rights save
+        Preference.setString(
+          PrefKeys.singleRights,
+          jsonEncode(response['user']['single_right']),
+        );
+        Preference.setString(
+          PrefKeys.locationId,
+          response['user']['branch_id'],
+        );
+        Preference.setString(
+          PrefKeys.branchName,
+          response['user']['branch_name'],
+        );
+        Preference.setString(
+          PrefKeys.branchAddress,
+          response['user']['address'],
+        );
+        Preference.setString(PrefKeys.state, response['user']['state']);
+        Preference.setString(PrefKeys.userType, response['user']['role']);
+        Preference.setString(
+          PrefKeys.amcDueDate,
+          DateFormat(
+            'dd-MM-yyyy',
+          ).format(DateTime.parse(response['user']['amc_due_date'])),
+        );
+        showCustomSnackbarSuccess(context, response['message']);
+        // await fetchAndSaveActiveSessionId();
+        pushNdRemove(FullScreen());
+      } else {
+        showCustomSnackbarError(context, response['message']);
+      }
+    } catch (e) {
+      if (e is ApiException) {
+        showCustomSnackbarError(context, e.message);
       }
     }
   }
+
+  // Future<void> fetchAndSaveActiveSessionId() async {
+  //   var response = await ApiService.fetchData(
+  //     "session?licence_no=${Preference.getint(PrefKeys.licenseNo)}&branch_id=${_selectedBranch!.id}",
+  //   );
+  //   if (response["status"] == true) {
+  //     List sessions = response['data'];
+  //     for (var session in sessions) {
+  //       if (session['is_active'] == 1) {
+  //         await Preference.setInt(PrefKeys.sessionId, session['id']);
+  //         await Preference.setString(
+  //           PrefKeys.sessionDate,
+  //           "${session['session_start_date']} - ${session['session_end_date']}",
+  //         );
+  //         break;
+  //       }
+  //     }
+  //   }
+  // }
 }

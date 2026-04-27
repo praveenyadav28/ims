@@ -31,14 +31,15 @@ class Preference {
 class PrefKeys {
   static const loginStatus = "loginStatus";
   static const token = "token";
+  static const loginTime = "loginTime";
   static const userstatus = "userstatus";
   static const branchName = "branchName";
   static const branchAddress = "branchAddress";
   static const licenseNo = "licenseNo";
   static const locationId = "locationId";
-  static const staffId = "staffId";
   static const userType = "userType";
   static const rights = "rights";
+  static const singleRights = "singleRights";
   static const sessionId = "sessionId";
   static const sessionDate = "sessionDate";
   static const state = "state";
@@ -54,10 +55,10 @@ logoutPrefData() async {
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   await prefs.remove(PrefKeys.token);
   await prefs.remove(PrefKeys.userstatus);
+  await prefs.remove(PrefKeys.loginTime);
   await prefs.remove(PrefKeys.licenseNo);
   await prefs.remove(PrefKeys.locationId);
   await prefs.remove(PrefKeys.branchName);
-  await prefs.remove(PrefKeys.staffId);
   await prefs.remove(PrefKeys.userType);
   await prefs.remove(PrefKeys.sessionId);
   await prefs.remove(PrefKeys.sessionDate);

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/ledger_model.dart';
 import 'package:ims/ui/master/ledger/ledger_master.dart';
+import 'package:ims/utils/access.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -11,6 +12,7 @@ import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
+import 'package:ims/utils/textfield.dart';
 
 class LedgerListScreen extends StatefulWidget {
   const LedgerListScreen({super.key});
@@ -21,7 +23,14 @@ class LedgerListScreen extends StatefulWidget {
 
 class _LedgerListScreenState extends State<LedgerListScreen> {
   List<LedgerListModel> ledgerList = [];
+  List<LedgerListModel> allLedgerList = [];
+  List<LedgerListModel> filteredList = [];
 
+  TextEditingController searchController = TextEditingController();
+  String selectedGroup = "All";
+
+  int currentPage = 1;
+  int rowsPerPage = 100;
   @override
   void initState() {
     super.initState();
@@ -36,18 +45,97 @@ class _LedgerListScreenState extends State<LedgerListScreen> {
     );
 
     List responseData = response['data'] ?? [];
-    
-    final allLedgers = responseData.map((e) => LedgerListModel.fromJson(e)).toList();
+
     setState(() {
-       ledgerList = allLedgers
+      allLedgerList = responseData
+          .map((e) => LedgerListModel.fromJson(e))
           .where(
             (e) =>
                 e.ledgerGroup != 'Sundry Debtor' &&
                 e.ledgerGroup != 'Sundry Creditor',
           )
           .toList();
-     
+
+      applyFilter();
     });
+  }
+
+  void applyFilter() {
+    List<LedgerListModel> temp = allLedgerList;
+
+    // 🔍 Ledger Name filter
+    if (searchController.text.isNotEmpty) {
+      temp = temp
+          .where(
+            (e) => (e.ledgerName ?? "").toLowerCase().contains(
+              searchController.text.toLowerCase(),
+            ),
+          )
+          .toList();
+    }
+
+    // 🧩 Group filter
+    if (selectedGroup != "All") {
+      temp = temp.where((e) => e.ledgerGroup == selectedGroup).toList();
+    }
+
+    filteredList = temp;
+    currentPage = 1;
+
+    setState(() {});
+  }
+
+  List<LedgerListModel> get paginatedList {
+    final start = (currentPage - 1) * rowsPerPage;
+
+    if (start >= filteredList.length) return [];
+
+    final end = start + rowsPerPage;
+
+    return filteredList.sublist(
+      start,
+      end > filteredList.length ? filteredList.length : end,
+    );
+  }
+
+  Widget _filters() {
+    List<String> groups = [
+      "All",
+      ...allLedgerList.map((e) => e.ledgerGroup ?? "").toSet(),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          // 🔍 Search
+          Expanded(
+            flex: 4,
+            child: CommonTextField(
+              controller: searchController,
+              onChanged: (_) => applyFilter(),
+              hintText: "Search Ledger",
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          // 🧩 Group dropdown
+          Expanded(
+            child: CommonDropdownField<String>(
+              value: selectedGroup,
+              items: groups
+                  .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                  .toList(),
+              onChanged: (v) {
+                selectedGroup = v!;
+                applyFilter();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future deleteApi(String id) async {
@@ -81,18 +169,19 @@ class _LedgerListScreenState extends State<LedgerListScreen> {
           ),
         ),
         actions: [
-          Center(
-            child: defaultButton(
-              height: 40,
-              width: 150,
-              onTap: () async {
-                var data = await pushTo(CreateLedger());
-                if (data == "data") ledgerApi();
-              },
-              text: "Create Ledger",
-              buttonColor: AppColor.blue,
+          if (hasModuleAccess("Ledger", "create"))
+            Center(
+              child: defaultButton(
+                height: 40,
+                width: 150,
+                onTap: () async {
+                  var data = await pushTo(CreateLedger());
+                  if (data == "data") ledgerApi();
+                },
+                text: "Create Ledger",
+                buttonColor: AppColor.blue,
+              ),
             ),
-          ),
           const SizedBox(width: 12),
           Center(
             child: defaultButton(
@@ -130,23 +219,61 @@ class _LedgerListScreenState extends State<LedgerListScreen> {
               ),
               child: Column(
                 children: [
+                  _filters(), // 👈 NEW
                   _tableHeader(),
                   const Divider(height: 1),
+
                   Expanded(
-                    child: ledgerList.isEmpty
+                    child: paginatedList.isEmpty
                         ? const Center(child: Text("No Data Found"))
                         : ListView.separated(
-                            itemCount: ledgerList.length,
+                            itemCount: paginatedList.length,
                             separatorBuilder: (_, __) =>
                                 Divider(height: 1, color: Colors.grey.shade200),
                             itemBuilder: (context, i) {
-                              return _tableRow(ledgerList[i], i);
+                              return _tableRow(paginatedList[i], i);
                             },
                           ),
                   ),
+
+                  _pagination(), // 👈 NEW
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pagination() {
+    int totalPages = (filteredList.length / rowsPerPage).ceil();
+
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          IconButton(
+            onPressed: currentPage > 1
+                ? () {
+                    currentPage--;
+                    setState(() {});
+                  }
+                : null,
+            icon: Icon(Icons.arrow_back),
+          ),
+
+          Text("Page $currentPage of $totalPages"),
+
+          IconButton(
+            onPressed: currentPage < totalPages
+                ? () {
+                    currentPage++;
+                    setState(() {});
+                  }
+                : null,
+            icon: Icon(Icons.arrow_forward),
           ),
         ],
       ),
@@ -246,12 +373,15 @@ class _LedgerListScreenState extends State<LedgerListScreen> {
         children: [
           _iconBtn(Icons.visibility, Colors.blue, () => _showDetails(l)),
           const SizedBox(width: 10),
-          _iconBtn(Icons.edit, AppColor.primary, () async {
-            var data = await pushTo(CreateLedger(existing: l));
-            if (data != null) ledgerApi();
-          }),
+          if (hasModuleAccess("Ledger", "update"))
+            _iconBtn(Icons.edit, AppColor.primary, () async {
+              var data = await pushTo(CreateLedger(existing: l));
+              if (data != null) ledgerApi();
+            }),
           const SizedBox(width: 10),
-          _iconBtn(Icons.delete, Colors.red, () => _confirmDelete(l.id!)),
+
+          if (hasModuleAccess("Ledger", "delete"))
+            _iconBtn(Icons.delete, Colors.red, () => _confirmDelete(l.id!)),
         ],
       ),
     );
@@ -291,8 +421,14 @@ class _LedgerListScreenState extends State<LedgerListScreen> {
               _d("City", l.city),
               const SizedBox(height: 8),
               const Divider(),
-              _d("Opening Balance", "${l.openingBalance} ${l.openingType}"),
-              _d("Closing Balance", l.closingBalance?.toString()),
+              _d(
+                "Opening Balance",
+                "${l.openingBalance} ${l.openingBalance! < 0 ? 'I Pay' : 'I Receive'}",
+              ),
+              _d(
+                "Closing Balance",
+                "${l.closingBalance?.toString() ?? '-'} ${l.closingBalance != null ? (l.closingBalance! < 0 ? 'I Pay' : 'I Receive') : ''}",
+              ),
             ],
           ),
         ),

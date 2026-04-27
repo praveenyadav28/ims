@@ -5,15 +5,16 @@ class NavigationService {
 }
 
 pushTo(Widget name) async {
-  return await Navigator.push(
-    NavigationService.navigatorKey.currentContext!,
-    MaterialPageRoute(builder: (context) => name),
+  return await NavigationService.navigatorKey.currentState!.push(
+    MaterialPageRoute(builder: (_) => name),
   );
 }
 
 void replaceRoute(Widget name) {
-  Navigator.pushReplacement(NavigationService.navigatorKey.currentContext!,
-      MaterialPageRoute(builder: (context) => name));
+  Navigator.pushReplacement(
+    NavigationService.navigatorKey.currentContext!,
+    MaterialPageRoute(builder: (context) => name),
+  );
 }
 
 pushName(BuildContext context, String route) {
@@ -23,6 +24,8 @@ pushName(BuildContext context, String route) {
 void pushNdRemove(Widget name) {
   Navigator.of(
     NavigationService.navigatorKey.currentContext!,
-  ).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => name),
-      (Route<dynamic> route) => false);
+  ).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (context) => name),
+    (Route<dynamic> route) => false,
+  );
 }

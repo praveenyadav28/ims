@@ -53,7 +53,19 @@ class _SupplierTableScreenState extends State<SupplierTableScreen> {
 
     List responseData = response['data'] ?? [];
     setState(() {
-      supplierList = responseData.map((e) => Customer.fromJson(e)).toList();
+      supplierList = responseData.map((e) {
+        final customerJson = e['supplier'] ?? {};
+        final ledgerJson = e['ledger'] ?? {};
+
+        // merge ledger balance into customer
+        customerJson['opening_balance'] =
+            ledgerJson['opening_balance'] ?? customerJson['opening_balance'];
+
+        customerJson['closing_balance'] =
+            ledgerJson['closing_balance'] ?? customerJson['closing_balance'];
+
+        return Customer.fromJson(customerJson);
+      }).toList();
       filteredList = supplierList; // 🔥 IMPORTANT
     });
   }

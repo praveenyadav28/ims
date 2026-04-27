@@ -1,4 +1,5 @@
 // top of file
+import 'dart:async';
 import 'dart:io';
 import 'package:excel/excel.dart' hide Border;
 import 'package:path_provider/path_provider.dart';
@@ -42,19 +43,35 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
   double creditTotal = 0;
 
   List<LedgerRow> rows = [];
-
+  Timer? _ledgerDebounce;
   @override
   void initState() {
     super.initState();
+    setFinancialYear();
     fromCtrl.text = df.format(fromDate);
     toCtrl.text = df.format(toDate);
-    ledgerApi();
+    ledgerApi("");
+  }
+
+  void setFinancialYear() {
+    final now = DateTime.now();
+
+    if (now.month >= 4) {
+      fromDate = DateTime(now.year, 4, 1);
+      toDate = DateTime(now.year + 1, 3, 31);
+    } else {
+      fromDate = DateTime(now.year - 1, 4, 1);
+      toDate = DateTime(now.year, 3, 31);
+    }
+
+    fromCtrl.text = DateFormat("dd/MM/yyyy").format(fromDate);
+    toCtrl.text = DateFormat("dd/MM/yyyy").format(toDate);
   }
 
   // ================= LEDGER LIST =================
-  Future<void> ledgerApi() async {
+  Future<void> ledgerApi(String text) async {
     final res = await ApiService.fetchData(
-      "get/ledger",
+      text.isEmpty ? "get/ledger/search" : "get/ledger/search?search=$text",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
@@ -83,11 +100,8 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
     );
 
     /// ================= OPENING =================
-    double opening = (res['Ledger']['opening_balance'] ?? 0).toDouble();
-    String openingType = res['Ledger']['opening_type'] ?? "DR";
-
     // DR = debit , CR = credit
-    openingBalance = openingType == "DR" ? opening : -opening;
+    openingBalance = (res['Ledger']['opening_balance'] ?? 0).toDouble();
 
     /// ================= COMMON HANDLER =================
     void addRow({
@@ -129,7 +143,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         party: e['customer_name'],
         debit: e['totle_amo'].toDouble(),
         credit: 0,
-        no: e['no'].toString(),
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['no'].toString()}",
       );
     }
 
@@ -141,7 +155,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         party: e['customer_name'],
         debit: 0,
         credit: e['totle_amo'].toDouble(),
-        no: e['no'].toString(),
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['no'].toString()}",
       );
     }
 
@@ -151,9 +165,9 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         date: DateTime.parse(e['debitnote_date']),
         type: "Credit Note",
         party: e['customer_name'],
-        debit: e['totle_amo'].toDouble(),
-        credit: 0,
-        no: e['no'].toString(),
+        credit: e['totle_amo'].toDouble(),
+        debit: 0,
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['no'].toString()}",
       );
     }
 
@@ -165,7 +179,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         party: e['supplier_name'],
         debit: 0,
         credit: e['totle_amo'].toDouble(),
-        no: e['no'].toString(),
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['no'].toString()}",
       );
     }
 
@@ -177,7 +191,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         party: e['supplier_name'],
         debit: e['totle_amo'].toDouble(),
         credit: 0,
-        no: e['no'].toString(),
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['no'].toString()}",
       );
     }
 
@@ -188,7 +202,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         party: e['supplier_name'],
         debit: e['totle_amo'].toDouble(),
         credit: 0,
-        no: e['no'].toString(),
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['no'].toString()}",
       );
     }
 
@@ -199,8 +213,8 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         type: "Receipt",
         party: e['customer_name'],
         debit: 0,
-        credit: e['amount'].toDouble(),
-        no: e['vouncher_no'].toString(),
+        credit: e['amount'],
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['vouncher_no'].toString()}",
       );
     }
 
@@ -209,9 +223,9 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         date: DateTime.parse(e['date']),
         type: "Payment",
         party: e['supplier_name'],
-        debit: e['amount'].toDouble(),
+        debit: e['amount'],
         credit: 0,
-        no: e['vouncher_no'].toString(),
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['vouncher_no'].toString()}",
       );
     }
 
@@ -223,7 +237,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         party: e['ledger_name'],
         debit: e['amount']?.toDouble() ?? 0,
         credit: 0,
-        no: e['vouncher_no'].toString(),
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['vouncher_no'].toString()}",
       );
     }
 
@@ -235,7 +249,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         party: e['account_name'],
         debit: e['amount'].toDouble(),
         credit: 0,
-        no: e['vouncher_no'].toString(),
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['vouncher_no'].toString()}",
       );
     }
 
@@ -245,13 +259,13 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         date: DateTime.parse(e['date']),
         type: "Journal",
         party: selectedLedger?.ledgerName ?? "",
-        debit: e['account_name'] == selectedLedger!.ledgerName
+        credit: e['account_name'] == selectedLedger!.ledgerName
             ? 0
             : e['amount'].toDouble(),
-        credit: e['account_name'] == selectedLedger!.ledgerName
+        debit: e['account_name'] == selectedLedger!.ledgerName
             ? e['amount'].toDouble()
             : 0,
-        no: e['vouncher_no'].toString(),
+        no: "${e['prefix']}${e['prefix'].isEmpty ? '' : '-'}${e['vouncher_no'].toString()}",
       );
     }
 
@@ -288,7 +302,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
     return Row(
       children: [
         Expanded(
-          child: CommonSearchableDropdownField<LedgerListModel>(
+          child: CommonSearchableDropdownChange<LedgerListModel>(
             controller: ledgerCtrl,
             hintText: "Select Ledger",
             suggestions: ledgerList
@@ -297,6 +311,12 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
             onSuggestionTap: (v) {
               selectedLedger = v.item;
               ledgerCtrl.text = v.item!.ledgerName!;
+            },
+            onChanged: (v) {
+              if (_ledgerDebounce?.isActive ?? false) _ledgerDebounce!.cancel();
+              _ledgerDebounce = Timer(const Duration(milliseconds: 200), () {
+                ledgerApi(v);
+              });
             },
           ),
         ),

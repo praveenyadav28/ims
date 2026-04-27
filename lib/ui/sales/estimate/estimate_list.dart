@@ -27,18 +27,25 @@ class _EstimateListScreenState extends State<EstimateListScreen> {
     return TransactionListScreen<EstimateData>(
       key: listKey, // 👈 VERY IMPORTANT
       title: "Estimate",
+      module: "Estimate",
 
       /// API Call
       fetchData: repo.getEstimates,
 
       /// ACTIONS
       onView: (e) async {
-        final doc = e.toPrintModel(); // ✅ no dynamic
+        try {
+          FocusManager.instance.primaryFocus?.unfocus(); // 🔥 FIX
 
-        final companyApi = await CompanyProfileAPi.getCompanyProfile();
-        final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+          final doc = e.toPrintModel();
 
-        await PdfEngine.printPremiumInvoice(doc: doc, company: company);
+          final companyApi = await CompanyProfileAPi.getCompanyProfile();
+          final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+
+          await PdfEngine.printPremiumInvoice(doc: doc, company: company);
+        } catch (err) {
+          print("ERROR: $err");
+        }
       },
 
       onEdit: (e) async {
@@ -63,7 +70,7 @@ class _EstimateListScreenState extends State<EstimateListScreen> {
       idGetter: (e) => e.id,
       dateGetter: (e) => e.estimateDate,
       numberGetter: (e) =>
-          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
+          "${e.prefix}${e.prefix.isNotEmpty ? '/' : ''}${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
       mobile: (e) => e.mobile,

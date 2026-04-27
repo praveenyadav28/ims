@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/component/full_screen.dart';
 import 'package:ims/ui/onboarding/login.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/navigation.dart';
+import 'package:ims/utils/prefence.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,13 +25,30 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _openHome() {
-    replaceRoute(LoginScreen());
+    final token = Preference.getString(PrefKeys.token);
+
+    if (token.isNotEmpty && isSessionValid()) {
+      replaceRoute(FullScreen());
+    } else {
+      replaceRoute(LoginScreen());
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  bool isSessionValid() {
+    final loginTime = Preference.getint(PrefKeys.loginTime);
+
+    if (loginTime == 0) return false;
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final diffMinutes = (now - loginTime) / (1000 * 60);
+
+    return diffMinutes < 60;
   }
 
   @override

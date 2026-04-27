@@ -1,16 +1,19 @@
 // ignore_for_file: must_be_immutable
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/expanse_model.dart';
+import 'package:ims/model/ledger_model.dart';
 import 'package:ims/ui/master/company/company_api.dart';
+import 'package:ims/ui/master/ledger/ledger_master.dart';
 import 'package:ims/ui/sales/data/reuse_print.dart';
-import 'package:ims/ui/sales/models/global_models.dart';
 import 'package:ims/ui/voucher/pdf_print.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
+import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/snackbar.dart';
@@ -28,11 +31,13 @@ class ExpenseEntry extends StatefulWidget {
 
 class _ExpenseEntryState extends State<ExpenseEntry> {
   /// ================= DATA =================
-  List<LedgerModelDrop> expenseList = [];
-  List<LedgerModelDrop> paymentLedgerList = [];
+  List<LedgerListModel> expenseList = [];
+  List<LedgerListModel> paymentLedgerList = [];
 
-  LedgerModelDrop? selectedExpense;
-  LedgerModelDrop? selectedPaymentLedger;
+  List<LedgerListModel> initialExpanseList = [];
+  List<LedgerListModel> initialBankList = [];
+  LedgerListModel? selectedExpense;
+  LedgerListModel? selectedPaymentLedger;
   String? existingDocuUrl;
 
   /// ================= CONTROLLERS =================
@@ -67,25 +72,53 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
     });
   }
 
+  Timer? _debounce;
+
   /// ================= INIT =================
   @override
   void initState() {
     super.initState();
-    fetchLedgers();
+    searchLedger("").then((data) {
+      initialExpanseList = data
+          .where((e) => e.ledgerGroup == 'Expense')
+          .toList();
+
+      initialBankList = data
+          .where(
+            (e) =>
+                e.ledgerGroup == "Bank Account" ||
+                e.ledgerGroup == "Cash In Hand",
+          )
+          .toList();
+    });
 
     if (widget.expenseModel != null) {
       final e = widget.expenseModel!;
 
-      // ---- BASIC FIELDS ----
       amountController.text = e.amount.toString();
       noteController.text = e.note;
       prefixController.text = e.prefix;
       voucherNoController.text = e.voucherNo.toString();
       dateController.text = DateFormat('yyyy-MM-dd').format(e.date);
       selectedDate = e.date;
+      existingDocuUrl = e.docu;
 
-      // ---- IMAGE URL ----
-      existingDocuUrl = e.docu; // 👈 add variable (see below)
+      expenseController.text = e.supplierName;
+      paymentController.text = e.ledgerName;
+
+      searchLedger("").then((data) {
+        setState(() {
+          selectedExpense = data.firstWhere(
+            (x) => x.ledgerName == e.supplierName,
+            orElse: () => LedgerListModel(id: e.id, ledgerName: e.supplierName),
+          );
+
+          selectedPaymentLedger = data.firstWhere(
+            (x) => x.ledgerName == e.ledgerName,
+            orElse: () => LedgerListModel(id: e.id, ledgerName: e.ledgerName),
+          );
+        });
+      });
     } else {
       getAutoVoucherApi();
     }
@@ -183,29 +216,209 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
         children: [
           _label("Expense"),
           const SizedBox(height: 8),
-          _ledgerDropdown(
+          SearchField<LedgerListModel>(
             controller: expenseController,
-            hint: "Select Expense",
-            list: expenseList,
-            onSelect: (v) {
-              selectedExpense = v;
-              expenseController.text = v.name;
+            suggestions: initialExpanseList.map((e) {
+              return SearchFieldListItem<LedgerListModel>(
+                e.ledgerName ?? "",
+                item: e,
+                child: ledgerTile(e),
+              );
+            }).toList(),
+
+            onSearchTextChanged: (text) async {
+              if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+              await Future.delayed(const Duration(milliseconds: 200));
+
+              final result = await searchLedger(text, groups: ["Expense"]);
+
+              return result
+                  .where(
+                    (e) =>
+                        e.ledgerGroup != "Bank Account" &&
+                        e.ledgerGroup != "Cash In Hand",
+                  )
+                  .map((e) {
+                    return SearchFieldListItem<LedgerListModel>(
+                      e.ledgerName ?? "",
+                      item: e,
+                      child: ledgerTile(e),
+                    );
+                  })
+                  .toList();
             },
-            selectedLedger: selectedExpense,
+
+            onSuggestionTap: (item) {
+              final ledger = item.item!;
+              setState(() {
+                selectedExpense = ledger;
+                expenseController.text = ledger.ledgerName ?? "";
+              });
+            },
+            searchInputDecoration: SearchInputDecoration(
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+              suffixIcon: InkWell(
+                onTap: () async {
+                  var data = await pushTo(CreateLedger());
+                  if (data != null) {
+                    searchLedger("").then((data) {
+                      setState(() {
+                        initialExpanseList = data
+                            .where((e) => e.ledgerGroup == 'Expense')
+                            .toList();
+                      });
+                    });
+                  }
+                },
+                child: Container(
+                  margin: EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: AppColor.primary.withValues(alpha: .2),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Icon(Icons.add, color: AppColor.primarydark),
+                ),
+              ),
+
+              labelText: "Search Expanse",
+              labelStyle: GoogleFonts.inter(
+                color: const Color(0xFF565D6D),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Color(0xFFDEE1E6), width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Color(0xFFDEE1E6), width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+
+                borderSide: BorderSide(color: Color(0xFFDEE1E6), width: 1),
+              ),
+            ),
+
+            suggestionStyle: GoogleFonts.inter(
+              color: const Color(0xFF565D6D),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+            suggestionItemDecoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
+
           SizedBox(height: Sizes.height * .02),
           _label("Payment Mode"),
           const SizedBox(height: 8),
-          _ledgerDropdown(
+          SearchField<LedgerListModel>(
             controller: paymentController,
-            hint: "Select Payment Mode",
-            list: paymentLedgerList,
-            onSelect: (v) {
-              selectedPaymentLedger = v;
-              paymentController.text = v.name;
+            suggestions: initialBankList.map((e) {
+              return SearchFieldListItem<LedgerListModel>(
+                e.ledgerName ?? "",
+                item: e,
+                child: ledgerTile(e),
+              );
+            }).toList(),
+
+            onSearchTextChanged: (text) async {
+              if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+              await Future.delayed(const Duration(milliseconds: 200));
+
+              final result = await searchLedger(
+                text,
+                groups: ["Bank Account", "Cash In Hand"],
+              );
+
+              return result.map((e) {
+                return SearchFieldListItem<LedgerListModel>(
+                  e.ledgerName ?? "",
+                  item: e,
+                  child: ledgerTile(e),
+                );
+              }).toList();
             },
-            selectedLedger: selectedPaymentLedger,
+
+            onSuggestionTap: (item) {
+              setState(() {
+                selectedPaymentLedger = item.item;
+                paymentController.text = item.item?.ledgerName ?? "";
+              });
+            },
+            searchInputDecoration: SearchInputDecoration(
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+              labelText: "Search Bank Account",
+              labelStyle: GoogleFonts.inter(
+                color: const Color(0xFF565D6D),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              suffixIcon: InkWell(
+                onTap: () async {
+                  var data = await pushTo(CreateLedger());
+                  if (data != null) {
+                    searchLedger("").then((data) {
+                      setState(() {
+                        initialBankList = data
+                            .where(
+                              (e) =>
+                                  e.ledgerGroup == "Bank Account" ||
+                                  e.ledgerGroup == "Cash In Hand",
+                            )
+                            .toList();
+                      });
+                    });
+                  }
+                },
+                child: Container(
+                  margin: EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: AppColor.primary.withValues(alpha: .2),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Icon(Icons.add, color: AppColor.primarydark),
+                ),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Color(0xFFDEE1E6), width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Color(0xFFDEE1E6), width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+
+                borderSide: BorderSide(color: Color(0xFFDEE1E6), width: 1),
+              ),
+            ),
+
+            suggestionStyle: GoogleFonts.inter(
+              color: const Color(0xFF565D6D),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+            suggestionItemDecoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
+
           SizedBox(height: Sizes.height * .02),
           TitleTextFeild(
             controller: amountController,
@@ -237,6 +450,36 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
                 child: TitleTextFeild(
                   controller: prefixController,
                   titleText: "Prefix",
+                  onChanged: (value) async {
+                    final currentText = value;
+
+                    Future.delayed(const Duration(milliseconds: 300), () async {
+                      if (prefixController.text.trim() != currentText.trim())
+                        return;
+
+                      final res = await ApiService.postData(
+                        'get/transno',
+                        {"trans_type": "Expense", "prefix": currentText.trim()},
+                        licenceNo: Preference.getint(PrefKeys.licenseNo),
+                      );
+
+                      if (prefixController.text.trim() != currentText.trim())
+                        return;
+
+                      if (res != null && res['status'] == true) {
+                        final newNo = res['next_no'].toString();
+
+                        voucherNoController.value = TextEditingValue(
+                          text: newNo,
+                          selection: TextSelection.collapsed(
+                            offset: newNo.length,
+                          ),
+                        );
+                      } else {
+                        voucherNoController.clear();
+                      }
+                    });
+                  },
                 ),
               ),
               const SizedBox(width: 20),
@@ -319,47 +562,10 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
     );
   }
 
-  /// ================= SEARCHABLE DROPDOWN =================
-  Widget _ledgerDropdown({
-    required TextEditingController controller,
-    required String hint,
-    required List<LedgerModelDrop> list,
-    required LedgerModelDrop? selectedLedger,
-    required Function(LedgerModelDrop) onSelect,
-  }) {
-    return CommonSearchableDropdownField<LedgerModelDrop>(
-      controller: controller,
-      hintText: hint,
-
-      // 🔥 BALANCE IN SUFFIX
-      suffixIcon: SizedBox(
-        width: 150,
-        child: Center(child: balanceSuffix(selectedLedger)),
-      ),
-
-      suggestions: list.map((e) {
-        return SearchFieldListItem<LedgerModelDrop>(
-          e.name,
-          item: e,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: ledgerTile(e),
-          ),
-        );
-      }).toList(),
-
-      onSuggestionTap: (item) {
-        setState(() {
-          onSelect(item.item!);
-        });
-      },
-    );
-  }
-
-  Widget balanceSuffix(LedgerModelDrop? ledger) {
+  Widget balanceSuffix(LedgerListModel? ledger) {
     if (ledger == null) return const SizedBox.shrink();
 
-    final bal = double.tryParse(ledger.closingBalance ?? "0") ?? 0;
+    final bal = ledger.closingBalance ?? 0;
     final isCr = bal < 0;
 
     return Padding(
@@ -376,13 +582,13 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
   }
 
   /// ================= LEDGER TILE =================
-  Widget ledgerTile(LedgerModelDrop c) {
-    final bal = double.tryParse(c.closingBalance ?? "0") ?? 0;
+  Widget ledgerTile(LedgerListModel c) {
+    final bal = c.closingBalance ?? 0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          c.name,
+          c.ledgerName ?? "",
           style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
         ),
         Text(
@@ -422,47 +628,13 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
     );
   }
 
-  /// ================= API =================
-  Future<void> fetchLedgers() async {
-    final res = await ApiService.fetchData(
-      "get/ledger",
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-
-    final list = (res['data'] as List)
-        .map((e) => LedgerModelDrop.fromMap(e))
-        .toList();
-
-    setState(() {
-      expenseList = list.where((e) => e.ledgerGroup == 'Expense').toList();
-      paymentLedgerList = list
-          .where(
-            (e) =>
-                e.ledgerGroup == 'Bank Account' ||
-                e.ledgerGroup == 'Cash In Hand',
-          )
-          .toList();
-    });
-    if (widget.expenseModel != null) {
-      final e = widget.expenseModel!;
-
-      selectedExpense = expenseList.firstWhere((x) => x.name == e.supplierName);
-      expenseController.text = selectedExpense!.name;
-
-      selectedPaymentLedger = paymentLedgerList.firstWhere(
-        (x) => x.name == e.ledgerName,
-      );
-      paymentController.text = selectedPaymentLedger!.name;
-    }
-  }
-
   Future<void> getAutoVoucherApi() async {
     final res = await ApiService.fetchData(
       "get/autoexpense",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     if (res['status'] == true) {
-      voucherNoController.text = res['NextNo'].toString();
+      voucherNoController.text = res['next_no'].toString();
       prefixController.text = res['prefix'].toString();
     }
   }
@@ -481,6 +653,31 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
     }
   }
 
+  Future<List<LedgerListModel>> searchLedger(
+    String text, {
+    List<String>? groups,
+  }) async {
+    try {
+      final res = await ApiService.fetchData(
+        text.isEmpty ? "get/ledger/search" : "get/ledger/search?search=$text",
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      final data = (res?['data'] as List?) ?? [];
+
+      final list = data.map((e) => LedgerListModel.fromJson(e)).toList();
+
+      // 🔥 group filter (frontend)
+      if (groups != null && groups.isNotEmpty) {
+        return list.where((e) => groups.contains(e.ledgerGroup)).toList();
+      }
+
+      return list;
+    } catch (e) {
+      return [];
+    }
+  }
+
   Future<void> saveExpense() async {
     if (selectedExpense == null || selectedPaymentLedger == null) return;
 
@@ -488,9 +685,9 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
       "licence_no": Preference.getint(PrefKeys.licenseNo),
       "branch_id": Preference.getString(PrefKeys.locationId),
       "ledger_id": selectedPaymentLedger!.id,
-      "ledger_name": selectedPaymentLedger!.name,
+      "ledger_name": selectedPaymentLedger!.ledgerName,
       "account_id": selectedExpense!.id,
-      "account_name": selectedExpense!.name,
+      "account_name": selectedExpense!.ledgerName,
       "amount": amountController.text,
       "date": dateController.text,
       "prefix": prefixController.text,

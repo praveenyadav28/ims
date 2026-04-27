@@ -1,8 +1,7 @@
+import 'dart:typed_data';
+import 'dart:html' as html;
 import 'package:excel/excel.dart' hide Border;
 import 'package:ims/ui/report/gst_r1_report/gstr_1_total.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/cussup_model.dart';
@@ -84,9 +83,18 @@ class _Gstr2DashboardScreenState extends State<Gstr2DashboardScreen>
     invoices = PurchaseInvoiceListResponse.fromJson(results[0]).data;
     returns = PurchaseReturnListResponse.fromJson(results[1]).data;
     creditNotes = CreditNoteListResponse.fromJson(results[2]).data;
-    suppliers = (results[3]['data'] as List)
-        .map((e) => Customer.fromJson(e))
-        .toList();
+    suppliers = (results[3]['data'] as List).map((e) {
+      final customerJson = Map<String, dynamic>.from(e['supplier'] ?? {});
+      final ledgerJson = Map<String, dynamic>.from(e['ledger'] ?? {});
+
+      customerJson['opening_balance'] =
+          ledgerJson['opening_balance'] ?? customerJson['opening_balance'];
+
+      customerJson['closing_balance'] =
+          ledgerJson['closing_balance'] ?? customerJson['closing_balance'];
+
+      return Customer.fromJson(customerJson);
+    }).toList();
 
     applyFilter();
     setState(() => loading = false);
@@ -274,15 +282,25 @@ class _Gstr2DashboardScreenState extends State<Gstr2DashboardScreen>
     _addGstr2DocsSheet(excel);
     _addGstr2ItcSheet(excel);
 
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File(
-      "${dir.path}/GSTR_2_${DateFormat('MMM_yyyy').format(DateTime.now())}.xlsx",
-    );
-
     final bytes = excel.encode();
-    await file.writeAsBytes(bytes!);
+    if (bytes == null) return;
 
-    await OpenFilex.open(file.path);
+    final fileName =
+        "GSTR2_${DateFormat('MMyyyy').format(DateTime.now())}.xlsx";
+
+    final data = Uint8List.fromList(bytes);
+
+    final blob = html.Blob([
+      data,
+    ], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+    final url = html.Url.createObjectUrlFromBlob(blob);
+
+    html.AnchorElement(href: url)
+      ..setAttribute("download", fileName)
+      ..click();
+
+    html.Url.revokeObjectUrl(url);
   }
 
   void _addHeader(Sheet sheet, List<String> headers) {

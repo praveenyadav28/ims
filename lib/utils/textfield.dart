@@ -105,6 +105,7 @@ class TitleTextFeild extends StatelessWidget {
     this.onFieldSubmitted,
     this.keyboardType,
     this.maxLength,
+    this.obscureText,
   });
 
   final String? hintText;
@@ -121,6 +122,7 @@ class TitleTextFeild extends StatelessWidget {
   final Widget? prefixIcon;
   final TextInputType? keyboardType;
   final int? maxLength;
+  final bool? obscureText;
 
   @override
   Widget build(BuildContext context) {
@@ -146,6 +148,7 @@ class TitleTextFeild extends StatelessWidget {
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
+          obscureText: obscureText ?? false,
           maxLines: maxLines ?? 1,
           validator: validator,
           keyboardType: keyboardType,
@@ -303,6 +306,107 @@ class CommonSearchableDropdownField<T> extends StatelessWidget {
       enabled: enableSearch,
 
       // ✅ Prevent suggestion opening
+      suggestions: enableSearch ? suggestions : const [],
+
+      readOnly: readOnly || !enableSearch,
+
+      onSuggestionTap: enableSearch ? onSuggestionTap : null,
+
+      validator: validator,
+
+      searchInputDecoration: SearchInputDecoration(
+        isDense: true,
+        filled: true,
+        fillColor: enableSearch ? bgClr : Colors.grey.shade100,
+        contentPadding:
+            contentPadding ??
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        labelText: hintText,
+        labelStyle: GoogleFonts.inter(
+          color: const Color(0xFF565D6D),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        prefixIcon: prefixIcon,
+        suffixIcon: suffixIcon,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(color: borderClr, width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(color: borderClr, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(color: const Color(0xFF565D6D), width: 1),
+        ),
+      ),
+
+      suggestionStyle: GoogleFonts.inter(
+        color: const Color(0xFF565D6D),
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      ),
+      suggestionItemDecoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: borderClr.withOpacity(0.3)),
+      ),
+    );
+  }
+}
+
+class CommonSearchableDropdownChange<T> extends StatelessWidget {
+  final TextEditingController controller;
+  final List<SearchFieldListItem<T>> suggestions;
+  final String hintText;
+  final Function(SearchFieldListItem<T>)? onSuggestionTap;
+  final Color? borderColor;
+  final Color? boxColor;
+  final Widget? prefixIcon;
+  final Widget? suffixIcon;
+  final bool readOnly;
+  final bool enableSearch; // ✅ NEW
+  final String? Function(String?)? validator;
+  final FocusNode? focusNode;
+  final EdgeInsetsGeometry? contentPadding;
+  final Function(String)? onChanged;
+
+  const CommonSearchableDropdownChange({
+    super.key,
+    required this.controller,
+    required this.suggestions,
+    required this.hintText,
+    this.onSuggestionTap,
+    this.borderColor,
+    this.boxColor,
+    this.prefixIcon,
+    this.onChanged,
+    this.suffixIcon,
+    this.readOnly = false,
+    this.enableSearch = true, // ✅ default enabled
+    this.validator,
+    this.focusNode,
+    this.contentPadding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderClr = borderColor ?? const Color(0xFFDEE1E6);
+    final bgClr = boxColor ?? Colors.white;
+
+    return SearchField<T>(
+      controller: controller,
+      focusNode: focusNode,
+
+      enabled: enableSearch,
+      onSearchTextChanged: (value) {
+        if (onChanged != null) {
+          onChanged!(value);
+        }
+        return suggestions;
+      },
       suggestions: enableSearch ? suggestions : const [],
 
       readOnly: readOnly || !enableSearch,

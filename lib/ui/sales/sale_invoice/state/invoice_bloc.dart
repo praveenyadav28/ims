@@ -67,6 +67,11 @@ class SaleInvoiceToggleUnitForRow extends SaleInvoiceEvent {
   SaleInvoiceToggleUnitForRow(this.rowId, this.sellInBase);
 }
 
+class SaleInvoiceSetDate extends SaleInvoiceEvent {
+  final DateTime date;
+  SaleInvoiceSetDate(this.date);
+}
+
 class SaleInvoiceApplyHsnToRow extends SaleInvoiceEvent {
   final String rowId;
   final HsnModel hsn;
@@ -91,6 +96,16 @@ class SaleInvoiceUpdateCharge extends SaleInvoiceEvent {
 class SaleInvoiceAddDiscount extends SaleInvoiceEvent {
   final DiscountLine d;
   SaleInvoiceAddDiscount(this.d);
+}
+
+class SaleInvoiceSelectSalesPerson extends SaleInvoiceEvent {
+  final String name;
+  SaleInvoiceSelectSalesPerson(this.name);
+}
+
+class SaleInvoiceSelectSalesPersonId extends SaleInvoiceEvent {
+  final String salesPersonId;
+  SaleInvoiceSelectSalesPersonId(this.salesPersonId);
 }
 
 class SaleInvoiceRemoveDiscount extends SaleInvoiceEvent {
@@ -191,6 +206,8 @@ class SaleInvoiceState {
   final double cgst;
   final double totalAmount;
   final bool autoRound;
+  final String? salesPerson;
+  final String? salesPersonId;
 
   // master list from get/misccharge (for lookup)
   final List<MiscChargeModelList> miscMasterList;
@@ -232,6 +249,8 @@ class SaleInvoiceState {
     this.transNo = "",
     this.transPrefix = "",
     this.transId,
+    this.salesPerson,
+    this.salesPersonId,
   });
 
   SaleInvoiceState copyWith({
@@ -261,6 +280,8 @@ class SaleInvoiceState {
     String? transNo,
     String? transPrefix,
     String? transId,
+    String? salesPerson,
+    String? salesPersonId,
   }) {
     return SaleInvoiceState(
       customers: customers ?? this.customers,
@@ -289,6 +310,8 @@ class SaleInvoiceState {
       transNo: transNo ?? this.transNo,
       transPrefix: transPrefix ?? this.transPrefix,
       transId: transId ?? this.transId,
+      salesPerson: salesPerson ?? this.salesPerson,
+      salesPersonId: salesPersonId ?? this.salesPersonId,
     );
   }
 }
@@ -307,6 +330,11 @@ class SaleInvoiceSaveWithUIData extends SaleInvoiceEvent {
   final bool printAfterSave;
   final bool printSignature;
   final bool sendWhatsApp;
+  final List<Map<String, dynamic>> ledgerDetails; // 🔥 multiple rows
+  final String voucherNo;
+  final DateTime date;
+  final String prefix;
+  final String? reminderDate;
 
   SaleInvoiceSaveWithUIData({
     required this.customerName,
@@ -321,6 +349,11 @@ class SaleInvoiceSaveWithUIData extends SaleInvoiceEvent {
     required this.terms,
     this.updateId,
     this.signatureImage,
+    required this.ledgerDetails,
+    required this.voucherNo,
+    required this.date,
+    required this.prefix,
+    this.reminderDate,
   });
 }
 
@@ -360,7 +393,16 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
     on<SaleInvoiceUpdatePrefix>((event, emit) {
       emit(state.copyWith(prefix: event.value));
     });
+    on<SaleInvoiceSetDate>((event, emit) {
+      emit(state.copyWith(saleInvoiceDate: event.date));
+    });
 
+    on<SaleInvoiceSelectSalesPerson>((event, emit) {
+      emit(state.copyWith(salesPerson: event.name));
+    });
+    on<SaleInvoiceSelectSalesPersonId>((event, emit) {
+      emit(state.copyWith(salesPersonId: event.salesPersonId));
+    });
     // misc
     on<SaleInvoiceAddMiscCharge>(_onAddMiscCharge);
     on<SaleInvoiceRemoveMiscCharge>(_onRemoveMiscCharge);
@@ -853,7 +895,7 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
 
         "amount": totalAmount,
 
-        "invoice_no": state.saleInvoiceNo,
+        "invoice_no": "${state.prefix}${state.saleInvoiceNo}",
 
         "date":
             "${e.date.year}-${e.date.month.toString().padLeft(2, '0')}-${e.date.day.toString().padLeft(2, '0')}",
@@ -1002,6 +1044,8 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
         "sub_totle": state.subtotal,
         "sub_gst": state.totalGst,
         "auto_ro": state.autoRound,
+        "employeename": state.salesPerson,
+        "employeeid": state.salesPersonId,
         "totle_amo": state.totalAmount,
         "additional_charges": charges,
         "misccharge": miscCharges,
@@ -1045,6 +1089,18 @@ class SaleInvoiceBloc extends Bloc<SaleInvoiceEvent, SaleInvoiceState> {
             saleInvoiceNavigatorKey.currentContext!,
             res?['message'] ?? "Saved",
           );
+          if (e.ledgerDetails.isNotEmpty) {
+            add(
+              SaleInvoiceSavePayment(
+                ledgerDetails: e.ledgerDetails,
+                voucherNo: e.voucherNo,
+                date: e.date,
+                prefix: e.prefix,
+                reminderDate: e.reminderDate,
+              ),
+            );
+          }
+
           if (e.printAfterSave) {
             final data = SaleInvoiceData.fromJson(res!['data']);
 

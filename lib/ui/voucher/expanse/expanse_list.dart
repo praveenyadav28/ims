@@ -1,6 +1,7 @@
 // top of file
 import 'dart:io';
 import 'package:excel/excel.dart' hide Border;
+import 'package:ims/utils/access.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +20,8 @@ import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 
 class ExpanseListTableScreen extends StatefulWidget {
-  const ExpanseListTableScreen({super.key});
+  ExpanseListTableScreen({super.key, required this.canBack});
+  bool? canBack;
 
   @override
   State<ExpanseListTableScreen> createState() => ExpanseaListTableScreenState();
@@ -143,6 +145,12 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
         elevation: 0,
         backgroundColor: AppColor.white,
         iconTheme: IconThemeData(color: AppColor.black),
+        leading: widget.canBack ?? false
+            ? IconButton(
+                icon: Icon(Icons.arrow_back, color: AppColor.black),
+                onPressed: () => Navigator.pop(context, "Data"),
+              )
+            : null,
         title: Text(
           "Expense",
           style: GoogleFonts.plusJakartaSans(
@@ -169,20 +177,22 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          Center(
-            child: defaultButton(
-              onTap: () async {
-                var data = await pushTo(ExpenseEntry());
-                if (data != null) {
-                  fetchExpanse();
-                }
-              },
-              buttonColor: AppColor.blue,
-              text: "Create Expense",
-              height: 40,
-              width: 150,
+
+          if (hasModuleAccess("Expense Voucher", "create"))
+            Center(
+              child: defaultButton(
+                onTap: () async {
+                  var data = await pushTo(ExpenseEntry());
+                  if (data != null) {
+                    fetchExpanse();
+                  }
+                },
+                buttonColor: AppColor.blue,
+                text: "Create Expense",
+                height: 40,
+                width: 150,
+              ),
             ),
-          ),
           SizedBox(width: 10),
         ],
       ),
@@ -334,7 +344,12 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
             flex: 2,
             child: Text(DateFormat('yyyy-MM-dd').format(p.date)),
           ),
-          Expanded(flex: 3, child: Text("${p.prefix}${p.prefix.isNotEmpty ? '-' : ''}${p.voucherNo}")),
+          Expanded(
+            flex: 3,
+            child: Text(
+              "${p.prefix}${p.prefix.isNotEmpty ? '/' : ''}${p.voucherNo}",
+            ),
+          ),
           Expanded(flex: 3, child: Text(p.supplierName)),
           Expanded(flex: 3, child: Text(p.ledgerName)),
           Expanded(
@@ -399,19 +414,22 @@ class ExpanseaListTableScreenState extends State<ExpanseListTableScreen> {
                   },
                 ),
 
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  onPressed: () async {
-                    var data = await pushTo(ExpenseEntry(expenseModel: p));
-                    if (data != null) {
-                      fetchExpanse();
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => confirmDelete(p.id),
-                ),
+                if (hasModuleAccess("Expense Voucher", "update"))
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () async {
+                      var data = await pushTo(ExpenseEntry(expenseModel: p));
+                      if (data != null) {
+                        fetchExpanse();
+                      }
+                    },
+                  ),
+
+                if (hasModuleAccess("Expense Voucher", "delete"))
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => confirmDelete(p.id),
+                  ),
               ],
             ),
           ),

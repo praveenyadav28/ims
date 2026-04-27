@@ -278,7 +278,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
                   text:
-                      "${widget.creditNoteData == null ? "Create" : "Update"} Debit Note",
+                      "${widget.creditNoteData == null ? "Save" : "Update"} Debit Note",
                   height: 40,
                   width: 200,
                   onTap: () {
@@ -380,7 +380,7 @@ class _CreateCreditNoteViewState extends State<CreateCreditNoteView> {
                     ),
                   ),
 
-                  SizedBox(height: Sizes.height * .03),
+                  SizedBox(height: Sizes.height * .02),
                   NoteItemsTableSection(
                     rows: state.rows,
                     hsnList: state.hsnMaster,

@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/sales/data/excel.dart';
+import 'package:ims/utils/access.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
+import 'package:ims/utils/snackbar.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 
 class TransactionListScreen<T> extends StatefulWidget {
   final String title;
+  final String module;
 
   /// API call function
   final Future<List<T>> Function() fetchData;
@@ -16,7 +19,7 @@ class TransactionListScreen<T> extends StatefulWidget {
   /// Actions
   final void Function(T) onView;
   final void Function(T) onEdit;
-  final Future<bool> Function(String id) onDelete;
+  final Future<Map<String, dynamic>?> Function(String id) onDelete;
   final Future<void> Function()? onCreate;
 
   /// Extractors — YOU must provide these
@@ -29,6 +32,7 @@ class TransactionListScreen<T> extends StatefulWidget {
   final double Function(T) amountGetter;
   final String Function(T) mobile;
   final String Function(T) placeOfSupply;
+  final bool? canBack;
 
   const TransactionListScreen({
     super.key,
@@ -46,7 +50,9 @@ class TransactionListScreen<T> extends StatefulWidget {
     required this.amountGetter,
     required this.mobile,
     required this.placeOfSupply,
+    required this.module,
     this.onCreate,
+    this.canBack,
   });
 
   @override
@@ -163,6 +169,12 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
         elevation: 0.4,
         iconTheme: IconThemeData(color: AppColor.white),
         backgroundColor: AppColor.black,
+        leading: widget.canBack ?? false
+            ? IconButton(
+                icon: Icon(Icons.arrow_back, color: AppColor.white),
+                onPressed: () => Navigator.pop(context, "Data"),
+              )
+            : null,
         title: Text(
           widget.title,
           style: GoogleFonts.plusJakartaSans(
@@ -262,7 +274,7 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
 
         const Spacer(flex: 3),
 
-        if (widget.onCreate != null)
+        if (widget.onCreate != null && hasModuleAccess(widget.module, "create"))
           defaultButton(
             height: 40,
             width: 160,
@@ -498,44 +510,57 @@ class TransactionListScreenState<T> extends State<TransactionListScreen<T>> {
                         AppColor.primary,
                         () => widget.onView(item),
                       ),
-                      _action(
-                        Icons.edit,
-                        Colors.orange,
-                        () => widget.onEdit(item),
-                      ),
-                      _action(Icons.delete, Colors.red, () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: const Text("Delete Confirmation"),
-                              content: Text(
-                                "Are you sure you want to delete this record?",
-                                style: GoogleFonts.inter(),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, false),
-                                  child: const Text("Cancel"),
+                      if (hasModuleAccess(widget.module, "update"))
+                        _action(
+                          Icons.edit,
+                          Colors.orange,
+                          () => widget.onEdit(item),
+                        ),
+                      if (hasModuleAccess(widget.module, "delete"))
+                        _action(Icons.delete, Colors.red, () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: const Text("Delete Confirmation"),
+                                content: Text(
+                                  "Are you sure you want to delete this record?",
+                                  style: GoogleFonts.inter(),
                                 ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, true),
-                                  child: const Text(
-                                    "Delete",
-                                    style: TextStyle(color: Colors.red),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text("Cancel"),
                                   ),
-                                ),
-                              ],
-                            );
-                          },
-                        );
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text(
+                                      "Delete",
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
 
-                        if (confirm == true) {
-                          bool ok = await widget.onDelete(baseId);
-                          if (ok) load();
-                        }
-                      }),
+                          if (confirm == true) {
+                            var res = await widget.onDelete(baseId);
+                            bool ok = res?["status"] == true;
+                            if (ok) load();
+                            ok
+                                ? showCustomSnackbarSuccess(
+                                    context,
+                                    res?["message"] ?? "Deleted successfully",
+                                  )
+                                : showCustomSnackbarError(
+                                    context,
+                                    res?["message"],
+                                  );
+                          }
+                        }),
                     ],
                   ),
                 ),

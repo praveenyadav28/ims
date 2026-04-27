@@ -109,6 +109,11 @@ class EstUpdateMiscCharge extends EstEvent {
   EstUpdateMiscCharge(this.m);
 }
 
+class EstUpdateValidDays extends EstEvent {
+  final int days;
+  EstUpdateValidDays(this.days);
+}
+
 /// ----------------------------------------------
 class EstCalculate extends EstEvent {}
 
@@ -124,13 +129,21 @@ class EstSelectSalesPerson extends EstEvent {
   EstSelectSalesPerson(this.name);
 }
 
+class EstSelectSalesPersonId extends EstEvent {
+  final String salesPersonId;
+  EstSelectSalesPersonId(this.salesPersonId);
+}
+
 class EstLoadCustomers extends EstEvent {}
 
 class EstUpdateEstimateNo extends EstEvent {
   final String value;
   EstUpdateEstimateNo(this.value);
 }
-
+class EstimateSetDate extends EstEvent {
+  final DateTime date;
+  EstimateSetDate(this.date);
+}
 class EstUpdatePrefix extends EstEvent {
   final String value;
   EstUpdatePrefix(this.value);
@@ -159,6 +172,7 @@ class EstState {
   final double totalAmount;
   final bool autoRound;
   final String? salesPerson;
+  final String? salesPersonId;
 
   // master list from get/misccharge (for lookup)
   final List<MiscChargeModelList> miscMasterList;
@@ -192,6 +206,7 @@ class EstState {
     this.notes = const [],
     this.terms = const [],
     this.salesPerson,
+    this.salesPersonId,
   });
 
   EstState copyWith({
@@ -219,6 +234,7 @@ class EstState {
     List<String>? notes,
     List<String>? terms,
     String? salesPerson,
+    String? salesPersonId,
   }) {
     return EstState(
       customers: customers ?? this.customers,
@@ -245,6 +261,7 @@ class EstState {
       notes: notes ?? this.notes,
       terms: terms ?? this.terms,
       salesPerson: salesPerson ?? this.salesPerson,
+      salesPersonId: salesPersonId ?? this.salesPersonId,
     );
   }
 }
@@ -316,6 +333,18 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     on<EstUpdatePrefix>((event, emit) {
       emit(state.copyWith(prefix: event.value));
     });
+    on<EstimateSetDate>((event, emit) {
+  emit(state.copyWith(estimateDate: event.date));
+});
+    on<EstUpdateValidDays>((event, emit) {
+      final estimateDate = state.estimateDate ?? DateTime.now();
+
+      final validityDate = estimateDate.add(Duration(days: event.days));
+
+      emit(
+        state.copyWith(validForDays: event.days, validityDate: validityDate),
+      );
+    });
     // misc
     on<EstAddMiscCharge>(_onAddMiscCharge);
     on<EstRemoveMiscCharge>(_onRemoveMiscCharge);
@@ -325,6 +354,9 @@ class EstBloc extends Bloc<EstEvent, EstState> {
     on<EstCalculate>(_onCalculate);
     on<EstSelectSalesPerson>((event, emit) {
       emit(state.copyWith(salesPerson: event.name));
+    });
+    on<EstSelectSalesPersonId>((event, emit) {
+      emit(state.copyWith(salesPersonId: event.salesPersonId));
     });
     on<EstLoadCustomers>((event, emit) async {
       final customers = await repo.searchLedger("", true);
@@ -763,7 +795,8 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         "branch_id": Preference.getString(PrefKeys.locationId),
         "customer_id": customerId,
         "customer_name": customerName,
-        "other1": state.salesPerson,
+        "employeename": state.salesPerson,
+        "employeeid": state.salesPersonId,
         if (mobile.isNotEmpty) "mobile": mobile,
         "address_0": billing,
         "address_1": shipping,
@@ -792,7 +825,6 @@ class EstBloc extends Bloc<EstEvent, EstState> {
         "item_details": itemRows,
         "service_details": serviceRows,
         "print_sig": e.printSignature,
-        "whatsapp_msg": e.sendWhatsApp,
       };
 
       if (itemRows.isEmpty && serviceRows.isEmpty) {
@@ -821,6 +853,26 @@ class EstBloc extends Bloc<EstEvent, EstState> {
             final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
 
             await PdfEngine.printPremiumInvoice(doc: doc, company: company);
+          }
+          if (e.sendWhatsApp) {
+            final data = EstimateData.fromJson(res!['data']);
+
+            final doc = data.toPrintModel();
+
+            final companyApi = await CompanyProfileAPi.getCompanyProfile();
+            final company = CompanyPrintProfile.fromApi(companyApi["data"][0]);
+
+            // 👇 PDF BYTES GENERATE KARO
+            // final pdfBytes = await PdfEngine.generateInvoiceBytes(
+            //   doc: doc,
+            //   company: company,
+            // );
+
+            // await repo.sendWhatsAppApi(
+            //   pdfBytes: pdfBytes,
+            //   mobile: mobile,
+            //   customerName: "Dear Sir/Madam $customerName, your estimate is here",
+            // );
           }
           // 🔥 GO BACK TO PREVIOUS SCREEN
           Navigator.of(ctx).pop(true); // true = success result

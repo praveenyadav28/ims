@@ -22,6 +22,8 @@ class BalanceReportScreen extends StatefulWidget {
 
 class _BalanceReportScreenState extends State<BalanceReportScreen> {
   List<LedgerListModel> ledgerList = [];
+  List<LedgerListModel> filteredLedgerList = [];
+  TextEditingController searchCtrl = TextEditingController();
   bool loading = false;
 
   DateTime fromDate = DateTime(1900, 1, 1); // 🔥 very old date (fixed)
@@ -52,8 +54,18 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
     );
 
     List responseData = response['data'] ?? [];
-
     ledgerList = responseData.map((e) => LedgerListModel.fromJson(e)).toList();
+    filteredLedgerList = ledgerList; // 👈 important
+  }
+
+  void filterLedger(String value) {
+    setState(() {
+      filteredLedgerList = ledgerList.where((e) {
+        final name = (e.ledgerName ?? "").toLowerCase();
+        final mobile = (e.contactNo?.toString() ?? "");
+        return name.contains(value.toLowerCase()) || mobile.contains(value);
+      }).toList();
+    });
   }
 
   // ---------------- UI ----------------
@@ -109,6 +121,16 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
                   ),
                 ),
                 const SizedBox(width: 10),
+                SizedBox(
+                  width: 200,
+                  child: TitleTextFeild(
+                    titleText: "Search...",
+                    controller: searchCtrl,
+                    onChanged: filterLedger,
+                    suffixIcon: const Icon(Icons.search, size: 18),
+                  ),
+                ),
+                const SizedBox(width: 10),
                 InkWell(
                   onTap: exportLedgerBalanceExcel,
                   child: Container(
@@ -150,16 +172,16 @@ class _BalanceReportScreenState extends State<BalanceReportScreen> {
                     Expanded(
                       child: loading
                           ? const Center(child: GlowLoader())
-                          : ledgerList.isEmpty
+                          : filteredLedgerList.isEmpty
                           ? const Center(child: Text("No Outstanding Found"))
                           : ListView.separated(
-                              itemCount: ledgerList.length,
+                              itemCount: filteredLedgerList.length,
                               separatorBuilder: (_, __) => Divider(
                                 height: 1,
                                 color: Colors.grey.shade200,
                               ),
                               itemBuilder: (context, i) {
-                                return _tableRow(ledgerList[i], i);
+                                return _tableRow(filteredLedgerList[i], i);
                               },
                             ),
                     ),

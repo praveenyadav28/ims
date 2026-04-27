@@ -321,10 +321,26 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
                   text:
-                      "${widget.purchaseInvoiceData == null ? "Create" : "Update"} Purchase Invoice",
+                      "${widget.purchaseInvoiceData == null ? "Save" : "Update"} Purchase Invoice",
                   height: 40,
                   width: 200,
                   onTap: () {
+                    final validRows = paymentRows.where((e) {
+                      return e.ledger?.id != null &&
+                          e.ledger?.ledgerName != null &&
+                          e.amountController.text.trim().isNotEmpty &&
+                          double.tryParse(e.amountController.text) != null &&
+                          double.parse(e.amountController.text) > 0;
+                    }).toList();
+
+                    final ledgerDetails = validRows.map((e) {
+                      return {
+                        "ledger_id": e.ledger?.id,
+                        "ledger_name": e.ledger?.ledgerName,
+                        "amount": double.parse(e.amountController.text.trim()),
+                      };
+                    }).toList();
+
                     bloc.add(
                       PurchaseInvoiceSaveWithUIData(
                         supplierName: cusNameController.text,
@@ -340,33 +356,14 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                         updateId: widget.purchaseInvoiceData?.id,
                         printAfterSave: printAfterSave,
                         printSignature: printSignature,
+
+                        // ✅ condition applied
+                        ledgerDetails: ledgerDetails,
+                        voucherNo: voucherNoController.text,
+                        date: pickedPurchaseInvoiceDate,
+                        prefix: voucherPrefixController.text,
                       ),
                     );
-                    final validRows = paymentRows.where((e) {
-                      return e.ledger?.id != null &&
-                          e.ledger?.ledgerName != null &&
-                          e.amountController.text.trim().isNotEmpty &&
-                          double.tryParse(e.amountController.text) != null &&
-                          double.parse(e.amountController.text) > 0;
-                    }).toList();
-                    if (validRows.isNotEmpty) {
-                      final ledgerDetails = validRows.map((e) {
-                        return {
-                          "ledger_id": e.ledger?.id,
-                          "ledger_name": e.ledger?.ledgerName,
-                          "amount": e.amountController.text,
-                        };
-                      }).toList();
-
-                      bloc.add(
-                        PurchaseInvoiceSavePayment(
-                          ledgerDetails: ledgerDetails,
-                          voucherNo: voucherNoController.text,
-                          date: pickedPurchaseInvoiceDate,
-                          prefix: voucherPrefixController.text,
-                        ),
-                      );
-                    }
                   },
                 ),
                 const SizedBox(width: 10),
@@ -382,7 +379,10 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
               trackVisibility: true,
               child: SingleChildScrollView(
                 controller: _scrollController,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -459,7 +459,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                       ),
                     ),
 
-                    SizedBox(height: Sizes.height * .03),
+                    SizedBox(height: Sizes.height * .02),
                     GlobalItemsTableSection(
                       rows: state.rows,
                       ledgerType:
@@ -484,7 +484,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                           if (_scrollController.hasClients) {
                             _scrollController.animateTo(
                               _scrollController.offset + 75,
-                              duration: const Duration(milliseconds: 300),
+                              duration: const Duration(milliseconds: 200),
                               curve: Curves.ease,
                             );
                           }
@@ -748,7 +748,6 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
                                                   child: CommonTextField(
                                                     controller:
                                                         row.amountController,
-                                                    readOnly: fullyPaid,
 
                                                     hintText: "Amount",
 
@@ -936,7 +935,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
 
     final completer = Completer<List<LedgerModelDrop>>();
 
-    _ledgerDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _ledgerDebounce = Timer(const Duration(milliseconds: 200), () async {
       final result = await repo.searchLedger(text, false);
       completer.complete(result);
     });
@@ -949,7 +948,7 @@ class _CreatePurchaseInvoiceViewState extends State<CreatePurchaseInvoiceView> {
 
     final completer = Completer<List<ItemServiceModel>>();
 
-    _itemDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _itemDebounce = Timer(const Duration(milliseconds: 200), () async {
       final result = await repo.searchItems(text);
       completer.complete(result);
     });

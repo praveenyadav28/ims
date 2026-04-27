@@ -355,7 +355,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                       defaultButton(
                         buttonColor: const Color(0xff8947E5),
                         text:
-                            "${widget.purchaseOrderData == null ? "Create" : "Update"} Purchase Order",
+                            "${widget.purchaseOrderData == null ? "Save" : "Update"} Purchase Order",
                         height: 40,
                         width: 200,
                         onTap: () {
@@ -399,6 +399,9 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     GlobalHeaderCard(
+                      flex1: 5,
+                      flex2: 5,
+                      flex3: 9,
                       billTo: GlobalBillToCard(
                         isCashSale: state.cashSaleDefault,
                         customers: state.customers,
@@ -508,7 +511,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
                           if (_scrollController.hasClients) {
                             _scrollController.animateTo(
                               _scrollController.offset + 75,
-                              duration: const Duration(milliseconds: 300),
+                              duration: const Duration(milliseconds: 200),
                               curve: Curves.ease,
                             );
                           }
@@ -738,7 +741,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
 
     final completer = Completer<List<LedgerModelDrop>>();
 
-    _ledgerDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _ledgerDebounce = Timer(const Duration(milliseconds: 200), () async {
       final result = await repo.searchLedger(text, true);
       completer.complete(result);
     });
@@ -751,7 +754,7 @@ class _CreatePurchaseOrderViewState extends State<CreatePurchaseOrderView> {
 
     final completer = Completer<List<ItemServiceModel>>();
 
-    _itemDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _itemDebounce = Timer(const Duration(milliseconds: 200), () async {
       final result = await repo.searchItems(text);
       completer.complete(result);
     });

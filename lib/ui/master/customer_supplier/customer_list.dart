@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/cussup_model.dart';
 import 'package:ims/ui/master/customer_supplier/create.dart';
+import 'package:ims/utils/access.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -54,7 +55,19 @@ class _CustomerTableScreenState extends State<CustomerTableScreen> {
 
     List responseData = response['data'] ?? [];
     setState(() {
-      customerList = responseData.map((e) => Customer.fromJson(e)).toList();
+      customerList = responseData.map((e) {
+        final customerJson = e['customer'] ?? {};
+        final ledgerJson = e['ledger'] ?? {};
+
+        // merge ledger balance into customer
+        customerJson['opening_balance'] =
+            ledgerJson['opening_balance'] ?? customerJson['opening_balance'];
+
+        customerJson['closing_balance'] =
+            ledgerJson['closing_balance'] ?? customerJson['closing_balance'];
+
+        return Customer.fromJson(customerJson);
+      }).toList();
       filteredList = customerList; // 🔥 IMPORTANT
     });
   }
@@ -90,18 +103,19 @@ class _CustomerTableScreenState extends State<CustomerTableScreen> {
           ),
         ),
         actions: [
-          Center(
-            child: defaultButton(
-              height: 40,
-              width: 150,
-              onTap: () async {
-                var data = await pushTo(CreateCusSup(isCustomer: true));
-                if (data == "data") getCustomerApi();
-              },
-              text: "Create Customer",
-              buttonColor: AppColor.blue,
+          if (hasModuleAccess("Ledger", "create"))
+            Center(
+              child: defaultButton(
+                height: 40,
+                width: 150,
+                onTap: () async {
+                  var data = await pushTo(CreateCusSup(isCustomer: true));
+                  if (data == "data") getCustomerApi();
+                },
+                text: "Create Customer",
+                buttonColor: AppColor.blue,
+              ),
             ),
-          ),
           const SizedBox(width: 12),
         ],
       ),
@@ -247,16 +261,18 @@ class _CustomerTableScreenState extends State<CustomerTableScreen> {
       width: 110,
       child: Row(
         children: [
-          _iconBtn(Icons.edit, AppColor.primary, () async {
-            var data = await pushTo(
-              CreateCusSup(isCustomer: true, cusSupData: c),
-            );
-            if (data != null) {
-              getCustomerApi();
-            }
-          }),
+          if (hasModuleAccess("Ledger", "update"))
+            _iconBtn(Icons.edit, AppColor.primary, () async {
+              var data = await pushTo(
+                CreateCusSup(isCustomer: true, cusSupData: c),
+              );
+              if (data != null) {
+                getCustomerApi();
+              }
+            }),
           SizedBox(width: 10),
-          _iconBtn(Icons.delete, Colors.red, () => _confirmDelete(c.id)),
+          if (hasModuleAccess("Ledger", "delete"))
+            _iconBtn(Icons.delete, Colors.red, () => _confirmDelete(c.id)),
         ],
       ),
     );

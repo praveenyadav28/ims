@@ -11,7 +11,7 @@ import 'package:ims/utils/navigation.dart';
 extension DebitNoteMapper on DebitNoteData {
   String get baseId => id;
   DateTime get baseDate => debitNoteDate;
-  String get baseNumber => "$prefix-$no";
+  String get baseNumber => "$prefix/$no";
   String get baseCustomer => customerName;
   double get baseAmount => totalAmount;
 }
@@ -37,6 +37,7 @@ class _DebitNoteInvoiceListScreenState
     return TransactionListScreen<DebitNoteData>(
       key: listKey,
       title: "Credit Note",
+      module: "Credit Note",
       fetchData: repo.getDebitNote,
       onView: (e) async {
         final doc = e.toPrintModel(); // ✅ no dynamic
@@ -66,7 +67,7 @@ class _DebitNoteInvoiceListScreenState
       idGetter: (e) => e.id,
       dateGetter: (e) => e.debitNoteDate,
       numberGetter: (e) =>
-          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
+          "${e.prefix}${e.prefix.isNotEmpty ? '/' : ''}${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
       mobile: (e) => e.mobile,

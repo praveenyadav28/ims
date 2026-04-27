@@ -1,6 +1,7 @@
 // top of file
 import 'dart:io';
 import 'package:excel/excel.dart' hide Border;
+import 'package:ims/utils/access.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
@@ -168,20 +169,21 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
           ),
           const SizedBox(width: 10),
 
-          Center(
-            child: defaultButton(
-              onTap: () async {
-                var data = await pushTo(JournalEntry());
-                if (data != null) {
-                  fetchJournal();
-                }
-              },
-              buttonColor: AppColor.blue,
-              text: "Create Journal",
-              height: 40,
-              width: 150,
+          if (hasModuleAccess("Journal Voucher", "create"))
+            Center(
+              child: defaultButton(
+                onTap: () async {
+                  var data = await pushTo(JournalEntry());
+                  if (data != null) {
+                    fetchJournal();
+                  }
+                },
+                buttonColor: AppColor.blue,
+                text: "Create Journal",
+                height: 40,
+                width: 150,
+              ),
             ),
-          ),
           SizedBox(width: 10),
         ],
       ),
@@ -337,7 +339,12 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
             flex: 2,
             child: Text(DateFormat('yyyy-MM-dd').format(p.date)),
           ),
-          Expanded(flex: 3, child: Text("${p.prefix}${p.prefix.isNotEmpty ? '-' : ''}${p.voucherNo}")),
+          Expanded(
+            flex: 3,
+            child: Text(
+              "${p.prefix}${p.prefix.isNotEmpty ? '/' : ''}${p.voucherNo}",
+            ),
+          ),
           Expanded(flex: 3, child: Text(p.toAccount)),
           Expanded(flex: 3, child: Text(p.fromAccount)),
           Expanded(
@@ -402,19 +409,21 @@ class _JournalListTableScreenState extends State<JournalListTableScreen> {
                   },
                 ),
 
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  onPressed: () async {
-                    var data = await pushTo(JournalEntry(contraModel: p));
-                    if (data != null) {
-                      fetchJournal();
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => confirmDelete(p.id),
-                ),
+                if (hasModuleAccess("Journal Voucher", "update"))
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () async {
+                      var data = await pushTo(JournalEntry(contraModel: p));
+                      if (data != null) {
+                        fetchJournal();
+                      }
+                    },
+                  ),
+                if (hasModuleAccess("Journal Voucher", "delete"))
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => confirmDelete(p.id),
+                  ),
               ],
             ),
           ),

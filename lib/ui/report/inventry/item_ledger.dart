@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:excel/excel.dart' hide Border;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
@@ -59,7 +60,7 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
   void initState() {
     super.initState();
     setFinancialYear();
-    loadItems();
+    refreshItems("");
     fromCtrl.text = df.format(fromDate);
     toCtrl.text = df.format(toDate);
   }
@@ -80,9 +81,17 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
     toCtrl.text = DateFormat("dd/MM/yyyy").format(toDate);
   }
 
-  Future<void> loadItems() async {
-    items = await repo.fetchOnyItem();
-    setState(() {});
+  Future<List<ItemServiceModel>> loadItems(String text) async {
+    final res = await ApiService.fetchData(
+      text.isEmpty ? "get/item/search" : "get/item/search?search=$text",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    final data = (res?['data'] as List?) ?? [];
+
+    return data
+        .map((e) => ItemServiceModel.fromItem(Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   // ================= LOAD LEDGER =================
@@ -228,21 +237,28 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
     );
   }
 
+  Timer? _debounce;
   Widget _filterRow() {
     return Row(
       children: [
         Expanded(
           flex: 2,
-          child: CommonSearchableDropdownField<ItemServiceModel>(
-            controller: itemCtrl,
-            hintText: "Select Item",
+          child: CommonSearchableDropdownChange<ItemServiceModel>(
             suggestions: items
                 .map((e) => SearchFieldListItem(e.name, item: e))
                 .toList(),
-            onSuggestionTap: (v) {
-              selectedItem = v.item;
-              itemCtrl.text = v.item!.name;
+            onSuggestionTap: (val) {
+              setState(() {
+                selectedItem = val.item;
+                itemCtrl.text = val.item!.name;
+              });
             },
+            onChanged: (value) {
+              refreshItems(value);
+              return null;
+            },
+            controller: itemCtrl,
+            hintText: 'Search Item',
           ),
         ),
         const SizedBox(width: 10),
@@ -545,6 +561,18 @@ class _ItemLedgerScreenState extends State<ItemLedgerScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Excel exported successfully")),
     );
+  }
+
+  void refreshItems(String val) {
+    _debounce?.cancel(); // 👈 clean & simple
+
+    _debounce = Timer(const Duration(milliseconds: 200), () async {
+      final data = await loadItems(val);
+
+      setState(() {
+        items = data;
+      });
+    });
   }
 }
 

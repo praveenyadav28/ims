@@ -277,6 +277,49 @@ class _ContraEntryState extends State<ContraEntry> {
                                 controller: prefixController,
                                 titleText: "Voucher Prifix",
                                 hintText: "Prifix",
+                                onChanged: (value) async {
+                                  final currentText = value;
+
+                                  Future.delayed(
+                                    const Duration(milliseconds: 300),
+                                    () async {
+                                      // latest text only
+                                      if (prefixController.text.trim() !=
+                                          currentText.trim())
+                                        return;
+
+                                      final res = await ApiService.postData(
+                                        'get/transno',
+                                        {
+                                          "trans_type": "Contra",
+                                          "prefix": currentText.trim(),
+                                        },
+                                        licenceNo: Preference.getint(
+                                          PrefKeys.licenseNo,
+                                        ),
+                                      );
+
+                                      if (prefixController.text.trim() !=
+                                          currentText.trim())
+                                        return;
+
+                                      if (res != null &&
+                                          res['status'] == true) {
+                                        final newNo = res['next_no'].toString();
+
+                                        voucherNoController
+                                            .value = TextEditingValue(
+                                          text: newNo,
+                                          selection: TextSelection.collapsed(
+                                            offset: newNo.length,
+                                          ),
+                                        );
+                                      } else {
+                                        voucherNoController.clear();
+                                      }
+                                    },
+                                  );
+                                },
                               ),
                             ),
                             SizedBox(width: 30),
@@ -418,7 +461,7 @@ class _ContraEntryState extends State<ContraEntry> {
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
     if (response['status'] == true) {
-      voucherNoController.text = response['NextNo'].toString();
+      voucherNoController.text = response['next_no'].toString();
       prefixController.text = response['prefix'].toString();
     }
   }

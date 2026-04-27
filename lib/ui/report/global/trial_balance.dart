@@ -84,7 +84,6 @@ class _TrialBalanceScreenState extends State<TrialBalanceScreen> {
       "get/ledgers?from_date=${fromCtrl.text}&to_date=${toCtrl.text}",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-
     final List list = res['data'] ?? [];
 
     rows.clear();

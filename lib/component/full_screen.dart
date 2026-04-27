@@ -65,7 +65,7 @@ class _FullScreenState extends State<FullScreen> {
       case MenuScreen.journal:
         return const JournalListTableScreen();
       case MenuScreen.expanse:
-        return const ExpanseListTableScreen();
+        return ExpanseListTableScreen(canBack: false);
       case MenuScreen.companyProfile:
         return const CompanyProfileScreen();
       case MenuScreen.userMaster:
@@ -79,7 +79,7 @@ class _FullScreenState extends State<FullScreen> {
       case MenuScreen.performaInvoice:
         return PerformaInvoiceListScreen();
       case MenuScreen.saleInvoice:
-        return SaleInvoiceInvoiceListScreen();
+        return SaleInvoiceInvoiceListScreen(canBack: false);
       case MenuScreen.deliveryChallan:
         return DiliveryChallanInvoiceListScreen();
       case MenuScreen.saleReturn:
@@ -89,7 +89,7 @@ class _FullScreenState extends State<FullScreen> {
       case MenuScreen.purchaseOrder:
         return PurchaseOrderListScreen();
       case MenuScreen.purchaseInvoice:
-        return PurchaseInvoiceListScreen();
+        return PurchaseInvoiceListScreen(canBack: false);
       case MenuScreen.creditNote:
         return CreditNoteListScreen();
       case MenuScreen.purchaseReturn:

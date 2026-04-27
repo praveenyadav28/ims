@@ -174,6 +174,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
     );
     if (date != null) {
       pickedInvoiceDate = date;
+      bloc.add(SaleReturnSetDate(date));
       bloc.add(SaleReturnCalculate());
       setState(() {});
     }
@@ -279,7 +280,8 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                 const SizedBox(width: 18),
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
-                  text: "Save Sale Return",
+                  text:
+                      "${widget.saleReturnData == null ? "Save" : "Update"} Sale Return",
                   height: 40,
                   width: 179,
                   onTap: () {
@@ -392,7 +394,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                       ),
                     ),
 
-                    SizedBox(height: Sizes.height * .03),
+                    SizedBox(height: Sizes.height * .02),
                     GlobalItemsTableSection(
                       ledgerType:
                           state.selectedCustomer?.ledgerType ?? 'Individual',
@@ -413,7 +415,7 @@ class _CreateSaleReturnViewState extends State<CreateSaleReturnView> {
                           if (_scrollController.hasClients) {
                             _scrollController.animateTo(
                               _scrollController.offset + 75,
-                              duration: const Duration(milliseconds: 300),
+                              duration: const Duration(milliseconds: 200),
                               curve: Curves.ease,
                             );
                           }

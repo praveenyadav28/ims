@@ -26,8 +26,9 @@ class _CreditNoteListScreenState extends State<CreditNoteListScreen> {
     return TransactionListScreen<CreditNoteData>(
       key: listKey,
       title: "Debit Note",
+      module: "Debit Note",
       fetchData: repo.getCreditNote,
-        onView: (e) async {
+      onView: (e) async {
         final doc = e.toPrintModel(); // ✅ no dynamic
 
         final companyApi = await CompanyProfileAPi.getCompanyProfile();
@@ -55,7 +56,8 @@ class _CreditNoteListScreenState extends State<CreditNoteListScreen> {
       /// EXTRACTORS — REQUIRED
       idGetter: (e) => e.id,
       dateGetter: (e) => e.creditNoteDate,
-      numberGetter: (e) => "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
+      numberGetter: (e) =>
+          "${e.prefix}${e.prefix.isNotEmpty ? '/' : ''}${e.no}",
       customerGetter: (e) => e.ledgerName,
       amountGetter: (e) => e.totalAmount,
       gstGetter: (e) => e.subGst,

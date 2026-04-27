@@ -105,6 +105,7 @@ class _OutStandingReminderState extends State<OutStandingReminder> {
           remark: receipt.note,
           reminderDate: receipt.reminderDate!,
           recieptNo: receipt.voucherNo,
+          prefix: receipt.prefix,
           closingBalance: ledger?.closingBalance ?? 0,
           mobile: ledger?.contactNo ?? 0,
         ),
@@ -217,10 +218,7 @@ class _OutStandingReminderState extends State<OutStandingReminder> {
         children: [
           buildSummaryCards(),
           buildFilterCard(),
-          SizedBox(
-            width: double.infinity,
-            child: Expanded(child: buildTable()),
-          ),
+          SizedBox(width: double.infinity, child: buildTable()),
           buildPagination(),
         ],
       ),
@@ -384,7 +382,11 @@ class _OutStandingReminderState extends State<OutStandingReminder> {
               cells: [
                 DataCell(Text(r.name)),
                 DataCell(Text(r.mobile.toString())),
-                DataCell(Text("#${r.recieptNo}")),
+                DataCell(
+                  Text(
+                    "${r.prefix}${r.prefix.isEmpty ? '' : '-'}${r.recieptNo}",
+                  ),
+                ),
                 DataCell(
                   Text(
                     "${r.reminderDate.day}-${r.reminderDate.month}-${r.reminderDate.year}",

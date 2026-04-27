@@ -9,7 +9,8 @@ import 'package:ims/utils/print_mapper.dart';
 import '../../../utils/navigation.dart';
 
 class PurchaseInvoiceListScreen extends StatefulWidget {
-  PurchaseInvoiceListScreen({super.key});
+  PurchaseInvoiceListScreen({super.key, required this.canBack});
+  bool? canBack;
 
   @override
   State<PurchaseInvoiceListScreen> createState() =>
@@ -28,6 +29,7 @@ class _PurchaseInvoiceListScreenState extends State<PurchaseInvoiceListScreen> {
     return TransactionListScreen<PurchaseInvoiceData>(
       key: listKey,
       title: "Purchase Invoice",
+      module: "Purchase Invoice",
       fetchData: repo.getPurchaseInvoice,
       onView: (e) async {
         final doc = e.toPrintModel(); // ✅ no dynamic
@@ -59,7 +61,7 @@ class _PurchaseInvoiceListScreenState extends State<PurchaseInvoiceListScreen> {
       idGetter: (e) => e.id,
       dateGetter: (e) => e.purchaseInvoiceDate,
       numberGetter: (e) =>
-          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
+          "${e.prefix}${e.prefix.isNotEmpty ? '/' : ''}${e.no}",
       customerGetter: (e) => e.supplierName,
       amountGetter: (e) => e.totalAmount,
       gstGetter: (e) => e.subGst,

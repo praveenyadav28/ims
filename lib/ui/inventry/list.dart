@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/inventry/item/create.dart';
-import 'package:ims/ui/sales/models/sale_invoice_data.dart';
+import 'package:ims/utils/access.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -17,6 +17,7 @@ import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:ims/ui/inventry/excel_download_web.dart'
     if (dart.library.io) 'package:ims/ui/inventry/excel_download_mobile.dart';
+import 'package:searchfield/searchfield.dart';
 import 'item_model.dart';
 
 class InventoryScreen extends StatefulWidget {
@@ -29,9 +30,10 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   bool loading = false;
   List<ItemModel> list = [];
+  List<String> categoryList = [];
+  String? selectedCategoryFilter;
   // ---------------- FILTER STATES ----------------
   String searchText = '';
-  String? selectedCategoryFilter;
   bool showLowStockOnly = false;
   bool isloading = false;
   @override
@@ -41,9 +43,64 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> _loadInitialData() async {
+    await fetchInventoryStats();
+    await _loadMiscDropdowns(); // 👈 FIRST
     await fetchItems();
-    await fetchDeadStockItems();
     await fetchStockValueNDP();
+  }
+
+  double stockValueMRP = 0;
+  int lowStockCountApi = 0;
+  int deadStockCountApi = 0;
+  int totalItems = 0;
+  int filteredItems = 0;
+  TextEditingController categoryController = TextEditingController();
+  Future<void> _loadMiscDropdowns() async {
+    try {
+      final response = await ApiService.fetchData(
+        "get/misc",
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+
+      categoryList.clear();
+      if (response != null && response['status'] == true) {
+        final List<dynamic> data = response['data'] ?? [];
+
+        for (var item in data) {
+          final id = item['misc_id']?.toString();
+          final name = (item['name'] ?? '').toString();
+
+          if (name.isEmpty) continue;
+
+          if (id == '1') categoryList.add(name);
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {});
+    } catch (e) {
+      debugPrint("Misc load error: $e");
+    }
+  }
+
+  Future<void> fetchInventoryStats() async {
+    final res = await ApiService.fetchData(
+      'get/item',
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    if (res == null || res['status'] != true || res['data'] == null) return;
+
+    final data = res['data'];
+
+    if (!mounted) return;
+
+    setState(() {
+      deadStockCountApi = data['dead_stock'] ?? 0;
+      lowStockCountApi = data['low_stock'] ?? 0;
+      stockValueMRP = (data['total_mrp'] ?? 0).toDouble();
+    });
   }
 
   double stockValueNDP = 0;
@@ -68,123 +125,41 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> fetchItems() async {
+    if (!mounted) return;
     setState(() => loading = true);
+    final queryParams = {
+      "low_stock": showLowStockOnly.toString(),
+      "dead_stock": showDeadStock.toString(),
+      "group": selectedCategoryFilter ?? "",
+      "search": searchText,
+    };
+
+    final queryString = Uri(queryParameters: queryParams).query;
 
     final res = await ApiService.fetchData(
-      'get/items',
+      'get/items?$queryString',
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
-    if (res['status'] == true) {
+    if (res != null && res['status'] == true) {
       list = await compute(parseItems, res['data'] as List<dynamic>);
+
+      totalItems = res['counts']['total'] ?? 0;
+      filteredItems = res['counts']['filtered'] ?? 0;
     }
+
+    if (!mounted) return;
 
     setState(() => loading = false);
   }
 
   bool showDeadStock = false;
   String deadStockMonth = "1";
-  Set<String> deadStockItemIds = {};
-  Future<void> fetchDeadStockItems() async {
-    final res = await ApiService.fetchData(
-      "get/invoice",
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-
-    final sales = SaleInvoiceListResponse.fromJson(res).data;
-
-    final limitDate = DateTime.now().subtract(
-      Duration(days: int.parse(deadStockMonth) * 30),
-    );
-
-    final Set<String> soldItemIds = {};
-
-    for (var invoice in sales) {
-      if (invoice.saleInvoiceDate.isAfter(limitDate)) {
-        for (var item in invoice.itemDetails) {
-          soldItemIds.add(item.itemId);
-        }
-      }
-    }
-
-    deadStockItemIds.clear();
-
-    for (var item in list) {
-      final stock = double.tryParse(item.stockQty) ?? 0;
-
-      if (stock > 0 && !soldItemIds.contains(item.id)) {
-        deadStockItemIds.add(item.id);
-      }
-    }
-
-    setState(() {});
-  }
-
-  int get deadStockCount => deadStockItemIds.length;
-  List<ItemModel> get filteredList {
-    return list.where((item) {
-      final name = item.itemName.toLowerCase();
-      final code = item.itemNo.toLowerCase();
-      final query = searchText.toLowerCase();
-
-      bool matchesSearch =
-          query.isEmpty || name.contains(query) || code.contains(query);
-
-      bool matchesCategory =
-          selectedCategoryFilter == null ||
-          selectedCategoryFilter == item.group;
-
-      bool matchesLowStock = true;
-      if (showLowStockOnly) {
-        final qty = double.tryParse(item.stockQty) ?? 0;
-        final reorder = double.tryParse(item.reorderLevel) ?? 0;
-        matchesLowStock = reorder > 0 && qty <= reorder;
-      }
-
-      bool matchesDeadStock = true;
-      if (showDeadStock) {
-        matchesDeadStock = deadStockItemIds.contains(item.id);
-      }
-
-      return matchesSearch &&
-          matchesCategory &&
-          matchesLowStock &&
-          matchesDeadStock;
-    }).toList();
-  }
-
-  // ---------------- STATS ----------------
-  double get stockValueMRP {
-    double total = 0;
-    for (var i in list) {
-      final qty = double.tryParse(i.stockQty) ?? 0;
-      final price = double.tryParse(i.salesPrice) ?? 0;
-      total += qty * price;
-    }
-    return total;
-  }
-
-  int get lowStockCount {
-    return list.where((item) {
-      final qty = double.tryParse(item.stockQty) ?? 0;
-      final reorder = double.tryParse(item.reorderLevel) ?? 0;
-
-      // ✅ Valid reorder level hona chahiye
-      if (reorder <= 0) return false;
-
-      // ✅ Stock hona chahiye
-      if (qty <= 0) return false;
-
-      // ✅ Low stock condition
-      return qty <= reorder;
-    }).length;
-  }
-
   // ---------------- ACTIONS ----------------
   void _editItem(ItemModel item) async {
     final res = await pushTo(CreateNewItemScreen(editItem: item));
 
-    if (res == true) fetchItems();
+    if (res == true) refreshItems();
   }
 
   void _deleteItemConfirm(ItemModel item) {
@@ -227,35 +202,25 @@ class _InventoryScreenState extends State<InventoryScreen> {
   int currentPage = 1;
   int itemsPerPage = 100;
 
-  int get totalPages => (filteredFullList.length / itemsPerPage).ceil();
-
-  List<ItemModel> get filteredFullList {
-    return list.where((item) {
-      final name = item.itemName.toLowerCase();
-      final code = item.itemNo.toLowerCase();
-      final query = searchText.toLowerCase();
-
-      bool matchesSearch =
-          query.isEmpty || name.contains(query) || code.contains(query);
-
-      bool matchesCategory =
-          selectedCategoryFilter == null ||
-          selectedCategoryFilter == item.group;
-
-      return matchesSearch && matchesCategory;
-    }).toList();
-  }
+  int get totalPages => (list.length / itemsPerPage).ceil();
 
   List<ItemModel> get paginatedList {
     final start = (currentPage - 1) * itemsPerPage;
     final end = start + itemsPerPage;
 
-    if (start >= filteredFullList.length) return [];
+    if (start >= list.length) return [];
 
-    return filteredFullList.sublist(
-      start,
-      end > filteredFullList.length ? filteredFullList.length : end,
-    );
+    return list.sublist(start, end > list.length ? list.length : end);
+  }
+
+  List<SearchFieldListItem<String>> get categorySuggestions {
+    return categoryList
+        .where(
+          (c) =>
+              c.toLowerCase().contains(categoryController.text.toLowerCase()),
+        )
+        .map((c) => SearchFieldListItem<String>(c, item: c))
+        .toList();
   }
 
   // ---------------- UI ----------------
@@ -296,7 +261,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 _infoCard(
                   title: "Low Stock",
-                  value: lowStockCount.toString(),
+                  value: lowStockCountApi.toString(),
                   bgColor: const Color(0xffFFF7E6),
                   textColor: Colors.orange,
                   icon: Icons.warning,
@@ -304,15 +269,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
                 _infoCard(
                   title: "Dead Stock",
-                  value: deadStockCount.toString(),
+                  value: deadStockCountApi.toString(),
                   bgColor: const Color(0xffFFE4E6),
                   textColor: Colors.red,
                   icon: Icons.error,
-                  onTap: () async {
+                  onTap: () {
                     showDeadStock = true;
                     showLowStockOnly = false;
-
-                    await fetchDeadStockItems();
+                    refreshItems(); // 🔥 missing tha
                   },
                 ),
               ],
@@ -320,22 +284,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
             const SizedBox(height: 24),
 
-            /// ---------------- FILTER BAR ----------------
             Row(
               children: [
-                // SEARCH
                 Expanded(
+                  flex: 2,
                   child: CommonTextField(
                     perfixIcon: const Icon(Icons.search),
                     hintText: "Search Item",
                     onChanged: (val) {
                       if (_debounce?.isActive ?? false) _debounce!.cancel();
 
-                      _debounce = Timer(const Duration(milliseconds: 400), () {
-                        setState(() {
-                          searchText = val;
-                          currentPage = 1;
-                        });
+                      _debounce = Timer(const Duration(milliseconds: 200), () {
+                        searchText = val;
+                        currentPage = 1;
+                        refreshItems();
                       });
                     },
                   ),
@@ -344,23 +306,36 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
                 // CATEGORY FILTER
                 Expanded(
-                  child: CommonDropdownField<String>(
-                    value: selectedCategoryFilter,
-                    items: [
-                      DropdownMenuItem(
-                        value: null,
-                        child: Text("All Categories"),
-                      ),
-                      ...list
-                          .map((e) => e.group)
-                          .toSet()
-                          .map(
-                            (c) => DropdownMenuItem(value: c, child: Text(c)),
-                          ),
-                    ],
-                    onChanged: (val) =>
-                        setState(() => selectedCategoryFilter = val),
-                    hintText: "Select Categories",
+                  flex: 2,
+                  child: CommonSearchableDropdownChange<String>(
+                    controller: categoryController,
+                    suggestions: categorySuggestions,
+                    hintText: "Search Category",
+                    onChanged: (val) {
+                      if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+                      _debounce = Timer(const Duration(milliseconds: 200), () {
+                        selectedCategoryFilter = val.isEmpty ? null : val;
+                        currentPage = 1;
+                        refreshItems(); // 🔥 LIVE API
+                      });
+                    },
+                    onSuggestionTap: (item) {
+                      selectedCategoryFilter = item.item;
+                      categoryController.text = item.searchKey;
+
+                      refreshItems(); // 🔥 API hit
+                      setState(() {});
+                    },
+
+                    // 🔥 MOST IMPORTANT
+                    validator: (val) {
+                      // not needed
+                      return null;
+                    },
+
+                    // 👇 ADD THIS
+                    focusNode: FocusNode(),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -373,10 +348,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       Checkbox(
                         value: showLowStockOnly,
                         onChanged: (v) {
-                          setState(() {
-                            showLowStockOnly = v ?? false;
-                            showDeadStock = false;
-                          });
+                          showLowStockOnly = v ?? false;
+                          showDeadStock = false;
+                          refreshItems(); // 🔥
+                          setState(() {});
                         },
                       ),
                       const Text("Low Stock"),
@@ -388,48 +363,44 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         onChanged: (v) async {
                           showDeadStock = v ?? false;
                           showLowStockOnly = false;
-
-                          if (showDeadStock) {
-                            await fetchDeadStockItems();
-                          }
-
+                          refreshItems(); // 🔥
                           setState(() {});
                         },
                       ),
                       const Text("Dead Stock"),
 
-                      if (showDeadStock)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 12),
-                          child: SizedBox(
-                            width: 200,
-                            child: CommonDropdownField<String>(
-                              value: deadStockMonth,
-                              items: const [
-                                DropdownMenuItem(
-                                  value: "1",
-                                  child: Text("1 Month"),
-                                ),
-                                DropdownMenuItem(
-                                  value: "3",
-                                  child: Text("3 Month"),
-                                ),
-                                DropdownMenuItem(
-                                  value: "6",
-                                  child: Text("6 Month"),
-                                ),
-                                DropdownMenuItem(
-                                  value: "12",
-                                  child: Text("12 Month"),
-                                ),
-                              ],
-                              onChanged: (v) async {
-                                deadStockMonth = v!;
-                                await fetchDeadStockItems();
-                              },
-                            ),
-                          ),
-                        ),
+                      // if (showDeadStock)
+                      //   Padding(
+                      //     padding: const EdgeInsets.only(left: 12),
+                      //     child: SizedBox(
+                      //       width: 200,
+                      //       child: CommonDropdownField<String>(
+                      //         value: deadStockMonth,
+                      //         items: const [
+                      //           DropdownMenuItem(
+                      //             value: "1",
+                      //             child: Text("1 Month"),
+                      //           ),
+                      //           DropdownMenuItem(
+                      //             value: "3",
+                      //             child: Text("3 Month"),
+                      //           ),
+                      //           DropdownMenuItem(
+                      //             value: "6",
+                      //             child: Text("6 Month"),
+                      //           ),
+                      //           DropdownMenuItem(
+                      //             value: "12",
+                      //             child: Text("12 Month"),
+                      //           ),
+                      //         ],
+                      //         onChanged: (v) async {
+                      //           deadStockMonth = v!;
+                      //           await fetchDeadStockItems();
+                      //         },
+                      //       ),
+                      //     ),
+                      //   ),
                     ],
                   ),
                 ),
@@ -453,26 +424,30 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                       ),
                 SizedBox(width: 10),
-                defaultButton(
-                  buttonColor: AppColor.blue,
-                  height: 40,
-                  width: 100,
-                  onTap: () async {
-                    var data = await pushTo(CreateNewItemScreen());
-                    if (data != null) {
-                      fetchItems();
-                    }
-                  },
-                  text: "Create Item",
-                ),
+
+                if (hasModuleAccess("Item", "create"))
+                  defaultButton(
+                    buttonColor: AppColor.blue,
+                    height: 40,
+                    width: 100,
+                    onTap: () async {
+                      var data = await pushTo(CreateNewItemScreen());
+                      if (data != null) {
+                        _loadInitialData();
+                      }
+                    },
+                    text: "Create Item",
+                  ),
                 SizedBox(width: 10),
-                defaultButton(
-                  buttonColor: AppColor.blue,
-                  height: 40,
-                  width: 100,
-                  onTap: uploadExcelFile,
-                  text: "Upload Item",
-                ),
+
+                if (hasModuleAccess("Item", "create"))
+                  defaultButton(
+                    buttonColor: AppColor.blue,
+                    height: 40,
+                    width: 100,
+                    onTap: uploadExcelFile,
+                    text: "Upload Item",
+                  ),
               ],
             ),
 
@@ -504,6 +479,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
+                              Text(
+                                "   Total Items : $filteredItems/$totalItems",
+                              ),
+                              Spacer(),
                               Text("Page $currentPage of $totalPages"),
                               SizedBox(width: 10),
 
@@ -535,7 +514,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Future<void> exportItemsCsv() async {
     setState(() => isloading = true);
 
-    final items = filteredList;
+    final items = list;
 
     final buffer = StringBuffer();
 
@@ -640,14 +619,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
           Expanded(
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  onPressed: () => _editItem(item),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => _deleteItemConfirm(item),
-                ),
+                if (hasModuleAccess("Item", "update"))
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () => _editItem(item),
+                  ),
+
+                if (hasModuleAccess("Item", "delete"))
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _deleteItemConfirm(item),
+                  ),
               ],
             ),
           ),
@@ -697,7 +679,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
       if (response.statusCode == 200 && response.data["status"] == true) {
         showCustomSnackbarSuccess(context, "Excel Uploaded Successfully");
-        fetchItems();
+        refreshItems();
       } else {
         showCustomSnackbarError(
           context,
@@ -708,6 +690,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
       Navigator.pop(context);
       showCustomSnackbarError(context, "Upload Error: $e");
     }
+  }
+
+  Future<void> refreshItems() async {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+    _debounce = Timer(const Duration(milliseconds: 200), () {
+      fetchItems();
+    });
   }
 }
 

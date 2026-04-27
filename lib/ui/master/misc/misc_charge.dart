@@ -20,14 +20,6 @@ class CreateMiscCharge extends StatefulWidget {
 class _CreateMiscChargeState extends State<CreateMiscCharge> {
   final TextEditingController nameCtrl = TextEditingController();
 
-  // ========= POSTING ACCOUNT ==========
-  List<Map<String, dynamic>> ledgerList = [];
-  // List<String> postingAccountNames = [];
-  // Map<String, String> postingAccountIdMap = {}; // name -> id
-
-  String? selectedPostingName;
-  String? selectedPostingId;
-
   // ========= HSN + GST ==========
   List<Map<String, dynamic>> hsnList = [];
   List<String> hsnNames = [];
@@ -40,7 +32,6 @@ class _CreateMiscChargeState extends State<CreateMiscCharge> {
   bool applyTax = false;
   bool printInInvoice = true;
   bool rePaymentRequired = false;
-  String? _pendingLedgerName;
   String? _pendingHsn;
 
   @override
@@ -48,7 +39,6 @@ class _CreateMiscChargeState extends State<CreateMiscCharge> {
     if (widget.editData != null) {
       final e = widget.editData!;
       nameCtrl.text = e.name;
-      _pendingLedgerName = e.ledgerName; // ← store temporarily
       _pendingHsn = e.hsn ?? ""; // ← store temporarily
 
       applyTax = e.tax;
@@ -60,47 +50,9 @@ class _CreateMiscChargeState extends State<CreateMiscCharge> {
 
     super.initState();
     _loadHsnCodes();
-    _loadPostingAccounts();
   }
 
   bool get isEdit => widget.editData != null;
-
-  // ===================== LOAD LEDGER (POSTING ACCOUNTS) =====================
-  Future<void> _loadPostingAccounts() async {
-    try {
-      final resp = await ApiService.fetchData(
-        "get/ledger",
-        licenceNo: Preference.getint(PrefKeys.licenseNo),
-      );
-
-      if (resp != null && resp['status'] == true) {
-        ledgerList = List<Map<String, dynamic>>.from(resp['data']);
-
-        // postingAccountNames.clear();
-        // postingAccountIdMap.clear();
-
-        // Filter only ledgers with group = Misc Charges
-        for (var e in ledgerList) {
-          if ((e["ledger_group"] ?? "").toString() == "Misc Charges") {
-            final name = e["ledger_name"].toString();
-            final id = e["_id"].toString();
-
-            // postingAccountNames.add(name);
-            // postingAccountIdMap[name] = id;
-          }
-        }
-      }
-
-      setState(() {
-        // if (_pendingLedgerName != null &&
-        //     postingAccountNames.contains(_pendingLedgerName)) {
-        //   selectedPostingName = _pendingLedgerName;
-        //   selectedPostingId = postingAccountIdMap[_pendingLedgerName];
-        //   _pendingLedgerName = null;
-        // }
-      });
-    } catch (e) {}
-  }
 
   // ======================= LOAD HSN CODES =======================
   Future<void> _loadHsnCodes() async {
@@ -147,21 +99,14 @@ class _CreateMiscChargeState extends State<CreateMiscCharge> {
       return;
     }
 
-    if (selectedPostingId == null || selectedPostingName == null) {
-      showCustomSnackbarError(context, "Select posting account");
-      return;
-    }
-
     final payload = {
       "licence_no": Preference.getint(PrefKeys.licenseNo),
       "branch_id": Preference.getString(PrefKeys.locationId),
 
-      // Posting Account
-      "ledger_id": selectedPostingId, // _id of ledger
-      "ledger_name": selectedPostingName, // ledger_name
       // Charge name
       "name": nameCtrl.text.trim(),
-
+      "ledger_id": "-",
+      "ledger_name": "-",
       // Boolean fields
       "re_pay": rePaymentRequired,
       "print_in": printInInvoice,
@@ -372,16 +317,11 @@ class _CreateMiscChargeState extends State<CreateMiscCharge> {
       return;
     }
 
-    if (selectedPostingId == null) {
-      showCustomSnackbarError(context, "Select posting account");
-      return;
-    }
-
     final payload = {
       "licence_no": Preference.getint(PrefKeys.licenseNo),
       "branch_id": Preference.getString(PrefKeys.locationId),
-      "ledger_id": selectedPostingId,
-      "ledger_name": selectedPostingName,
+      "ledger_id": "-",
+      "ledger_name": "-",
       "name": nameCtrl.text.trim(),
       "re_pay": rePaymentRequired,
       "print_in": printInInvoice,

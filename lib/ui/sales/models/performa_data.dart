@@ -67,8 +67,8 @@ class PerformaData {
   final List<ServiceDetail> serviceDetails;
 
   final String signature;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final String salePerson;
+  final String salePersonId;
 
   PerformaData({
     required this.id,
@@ -100,8 +100,8 @@ class PerformaData {
     required this.itemDetails,
     required this.serviceDetails,
     required this.signature,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.salePerson,
+    required this.salePersonId,
   });
 
   factory PerformaData.fromJson(Map<String, dynamic> j) => PerformaData(
@@ -154,7 +154,7 @@ class PerformaData {
         .toList(),
 
     signature: j["signature"] ?? "",
-    createdAt: DateTime.parse(j["createdAt"]),
-    updatedAt: DateTime.parse(j["updatedAt"]),
+    salePerson: j["employeename"] ?? "",
+    salePersonId: j["employeeid"] ?? "",
   );
 }

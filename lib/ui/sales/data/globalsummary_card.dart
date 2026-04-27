@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/utils/colors.dart';
 
-class GlobalSummaryCard extends StatelessWidget {
+class GlobalSummaryCard extends StatefulWidget {
   const GlobalSummaryCard({
     super.key,
 
@@ -40,6 +40,12 @@ class GlobalSummaryCard extends StatelessWidget {
   final Widget discountSection;
 
   @override
+  State<GlobalSummaryCard> createState() => _GlobalSummaryCardState();
+}
+
+class _GlobalSummaryCardState extends State<GlobalSummaryCard> {
+  bool viewSummary = false;
+  @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
@@ -57,28 +63,30 @@ class GlobalSummaryCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _row('Subtotal', subtotal),
-          _row('Total GST', totalGst),
-          // _row('SGST', sgst),
-          // _row('CGST', cgst),
+          if (viewSummary) ...[
+            _row('Subtotal', widget.subtotal),
+            _row('Total GST', widget.totalGst),
+            // _row('SGST', sgst),
+            // _row('CGST', cgst),
 
-          /// ---------- Injected Sections ----------
-          additionalChargesSection,
-          miscChargesSection,
-          discountSection,
+            /// ---------- Injected Sections ----------
+            widget.additionalChargesSection,
+            widget.miscChargesSection,
+            widget.discountSection,
 
-          Divider(),
+            Divider(),
+          ],
 
           /// -------- ROUND OFF --------
           Row(
             children: [
               Checkbox(
-                value: autoRound,
+                value: widget.autoRound,
                 fillColor: WidgetStatePropertyAll(AppColor.primary),
                 shape: ContinuousRectangleBorder(
                   borderRadius: BorderRadiusGeometry.circular(5),
                 ),
-                onChanged: (v) => onToggleRound(v ?? true),
+                onChanged: (v) => widget.onToggleRound(v ?? true),
               ),
               const SizedBox(width: 8),
               Text(
@@ -88,12 +96,24 @@ class GlobalSummaryCard extends StatelessWidget {
                   color: AppColor.textColor,
                 ),
               ),
+              Spacer(),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    viewSummary = !viewSummary;
+                  });
+                },
+                icon: Icon(
+                  viewSummary ? Icons.expand_less : Icons.expand_more,
+                  color: AppColor.primary,
+                ),
+              ),
             ],
           ),
 
           const SizedBox(height: 8),
 
-          _row('Total Amount', totalAmount, isBold: true),
+          _row('Total Amount', widget.totalAmount, isBold: true),
         ],
       ),
     );

@@ -31,6 +31,11 @@ class SaleReturnSelectCustomer extends SaleReturnEvent {
   SaleReturnSelectCustomer(this.c);
 }
 
+class SaleReturnSetDate extends SaleReturnEvent {
+  final DateTime date;
+  SaleReturnSetDate(this.date);
+}
+
 class SaleReturnToggleCashSale extends SaleReturnEvent {
   final bool enabled;
   SaleReturnToggleCashSale(this.enabled);
@@ -335,7 +340,9 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
     on<SaleReturnUpdatePrefix>((event, emit) {
       emit(state.copyWith(prefix: event.value));
     });
-
+    on<SaleReturnSetDate>((event, emit) {
+      emit(state.copyWith(saleReturnDate: event.date));
+    });
     // misc
     on<SaleReturnAddMiscCharge>(_onAddMiscCharge);
     on<SaleReturnRemoveMiscCharge>(_onRemoveMiscCharge);
@@ -738,10 +745,17 @@ class SaleReturnBloc extends Bloc<SaleReturnEvent, SaleReturnState> {
 
       emit(newState);
       add(SaleReturnCalculate());
-      showCustomSnackbarSuccess(
-        saleReturnNavigatorKey.currentContext!,
-        "Transaction loaded",
-      );
+      if (estimate.warningStatus) {
+        showCustomSnackbarWarning(
+          saleReturnNavigatorKey.currentContext!,
+          estimate.warningmessage,
+        );
+      } else {
+        showCustomSnackbarSuccess(
+          saleReturnNavigatorKey.currentContext!,
+          "Transaction loaded",
+        );
+      }
     } catch (err) {
       showCustomSnackbarError(
         saleReturnNavigatorKey.currentContext!,

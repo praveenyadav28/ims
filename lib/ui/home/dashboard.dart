@@ -2,19 +2,22 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ims/model/cussup_model.dart';
 import 'package:ims/model/expanse_model.dart';
 import 'package:ims/model/ledger_model.dart';
+import 'package:ims/ui/purchase/purchase_invoice/purchase_invoice_list.dart';
 import 'package:ims/ui/report/report_screen.dart';
-
 import 'package:ims/ui/sales/models/sale_invoice_data.dart';
 import 'package:ims/ui/sales/models/purcahseinvoice_data.dart';
 import 'package:ims/ui/sales/sale_invoice/sale_invoice_list.dart';
+import 'package:ims/ui/sales/sale_invoice/saleinvoice_create.dart';
+import 'package:ims/ui/voucher/expanse/expanse_list.dart';
+import 'package:ims/utils/access.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/navigation.dart';
 import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
+import 'package:ims/utils/snackbar.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -29,19 +32,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double totalExpanse = 0;
   bool loading = true;
 
-  int invoices = 0;
-  int purchases = 0;
-
-  // DATA
   List<SaleInvoiceData> saleInvoices = [];
   List<PurchaseInvoiceData> purchaseInvoices = [];
-  List<Customer> customers = [];
   List<ExpanseModel> expenses = [];
 
-  // OUTSTANDING
-  List<Customer> outstandingList = [];
-
-  // CASHFLOW
   Map<int, double> saleMonthly = {};
   Map<int, double> purchaseMonthly = {};
 
@@ -50,76 +44,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    loadDashboard();
+    if (hasMenuAccess("Dashboard")) {
+      initDashboard();
+    } else {
+      loading = false;
+    }
   }
 
-  Future<void> loadDashboard() async {
-    await Future.wait([
-      loadSaleTotal(),
-      loadPurchaseTotal(),
-      loadCustomers(),
-      fetchExpenses(),
-      loadRemindersData(),
-    ]);
+  Future<void> initDashboard() async {
+    await loadTotalAmount();
 
-    buildOutstanding();
-    buildCashFlow();
+    await loadSalePurchaseGraph(); // 🔥 wait karo
 
     setState(() => loading = false);
+
+    // background me baaki
+    Future.microtask(() async {
+      await Future.wait([fetchExpenses(), loadOutStandingData()]);
+      setState(() {});
+    });
   }
 
-  Future<void> loadRemindersData() async {
+  // ================= NEW TOTAL API =================
+  Future<void> loadTotalAmount() async {
+    final res = await ApiService.fetchData(
+      "get/getTotalAmount",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    if (res == null) return;
+
+    final data = res['data'];
+
+    saleTotal = double.tryParse(data['saleTotal'].toString()) ?? 0;
+    purchaseTotal = double.tryParse(data['purchaseTotal'].toString()) ?? 0;
+    totalExpanse = double.tryParse(data['expanseTotal'].toString()) ?? 0;
+  }
+  // ================= OLD METHODS (UNCHANGED) =================
+
+  Future<void> loadOutStandingData() async {
     final ledRes = await ApiService.fetchData(
       "get/ledger",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-
+    if (ledRes == null) return;
     ledgerList = (ledRes['data'] as List)
         .map((e) => LedgerListModel.fromJson(e))
-        .where((l) => (l.closingBalance ?? 0) > 0)
+        .where((l) {
+          return ((l.closingBalance ?? 0) > 0) &&
+              l.ledgerGroup == "Sundry Debtor";
+        })
         .toList();
   }
 
-  Future<void> loadSaleTotal() async {
+  Future<void> loadSalePurchaseGraph() async {
     final res = await ApiService.fetchData(
-      "get/invoice",
+      "get/salepurchase",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
 
     if (res == null) return;
+    final List data = res['data'];
 
-    final parsed = SaleInvoiceListResponse.fromJson(res);
-    saleInvoices = parsed.data;
+    saleMonthly.clear();
+    purchaseMonthly.clear();
 
-    invoices = saleInvoices.length;
-    saleTotal = saleInvoices.fold(0, (p, e) => p + e.totalAmount);
-  }
+    for (var e in data) {
+      final month = (e['month'] as num).toInt();
 
-  Future<void> loadPurchaseTotal() async {
-    final res = await ApiService.fetchData(
-      "get/purchaseinvoice",
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-
-    if (res == null) return;
-
-    final parsed = PurchaseInvoiceListResponse.fromJson(res);
-    purchaseInvoices = parsed.data;
-
-    purchases = purchaseInvoices.length;
-    purchaseTotal = purchaseInvoices.fold(0, (p, e) => p + e.totalAmount);
-  }
-
-  Future<void> loadCustomers() async {
-    final res = await ApiService.fetchData(
-      "get/customer",
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
-
-    if (res == null) return;
-
-    final List list = res['data'] ?? [];
-    customers = list.map((e) => Customer.fromJson(e)).toList();
+      saleMonthly[month] = (e['sale'] as num).toDouble();
+      purchaseMonthly[month] = (e['purchase'] as num).toDouble();
+    }
   }
 
   Future<void> fetchExpenses() async {
@@ -133,31 +128,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     expenses = (res['data'] as List)
         .map((e) => ExpanseModel.fromJson(e))
         .toList();
+
     totalExpanse = expenses.fold(0, (p, e) => p + e.amount);
-  }
 
-  // ================= LOGIC =================
-
-  void buildOutstanding() {
-    outstandingList = customers.where((c) => c.closingBalance < 0).toList();
-
-    outstandingList.sort(
-      (a, b) => b.closingBalance.abs().compareTo(a.closingBalance.abs()),
-    );
-  }
-
-  void buildCashFlow() {
-    saleMonthly.clear();
-    purchaseMonthly.clear();
-
-    for (var e in saleInvoices) {
-      final m = e.saleInvoiceDate.month;
-      saleMonthly[m] = (saleMonthly[m] ?? 0) + e.totalAmount;
-    }
-
-    for (var e in purchaseInvoices) {
-      final m = e.purchaseInvoiceDate.month;
-      purchaseMonthly[m] = (purchaseMonthly[m] ?? 0) + e.totalAmount;
+    // 🔥 only latest 5 (UI same)
+    if (expenses.length > 5) {
+      expenses = expenses.reversed.take(5).toList();
     }
   }
 
@@ -219,21 +195,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   _statCard(
                                     title: "Total Sale",
                                     amount: "₹ ${saleTotal.toStringAsFixed(2)}",
-                                    subtitle: "$invoices Invoices",
+                                    subtitle: "",
                                     color: const Color(0xffD1FAE5),
+                                    onTap: () async {
+                                      if (hasModuleAccess(
+                                        "Sale Invoice",
+                                        "view",
+                                      )) {
+                                        var data = await pushTo(
+                                          SaleInvoiceInvoiceListScreen(
+                                            canBack: true,
+                                          ),
+                                        );
+                                        if (data != null) {
+                                          await initDashboard();
+                                          setState(() {});
+                                        }
+                                      } else {
+                                        showCustomSnackbarError(
+                                          context,
+                                          "Access Denied",
+                                        );
+                                      }
+                                    },
                                   ),
                                   _statCard(
                                     title: "Total Purchase",
                                     amount:
                                         "₹ ${purchaseTotal.toStringAsFixed(2)}",
-                                    subtitle: "$purchases Invoices",
+                                    subtitle: "",
                                     color: const Color(0xffFEE2E2),
+                                    onTap: () async {
+                                      if (hasModuleAccess(
+                                        "Purchase Invoice",
+                                        "view",
+                                      )) {
+                                        var data = await pushTo(
+                                          PurchaseInvoiceListScreen(
+                                            canBack: true,
+                                          ),
+                                        );
+                                        if (data != null) {
+                                          await initDashboard();
+                                          setState(() {});
+                                        }
+                                      } else {
+                                        showCustomSnackbarError(
+                                          context,
+                                          "Access Denied",
+                                        );
+                                      }
+                                    },
                                   ),
                                   _statCard(
                                     title: "Total Expanse",
                                     amount: "₹ $totalExpanse",
                                     subtitle: "",
                                     color: const Color(0xffFECACA),
+                                    onTap: () async {
+                                      if (hasModuleAccess(
+                                        "Expense Voucher",
+                                        "View",
+                                      )) {
+                                        var data = await pushTo(
+                                          ExpanseListTableScreen(
+                                            canBack: true,
+                                          ),
+                                        );
+                                        if (data != null) {
+                                          await initDashboard();
+                                          setState(() {});
+                                        }
+                                      } else {
+                                        showCustomSnackbarError(
+                                          context,
+                                          "Access Denied",
+                                        );
+                                      }
+                                    },
                                   ),
                                 ],
                               ),
@@ -252,8 +291,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               SizedBox(height: 15),
                               InkWell(
                                 borderRadius: BorderRadius.circular(12),
-                                onTap: () {
-                                  pushTo(SaleInvoiceInvoiceListScreen());
+                                onTap: () async {
+                                  if (hasModuleAccess(
+                                    "Sale Invoice",
+                                    "create",
+                                  )) {
+                                    var data = await pushTo(
+                                      CreateSaleInvoiceFullScreen(),
+                                    );
+                                    if (data != null) {
+                                      await initDashboard();
+                                      setState(() {});
+                                    }
+                                  } else {
+                                    showCustomSnackbarError(
+                                      context,
+                                      "Access Denied",
+                                    );
+                                  }
                                 },
                                 child: Container(
                                   height: 45,
@@ -337,36 +392,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required String amount,
     required String subtitle,
     required Color color,
+    required Function()? onTap,
   }) {
     return Expanded(
-      child: Container(
-        margin: const EdgeInsets.only(right: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(right: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              amount,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 6),
+              Text(
+                amount,
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(subtitle, style: GoogleFonts.inter(fontSize: 12)),
-          ],
+              const SizedBox(height: 6),
+              Text(subtitle, style: GoogleFonts.inter(fontSize: 12)),
+            ],
+          ),
         ),
       ),
     );
@@ -410,38 +469,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     if (maxVal == 0) maxVal = 1;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: months.map((m) {
-        final sale = saleMonthly[m] ?? 0;
-        final purchase = purchaseMonthly[m] ?? 0;
+    return saleMonthly.isEmpty &&
+            purchaseMonthly.isEmpty &&
+            hasMenuAccess("Dashboard")
+        ? Center(child: CircularProgressIndicator())
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: months.map((m) {
+              final sale = saleMonthly[m] ?? 0;
+              final purchase = purchaseMonthly[m] ?? 0;
 
-        final saleH = (sale / maxVal) * 100;
-        final purH = (purchase / maxVal) * 100;
+              final saleH = (sale / maxVal) * 100;
+              final purH = (purchase / maxVal) * 100;
 
-        return Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(width: 8, height: saleH, color: Colors.greenAccent),
-                  const SizedBox(width: 4),
-                  Container(width: 8, height: purH, color: Colors.redAccent),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                _monthName(m),
-                style: const TextStyle(color: Colors.white54, fontSize: 10),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
+              return Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: saleH,
+                          color: Colors.greenAccent,
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          width: 8,
+                          height: purH,
+                          color: Colors.redAccent,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _monthName(m),
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          );
   }
 
   String _monthName(int m) {

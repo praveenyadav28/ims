@@ -57,7 +57,7 @@ class _CreateCusSupState extends State<CreateCusSup>
   List<String> titleParentList = ["S/O", "D/O", "W/O", "C/O"];
   String selectedTitleParent = "S/O";
 
-  String _selectedBalance = 'Cr';
+  String _selectedBalance = 'Dr';
   final List<String> _balanceType = ['Cr', 'Dr'];
 
   List<String> gstTypeList = [
@@ -93,7 +93,7 @@ class _CreateCusSupState extends State<CreateCusSup>
 
   void _addNewDocument() {
     setState(() {
-      documents.add({"duc_title": "", "image": null});
+      documents = List.from(documents)..add({"duc_title": "", "image": null});
     });
   }
 
@@ -136,7 +136,8 @@ class _CreateCusSupState extends State<CreateCusSup>
       emailController.text = c.email;
       mobileController.text = c.mobile;
       workPhoneController.text = c.phone ?? "";
-
+      openingBalanceController.text = c.openingBalance.abs().toString();
+      _selectedBalance = c.openingBalance < 0 ? "Cr" : "Dr";
       panController.text = c.pan;
       gstNumberController.text = c.gstNo;
       selectedGstType = c.gstType == "" ? null : c.gstType;
@@ -253,8 +254,7 @@ class _CreateCusSupState extends State<CreateCusSup>
               text: selectedType == "Individual"
                   ? "Party Name"
                   : "Company Name",
-              child:
-               Row(
+              child: Row(
                 children: [
                   Expanded(
                     flex: 3,
@@ -406,50 +406,50 @@ class _CreateCusSupState extends State<CreateCusSup>
                 ],
               ),
             ),
-            if (widget.cusSupData == null) SizedBox(height: Sizes.height * .02),
-            if (widget.cusSupData == null)
-              nameField(
-                text: "Opeing Balance",
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 4,
-                      child: CommonTextField(
-                        controller: openingBalanceController,
-                        hintText: 'Opening Balance',
-                      ),
+            SizedBox(height: Sizes.height * .02),
+
+            nameField(
+              text: "Opeing Balance",
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: CommonTextField(
+                      controller: openingBalanceController,
+                      hintText: 'Opening Balance',
                     ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: CommonDropdownField<String>(
-                        value: _balanceType.contains(_selectedBalance)
-                            ? _selectedBalance
-                            : null,
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedBalance = newValue ?? 'Dr';
-                          });
-                        },
-                        items: _balanceType.map<DropdownMenuItem<String>>((
-                          String value,
-                        ) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(
-                              value,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: AppColor.lightblack,
-                                fontSize: 17,
-                              ),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: CommonDropdownField<String>(
+                      value: _balanceType.contains(_selectedBalance)
+                          ? _selectedBalance
+                          : null,
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedBalance = newValue ?? 'Dr';
+                        });
+                      },
+                      items: _balanceType.map<DropdownMenuItem<String>>((
+                        String value,
+                      ) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(
+                            value,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: AppColor.lightblack,
+                              fontSize: 17,
                             ),
-                          );
-                        }).toList(),
-                      ),
+                          ),
+                        );
+                      }).toList(),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
 
             SizedBox(height: Sizes.height * .02),
             Align(
@@ -794,6 +794,7 @@ class _CreateCusSupState extends State<CreateCusSup>
                   onPressed: () {
                     setState(() {
                       documents[index]["image"] = null;
+                      imageFile = null;
                     });
                     Navigator.pop(context);
                   },
@@ -849,39 +850,42 @@ class _CreateCusSupState extends State<CreateCusSup>
         MapEntry("address", cityDistrictController.text.trim()),
         MapEntry("city", selectedCity?.item ?? ""),
         MapEntry("state", selectedState?.item ?? ""),
-        MapEntry(
-          'opening_balance',
-          openingBalanceController.text.trim().isEmpty
-              ? "0"
-              : _selectedBalance == "Cr"
-              ? "${int.tryParse(openingBalanceController.text.trim())}"
-              : "-${int.tryParse(openingBalanceController.text.trim())}",
-        ),
         MapEntry("opening_type", _selectedBalance),
-        if (widget.cusSupData == null)
-          MapEntry(
-            "closing_balance",
-            openingBalanceController.text.trim().isEmpty
-                ? "0"
-                : _selectedBalance != "Cr"
-                ? "${int.tryParse(openingBalanceController.text.trim())}"
-                : "-${int.tryParse(openingBalanceController.text.trim())}",
-          ),
+
         MapEntry("district", cityDistrictController.text.trim()),
         MapEntry("address_0", addressLine1Controller.text.trim()),
         MapEntry("address_1", addressLine2Controller.text.trim()),
       ]);
+      final int newOpening = openingBalanceController.text.trim().isEmpty
+          ? 0
+          : int.tryParse(openingBalanceController.text.trim()) ?? 0;
+
+      final int signedNewOpening = _selectedBalance != "Cr"
+          ? newOpening
+          : -newOpening;
+
+      int finalClosing = signedNewOpening;
+
+      if (widget.cusSupData != null) {
+        final oldOpening = widget.cusSupData?.openingBalance ?? 0;
+        final oldClosing = widget.cusSupData?.closingBalance ?? 0;
+
+        finalClosing = oldClosing + (signedNewOpening - oldOpening);
+      }
+
+      formData.fields.add(MapEntry('opening_balance', "$signedNewOpening"));
+      formData.fields.add(MapEntry('closing_balance', "$finalClosing"));
       // ✅ Documents (same key names multiple times)
       for (final doc in documents) {
         final title = doc["duc_title"]?.toString().trim();
-        final Uint8List? imageFile = doc["image"];
+        final imageData = doc["image"];
 
-        if (imageFile != null && title != null && title.isNotEmpty) {
+        if (imageData is Uint8List && title != null && title.isNotEmpty) {
           formData.files.add(
             MapEntry(
               'image',
               MultipartFile.fromBytes(
-                imageFile,
+                imageData,
                 filename: "doc_${DateTime.now().millisecondsSinceEpoch}.jpg",
               ),
             ),

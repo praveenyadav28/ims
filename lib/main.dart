@@ -9,20 +9,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   Preference.preferences = await SharedPreferences.getInstance();
-
+  WidgetsFlutterBinding.ensureInitialized();
   Preference.getBool(PrefKeys.userstatus);
-  runApp(
-    RawKeyboardListener(
-      focusNode: FocusNode(),
-      onKey: (event) {
-        if (event.logicalKey == LogicalKeyboardKey.altLeft ||
-            event.logicalKey == LogicalKeyboardKey.altRight) {
-          return;
-        }
-      },
-      child: const MyApp(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -32,7 +21,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     Sizes.init(context);
     return MaterialApp(
-      title: 'IMS',
+      title: 'Vyapari Bahi',
       debugShowCheckedModeBanner: false,
       navigatorKey: NavigationService.navigatorKey,
       theme: ThemeData(

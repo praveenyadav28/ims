@@ -1944,7 +1944,7 @@ class _CreateNewItemScreenState extends State<CreateNewItemScreen> {
         shadowColor: AppColor.grey,
         iconTheme: IconThemeData(color: AppColor.black),
         title: Text(
-          "${widget.editItem == null ? "Create New" : "Update"} Item",
+          "${widget.editItem == null ? "Save" : "Update"} Item",
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             fontWeight: FontWeight.w700,

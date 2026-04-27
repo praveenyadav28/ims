@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/model/employee_model.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -18,7 +19,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 
 class UserEmpCreate extends StatefulWidget {
-  const UserEmpCreate({super.key});
+  final EmployeeModel? employee; // if null => create, else update
+  const UserEmpCreate({super.key, this.employee});
   @override
   State<UserEmpCreate> createState() => _UserEmpCreateState();
 }
@@ -92,9 +94,36 @@ class _UserEmpCreateState extends State<UserEmpCreate>
   @override
   void initState() {
     super.initState();
+
     statesSuggestions = stateCities.keys.toList();
     citiesSuggestions = [];
     _tabController = TabController(length: 2, vsync: this);
+
+    // ✅ EDIT MODE
+    if (widget.employee != null) {
+      final e = widget.employee!;
+
+      selectedType = e.gender;
+      selectedTitle = e.title;
+
+      firstNameController.text = e.firstName;
+      lastNameController.text = e.lastName;
+      mobileController.text = e.mobile;
+      emailController.text = e.email;
+      cityDistrictController.text = e.address;
+
+      // optional
+      selectedState = SearchFieldListItem(e.address);
+
+      // ✅ documents autofill
+      documents = e.documents.map((doc) {
+        return {
+          "duc_title": doc.title,
+          "image": null, // API image hai, file nahi
+          "old_image": doc.image, // 👈 important
+        };
+      }).toList();
+    }
   }
 
   @override
@@ -118,7 +147,7 @@ class _UserEmpCreateState extends State<UserEmpCreate>
         elevation: .4,
         shadowColor: AppColor.grey,
         title: Text(
-          "Create New Employee",
+          widget.employee == null ? "Create Employee" : "Update Employee",
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             height: 1,
@@ -557,7 +586,9 @@ class _UserEmpCreateState extends State<UserEmpCreate>
           children: [
             defaultButton(
               buttonColor: Color(0xff8947E5),
-              text: "Create Employee",
+              text: widget.employee == null
+                  ? "Save"
+                  : "Update Employee",
               height: 40,
               width: 149,
               onTap: () => saveOrUpdate(),
@@ -569,7 +600,7 @@ class _UserEmpCreateState extends State<UserEmpCreate>
               text: "Cancel",
               height: 40,
               width: 93,
-                  onTap: () => Navigator.pop(context),
+              onTap: () => Navigator.pop(context),
             ),
           ],
         ),
@@ -681,12 +712,23 @@ class _UserEmpCreateState extends State<UserEmpCreate>
         'licence_no': Preference.getint(PrefKeys.licenseNo),
       };
 
-      // ✅ Send POST requestwha
-      final response = await dio.post(
-        "${ApiService.baseurl}/employee",
-        data: formData,
-        options: Options(headers: headers, contentType: 'multipart/form-data'),
-      );
+      final isUpdate = widget.employee != null;
+
+      final url = isUpdate
+          ? "${ApiService.baseurl}/employee/${widget.employee!.id}"
+          : "${ApiService.baseurl}/employee";
+
+      final response = isUpdate
+          ? await dio.put(
+              url,
+              data: formData,
+              options: Options(headers: headers),
+            )
+          : await dio.post(
+              url,
+              data: formData,
+              options: Options(headers: headers),
+            );
       if (response.statusCode == 200) {
         var data = json.decode("$response");
 

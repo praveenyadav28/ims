@@ -28,6 +28,7 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
     return TransactionListScreen<PurchaseReturnData>(
       key: listKey,
       title: "Purchase Return",
+      module: "Purchase Return",
       fetchData: repo.getPurchaseReturn,
       onView: (e) async {
         final doc = e.toPrintModel(); // ✅ no dynamic
@@ -58,7 +59,7 @@ class _PurchaseReturnListScreenState extends State<PurchaseReturnListScreen> {
       idGetter: (e) => e.id,
       dateGetter: (e) => e.purchaseReturnDate,
       numberGetter: (e) =>
-          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
+          "${e.prefix}${e.prefix.isNotEmpty ? '/' : ''}${e.no}",
       customerGetter: (e) => e.supplierName,
       amountGetter: (e) => e.totalAmount,
       gstGetter: (e) => e.subGst,

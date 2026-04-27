@@ -19,8 +19,8 @@ extension SaleInvoiceMapper on SaleInvoiceData {
 }
 
 class SaleInvoiceInvoiceListScreen extends StatefulWidget {
-  SaleInvoiceInvoiceListScreen({super.key});
-
+  SaleInvoiceInvoiceListScreen({super.key, required this.canBack});
+  bool? canBack;
   @override
   State<SaleInvoiceInvoiceListScreen> createState() =>
       _SaleInvoiceInvoiceListScreenState();
@@ -39,6 +39,7 @@ class _SaleInvoiceInvoiceListScreenState
     return TransactionListScreen<SaleInvoiceData>(
       key: listKey,
       title: "Sale Invoice",
+      module: "Sale Invoice",
       fetchData: repo.getSaleInvoice,
       onView: (e) async {
         final doc = e.toPrintModel(); // ✅ no dynamic
@@ -66,13 +67,15 @@ class _SaleInvoiceInvoiceListScreenState
       onDelete: repo.deleteSaleInvoice,
       idGetter: (e) => e.id,
       dateGetter: (e) => e.saleInvoiceDate,
-      numberGetter: (e) => "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
+      numberGetter: (e) =>
+          "${e.prefix}${e.prefix.isNotEmpty ? '/' : ''}${e.no}",
       customerGetter: (e) => e.customerName,
       gstGetter: (e) => e.subGst,
       basicGetter: (e) => e.subTotal,
       amountGetter: (e) => e.totalAmount,
       mobile: (e) => e.mobile,
       placeOfSupply: (e) => e.placeOfSupply,
+      canBack: widget.canBack,
     );
   }
 }

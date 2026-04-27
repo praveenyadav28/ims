@@ -66,6 +66,8 @@ class DiliveryChallanData {
   final List<ServiceDetail> serviceDetails;
 
   final String signature;
+  final String salePerson;
+  final String salePersonId;
 
   DiliveryChallanData({
     required this.id,
@@ -97,6 +99,8 @@ class DiliveryChallanData {
     required this.itemDetails,
     required this.serviceDetails,
     required this.signature,
+    required this.salePerson,
+    required this.salePersonId,
   });
 
   factory DiliveryChallanData.fromJson(Map<String, dynamic> j) =>
@@ -149,5 +153,7 @@ class DiliveryChallanData {
             .toList(),
 
         signature: j["signature"] ?? "",
+        salePerson: j["employeename"] ?? "",
+        salePersonId: j["employeeid"] ?? "",
       );
 }

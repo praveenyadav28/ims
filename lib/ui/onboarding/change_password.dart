@@ -35,7 +35,6 @@ class _CreatePasswordState extends State<CreatePassword> {
       "contact_no": widget.phoneNo,
       "password": passwordController.text,
     }, licenceNo: int.parse(widget.licenceNo));
-    print(response);
     if (response['status'] == true) {
       showCustomSnackbarSuccess(context, response['message']);
       pushNdRemove(LoginScreen());

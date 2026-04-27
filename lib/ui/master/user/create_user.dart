@@ -1,6 +1,7 @@
 // ignore_for_file: must_be_immutable
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/model/user_model.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -26,7 +27,9 @@ class UserRight {
 }
 
 class UserScreenCreate extends StatefulWidget {
-  const UserScreenCreate({super.key});
+  final UserModel? user;
+
+  UserScreenCreate({super.key, this.user});
 
   @override
   State<UserScreenCreate> createState() => _UserScreenCreateState();
@@ -62,6 +65,7 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
   List<String> singleRights = [
     "Dashboard",
     "Outstanding Report",
+    "OutStanding Reminder",
     "Profit/Loss Report",
     "Company Profile",
     "GSTR-1",
@@ -69,7 +73,10 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
     "Bank Book",
     "Cash Book",
     "Day Book",
+    "Trial Balance",
     "Ledger Report",
+    "Balance Sheet",
+    "Ledger Balance Report",
     "Purchase Invoice Report",
     "Sale Invoice Report",
     "GST Purchase Report",
@@ -78,6 +85,7 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
     "Item Sale-Purchase Summary",
     "Item Profit/Loss Reprot",
     "Stock Details Reprot",
+    "Salesman Report",
   ];
 
   List<String> singleRightsSelected = [];
@@ -86,6 +94,34 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
   bool allCreateSelected = false;
   bool allUpdateSelected = false;
   bool allDeleteSelected = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.user != null) {
+      userNameController.text = widget.user!.userName;
+      passwordController.text = widget.user!.password;
+
+      /// 🔥 Module Rights Fill
+      for (var right in rightsList) {
+        var matched = widget.user!.singleRight?.firstWhere(
+          (e) => e.module == right.title,
+          orElse: () => SingleRight(),
+        );
+
+        if (matched != null) {
+          right.view = matched.view ?? false;
+          right.create = matched.create ?? false;
+          right.update = matched.update ?? false;
+          right.delete = matched.delete ?? false;
+        }
+      }
+
+      /// 🔥 Other Rights Fill
+      singleRightsSelected = List.from(widget.user!.rightList);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +133,7 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
         shadowColor: AppColor.grey,
         iconTheme: IconThemeData(color: AppColor.black),
         title: Text(
-          "Create New User",
+          widget.user == null ? "Create New User" : "Update User",
           style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -185,7 +221,7 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
           children: [
             defaultButton(
               buttonColor: const Color(0xff8947E5),
-              text: "Create User",
+              text: widget.user == null ? "Save" : "Update User",
               height: 40,
               width: 149,
               onTap: () => saveOrUpdate(),
@@ -479,15 +515,26 @@ class _UserScreenCreateState extends State<UserScreenCreate> {
           .toList(),
       "right_list": "${singleRightsSelected}",
     };
-    print(payload);
-    final res = await ApiService.postData(
-      "user",
-      payload,
-      licenceNo: Preference.getint(PrefKeys.licenseNo),
-    );
+
+    var res;
+
+    if (widget.user == null) {
+      /// 🔹 CREATE
+      res = await ApiService.postData(
+        "user",
+        payload,
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+    } else {
+      /// 🔥 UPDATE
+      res = await ApiService.putData(
+        "user/${widget.user!.id}",
+        payload,
+        licenceNo: Preference.getint(PrefKeys.licenseNo),
+      );
+    }
 
     if (res != null && res["status"] == true) {
-      print(res);
       Navigator.pop(context, "refresh");
       showCustomSnackbarSuccess(context, res["message"]);
     } else {

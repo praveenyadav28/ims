@@ -4,6 +4,7 @@ class ReminderCardModel {
   final String remark;
   final int mobile;
   final int recieptNo;
+  final String prefix;
   final DateTime reminderDate;
   final int closingBalance;
 
@@ -13,6 +14,7 @@ class ReminderCardModel {
     required this.remark,
     required this.mobile,
     required this.recieptNo,
+    required this.prefix,
     required this.reminderDate,
     required this.closingBalance,
   });

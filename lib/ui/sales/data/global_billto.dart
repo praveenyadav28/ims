@@ -350,7 +350,6 @@ class _CustomerDropdown extends StatelessWidget {
           ),
         ),
         SizedBox(height: Sizes.height * .02),
-
         CommonTextField(
           controller: TextEditingController(
             text: selectedCustomer?.mobile ?? "",

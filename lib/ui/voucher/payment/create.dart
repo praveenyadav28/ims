@@ -1,4 +1,5 @@
 // ignore_for_file: must_be_immutable
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -73,6 +74,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
     });
   }
 
+  Timer? _debounce;
   String selectedType = "Other";
   bool printAfterSave = false;
   void onTogglePrint(bool value) {
@@ -144,17 +146,22 @@ class _PaymentEntryState extends State<PaymentEntry> {
       orElse: () => supplierList.first,
     );
     paymentRows.clear();
-    for (var e in widget.data!.ledgerDetails!) {
+
+    for (var e in d.ledgerDetails ?? []) {
       final row = PaymentRowModel();
 
-      row.ledger = ledgerList.firstWhere(
+      final matchedLedger = ledgerList.firstWhere(
         (l) => l.id == e.ledgerId,
-        // orElse: () => null,
+        orElse: () => ledgerList.first,
       );
-
+      row.ledger = matchedLedger;
+      row.ledgerController.text = matchedLedger.ledgerName ?? "";
       row.amountController.text = e.amount.toString();
 
       paymentRows.add(row);
+    }
+    if (paymentRows.isEmpty) {
+      paymentRows.add(PaymentRowModel());
     }
 
     setState(() {});
@@ -236,6 +243,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
         child: Column(
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Container(
@@ -261,72 +269,151 @@ class _PaymentEntryState extends State<PaymentEntry> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Party Name",
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: AppColor.textColor,
-                                        ),
-                                      ),
-                                      Spacer(),
-                                      TextButton(
-                                        onPressed: () async {
-                                          await pushTo(
-                                            CreateCusSup(isCustomer: false),
-                                          );
-                                        },
-                                        child: Text(
-                                          "+ Create Supplier",
-                                          style: TextStyle(
-                                            color: AppColor.primary,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  Text(
+                                    "Party Name",
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColor.textColor,
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
-                                  CommonSearchableDropdownField<
-                                    LedgerListModel
-                                  >(
+                                  SearchField<LedgerListModel>(
                                     controller: partyController,
-                                    hintText: "Search party by name or number",
-                                    suggestions: supplierList.map((c) {
+                                    suggestions: initialPartyList.map((e) {
                                       return SearchFieldListItem<
                                         LedgerListModel
                                       >(
-                                        c.ledgerName ?? "",
-                                        item: c,
-                                        child: ListTile(
-                                          dense: true,
-                                          title: Text(
-                                            c.ledgerName ?? "",
-                                            style: GoogleFonts.inter(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          subtitle: Text(
-                                            c.ledgerGroup.toString(),
-                                            style: GoogleFonts.inter(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                          ),
-                                        ),
+                                        e.ledgerName ?? "",
+                                        item: e,
+                                        child: ledgerTile(e),
                                       );
                                     }).toList(),
-                                    onSuggestionTap: (s) {
-                                      if (s.item == null) return;
 
-                                      FocusScope.of(context).unfocus();
-                                      selectedSupplier = s.item;
-                                      partyController.text =
-                                          s.item?.ledgerName ?? "";
-                                      loadInvoiceList(); // ✅ PERFECT
+                                    onSearchTextChanged: (text) async {
+                                      if (_debounce?.isActive ?? false)
+                                        _debounce!.cancel();
+
+                                      await Future.delayed(
+                                        const Duration(milliseconds: 200),
+                                      );
+
+                                      final result = await searchLedger(
+                                        text,
+                                        groups: [],
+                                      );
+
+                                      return result
+                                          .where(
+                                            (e) =>
+                                                e.ledgerGroup !=
+                                                    "Bank Account" &&
+                                                e.ledgerGroup != "Cash In Hand",
+                                          )
+                                          .map((e) {
+                                            return SearchFieldListItem<
+                                              LedgerListModel
+                                            >(
+                                              e.ledgerName ?? "",
+                                              item: e,
+                                              child: ledgerTile(e),
+                                            );
+                                          })
+                                          .toList();
                                     },
+
+                                    onSuggestionTap: (item) {
+                                      final ledger = item.item!;
+                                      setState(() {
+                                        selectedSupplier = ledger;
+                                        partyController.text =
+                                            ledger.ledgerName ?? "";
+                                      });
+                                    },
+                                    searchInputDecoration: SearchInputDecoration(
+                                      isDense: true,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
+                                      suffixIcon: InkWell(
+                                        onTap: () async {
+                                          var data = await pushTo(
+                                            CreateCusSup(isCustomer: false),
+                                          );
+                                          if (data != null) {
+                                            searchLedger("").then((ledgers) {
+                                              initialPartyList = ledgers
+                                                  .where(
+                                                    (e) =>
+                                                        e.ledgerGroup !=
+                                                            "Bank Account" &&
+                                                        e.ledgerGroup !=
+                                                            "Cash In Hand",
+                                                  )
+                                                  .toList();
+
+                                              setState(() {});
+                                            });
+                                          }
+                                        },
+                                        child: Container(
+                                          margin: EdgeInsets.all(5),
+                                          decoration: BoxDecoration(
+                                            color: AppColor.primary.withValues(
+                                              alpha: .2,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              5,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.add,
+                                            color: AppColor.primarydark,
+                                          ),
+                                        ),
+                                      ),
+
+                                      labelText: "Search Party",
+                                      labelStyle: GoogleFonts.inter(
+                                        color: const Color(0xFF565D6D),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: BorderSide(
+                                          color: Color(0xFFDEE1E6),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: BorderSide(
+                                          color: Color(0xFFDEE1E6),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+
+                                        borderSide: BorderSide(
+                                          color: Color(0xFFDEE1E6),
+                                          width: 1,
+                                        ),
+                                      ),
+                                    ),
+
+                                    suggestionStyle: GoogleFonts.inter(
+                                      color: const Color(0xFF565D6D),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    suggestionItemDecoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -456,21 +543,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Text("Payment Modes"),
-                                Spacer(),
-                                TextButton(
-                                  onPressed: () async {
-                                    await pushTo(CreateLedger());
-                                  },
-                                  child: Text(
-                                    "+ Create Ledger",
-                                    style: TextStyle(color: AppColor.primary),
-                                  ),
-                                ),
-                              ],
-                            ),
+                            Text("Payment Modes"),
 
                             SizedBox(height: 8),
 
@@ -488,32 +561,142 @@ class _PaymentEntryState extends State<PaymentEntry> {
                                     children: [
                                       /// Ledger Dropdown
                                       Expanded(
-                                        flex: 3,
-                                        child:
-                                            CommonDropdownField<
+                                        flex: 4,
+                                        child: SearchField<LedgerListModel>(
+                                          controller: row.ledgerController,
+                                          suggestions: initialBankList.map((e) {
+                                            return SearchFieldListItem<
                                               LedgerListModel
                                             >(
-                                              hintText: "Select Mode",
-                                              value:
-                                                  ledgerList.contains(
-                                                    row.ledger,
-                                                  )
-                                                  ? row.ledger
-                                                  : null,
-                                              items: ledgerList.map((ledger) {
-                                                return DropdownMenuItem(
-                                                  value: ledger,
-                                                  child: Text(
-                                                    ledger.ledgerName ?? "",
-                                                  ),
-                                                );
-                                              }).toList(),
-                                              onChanged: (v) {
-                                                setState(() {
-                                                  row.ledger = v;
-                                                });
-                                              },
+                                              e.ledgerName ?? "",
+                                              item: e,
+                                              child: ledgerTile(e),
+                                            );
+                                          }).toList(),
+
+                                          onSearchTextChanged: (text) async {
+                                            if (_debounce?.isActive ?? false)
+                                              _debounce!.cancel();
+
+                                            await Future.delayed(
+                                              const Duration(milliseconds: 200),
+                                            );
+
+                                            final result = await searchLedger(
+                                              text,
+                                              groups: [
+                                                "Bank Account",
+                                                "Cash In Hand",
+                                              ],
+                                            );
+
+                                            return result.map((e) {
+                                              return SearchFieldListItem<
+                                                LedgerListModel
+                                              >(
+                                                e.ledgerName ?? "",
+                                                item: e,
+                                                child: ledgerTile(e),
+                                              );
+                                            }).toList();
+                                          },
+
+                                          onSuggestionTap: (item) {
+                                            setState(() {
+                                              row.ledger = item.item!;
+                                              row.ledgerController.text =
+                                                  item.item!.ledgerName ?? "";
+                                            });
+                                          },
+                                          searchInputDecoration: SearchInputDecoration(
+                                            isDense: true,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 12,
+                                                  vertical: 12,
+                                                ),
+                                            labelText: "Search Bank Account",
+                                            labelStyle: GoogleFonts.inter(
+                                              color: const Color(0xFF565D6D),
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
                                             ),
+                                            suffixIcon: InkWell(
+                                              onTap: () async {
+                                                var data = await pushTo(
+                                                  CreateLedger(),
+                                                );
+                                                if (data != null) {
+                                                  searchLedger("").then((
+                                                    ledgers,
+                                                  ) {
+                                                    initialBankList = ledgers
+                                                        .where(
+                                                          (e) =>
+                                                              e.ledgerGroup ==
+                                                                  "Bank Account" ||
+                                                              e.ledgerGroup ==
+                                                                  "Cash In Hand",
+                                                        )
+                                                        .toList();
+
+                                                    setState(() {});
+                                                  });
+                                                }
+                                              },
+                                              child: Container(
+                                                margin: EdgeInsets.all(5),
+                                                decoration: BoxDecoration(
+                                                  color: AppColor.primary
+                                                      .withValues(alpha: .2),
+                                                  borderRadius:
+                                                      BorderRadius.circular(5),
+                                                ),
+                                                child: Icon(
+                                                  Icons.add,
+                                                  color: AppColor.primarydark,
+                                                ),
+                                              ),
+                                            ),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              borderSide: BorderSide(
+                                                color: Color(0xFFDEE1E6),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              borderSide: BorderSide(
+                                                color: Color(0xFFDEE1E6),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+
+                                              borderSide: BorderSide(
+                                                color: Color(0xFFDEE1E6),
+                                                width: 1,
+                                              ),
+                                            ),
+                                          ),
+
+                                          suggestionStyle: GoogleFonts.inter(
+                                            color: const Color(0xFF565D6D),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          suggestionItemDecoration:
+                                              BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                        ),
                                       ),
 
                                       SizedBox(width: 10),
@@ -528,7 +711,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
                                       ),
 
                                       /// Delete Button
-                                      index != paymentRows.length - 1
+                                      index != 0
                                           ? IconButton(
                                               icon: Icon(
                                                 Icons.delete,
@@ -596,6 +779,48 @@ class _PaymentEntryState extends State<PaymentEntry> {
                                 controller: prefixController,
                                 titleText: "Voucher Prifix",
                                 hintText: "Prifix",
+                                onChanged: (value) async {
+                                  final currentText = value;
+
+                                  Future.delayed(
+                                    const Duration(milliseconds: 300),
+                                    () async {
+                                      if (prefixController.text.trim() !=
+                                          currentText.trim())
+                                        return;
+
+                                      final res = await ApiService.postData(
+                                        'get/transno',
+                                        {
+                                          "trans_type": "Payment",
+                                          "prefix": currentText.trim(),
+                                        },
+                                        licenceNo: Preference.getint(
+                                          PrefKeys.licenseNo,
+                                        ),
+                                      );
+
+                                      if (prefixController.text.trim() !=
+                                          currentText.trim())
+                                        return;
+
+                                      if (res != null &&
+                                          res['status'] == true) {
+                                        final newNo = res['next_no'].toString();
+
+                                        voucherNoController
+                                            .value = TextEditingValue(
+                                          text: newNo,
+                                          selection: TextSelection.collapsed(
+                                            offset: newNo.length,
+                                          ),
+                                        );
+                                      } else {
+                                        voucherNoController.clear();
+                                      }
+                                    },
+                                  );
+                                },
                               ),
                             ),
                             SizedBox(width: 30),
@@ -721,7 +946,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
                         relatedPayments
                             .map(
                               (e) =>
-                                  "₹ ${e.amount}  |  ${e.prefix}${e.invoiceNo}  |  ${e.date.toString().split(' ').first}",
+                                  "₹ ${e.amount}  |  ${e.prefix}${e.voucherNo}  |  ${e.date.toString().split(' ').first}",
                             )
                             .toList(),
                         Colors.green,
@@ -745,7 +970,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
                         relatedRecieptOnReturn
                             .map(
                               (e) =>
-                                  "₹ ${e.amount}  |  ${e.prefix}${e.invoiceNo}  |  ${e.date.toString().split(' ').first}",
+                                  "₹ ${e.amount}  |  ${e.prefix}${e.voucherNo}  |  ${e.date.toString().split(' ').first}",
                             )
                             .toList(),
                         Colors.blue,
@@ -753,7 +978,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
 
                     if (relatedCreditNotes.isNotEmpty)
                       _txSection(
-                        "Debit Notes",
+                        "Credit Notes",
                         relatedCreditNotes
                             .map(
                               (e) =>
@@ -814,6 +1039,28 @@ class _PaymentEntryState extends State<PaymentEntry> {
     );
   }
 
+  /// ================= LEDGER TILE =================
+  Widget ledgerTile(LedgerListModel c) {
+    final bal = c.closingBalance ?? 0;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          c.ledgerName ?? "",
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+        Text(
+          "₹ ${bal.abs()} ${bal < 0 ? "Cr" : "Dr"}",
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: bal < 0 ? Colors.red : Colors.green,
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> savePaymentVoucher() async {
     if (selectedSupplier == null) return;
 
@@ -850,7 +1097,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
         "invoice_no": invoiceNoController.text,
       "date": dateController.text, // yyyy-MM-dd
       "prefix": prefixController.text,
-      "amount2": totalAmount.toString(),
+      "amount": totalAmount,
       "vouncher_no": voucherNoController.text,
       "note": noteController.text,
       "type": selectedType,
@@ -958,6 +1205,7 @@ class _PaymentEntryState extends State<PaymentEntry> {
         "get/ledgerreports/${selectedSupplier!.id}",
         licenceNo: Preference.getint(PrefKeys.licenseNo),
       );
+      print(res);
 
       /// ================= PURCHASE INVOICE =================
       for (var e in res['Purchaseinvoice'] ?? []) {
@@ -981,7 +1229,8 @@ class _PaymentEntryState extends State<PaymentEntry> {
       /// ================= PURCHASE RETURNS =================
       final purchaseReturns = <PurchaseReturnData>[];
       for (var e in res['Purchasereturn'] ?? []) {
-        if ("${e['invoice_pre']}${e['invoice_no']}" == invoiceKey) {
+        if ("${e['purchaseinvoice_pre']}${e['purchaseinvoice_no']}" ==
+            invoiceKey) {
           final model = PurchaseReturnData.fromJson(e);
           purchaseReturns.add(model);
           totalPurchaseReturn += model.totalAmount;
@@ -990,8 +1239,9 @@ class _PaymentEntryState extends State<PaymentEntry> {
 
       /// ================= CREDIT NOTES =================
       final creditNotes = <CreditNoteData>[];
-      for (var e in res['Creditnote'] ?? []) {
-        if ("${e['invoice_pre']}${e['invoice_no']}" == invoiceKey) {
+      for (var e in res['PurchaseNote'] ?? []) {
+        if ("${e['purchaseinvoice_pre']}${e['purchaseinvoice_no']}" ==
+            invoiceKey) {
           final model = CreditNoteData.fromJson(e);
           creditNotes.add(model);
           totalCreditNote += model.totalAmount;
@@ -1001,7 +1251,9 @@ class _PaymentEntryState extends State<PaymentEntry> {
       /// ================= RECEIPTS AGAINST RETURN =================
       final receiptsOnReturns = <PaymentModel>[];
 
-      final returnNos = purchaseReturns.map((e) => "${e.no}").toSet();
+      final returnNos = purchaseReturns
+          .map((e) => "${e.transPre}${e.transNo}")
+          .toSet();
 
       for (var e in res['Recipt'] ?? []) {
         if (returnNos.contains("${e['invoice_no']}")) {

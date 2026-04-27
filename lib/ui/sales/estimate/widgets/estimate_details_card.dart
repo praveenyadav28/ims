@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ims/model/employee_model.dart';
 import 'package:ims/ui/sales/estimate/state/estimate_bloc.dart';
+import 'package:ims/utils/api.dart';
+import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:searchfield/searchfield.dart';
@@ -49,8 +51,42 @@ class EstimateDetailsCard extends StatelessWidget {
                 child: CommonTextField(
                   controller: prefixController,
                   hintText: 'Prefix',
-                  onChanged: (value) {
+                  onChanged: (value) async {
                     context.read<EstBloc>().add(EstUpdatePrefix(value));
+
+                    final currentText = value;
+
+                    Future.delayed(const Duration(milliseconds: 300), () async {
+                      // user ne aur type kiya ho to old request ignore
+                      if (prefixController.text != currentText) return;
+
+                      final res = await ApiService.postData(
+                        'get/nexttranseno',
+                        {
+                          "trans_type": "Estimate",
+                          "prefix": currentText.trim(),
+                        },
+                        licenceNo: Preference.getint(PrefKeys.licenseNo),
+                      );
+
+                      // latest text hi chale
+                      if (prefixController.text != currentText) return;
+
+                      if (res != null && res['status'] == true) {
+                        final newNo = res['next_no'].toString();
+
+                        estimateNoController.value = TextEditingValue(
+                          text: newNo,
+                          selection: TextSelection.collapsed(
+                            offset: newNo.length,
+                          ),
+                        );
+
+                        context.read<EstBloc>().add(EstUpdateEstimateNo(newNo));
+                      } else {
+                        estimateNoController.clear();
+                      }
+                    });
                   },
                 ),
               ),
@@ -69,7 +105,7 @@ class EstimateDetailsCard extends StatelessWidget {
           flix: 30,
         ),
 
-        SizedBox(height: Sizes.height * .03),
+        SizedBox(height: Sizes.height * .02),
         nameField(
           text: "Estimate Date",
           child: Row(
@@ -87,7 +123,7 @@ class EstimateDetailsCard extends StatelessWidget {
           flix: 30,
         ),
 
-        SizedBox(height: Sizes.height * .03),
+        SizedBox(height: Sizes.height * .02),
         nameField(
           text: "Valid For Days",
           child: Row(
@@ -111,25 +147,37 @@ class EstimateDetailsCard extends StatelessWidget {
           ),
           flix: 30,
         ),
-        SizedBox(height: Sizes.height * .03),
+        SizedBox(height: Sizes.height * .02),
+
         nameField(
           text: "Sales Person",
           child: Row(
             children: [
               Expanded(
-                child: CommonSearchableDropdownField<String>(
+                child: CommonSearchableDropdownField<EmployeeModel>(
                   controller: salesPersonController,
                   hintText: "Select Sales Person",
-                  suggestions: employeeList
-                      .map((e) => SearchFieldListItem<String>(e.firstName))
-                      .toList(),
+
+                  suggestions: employeeList.map((e) {
+                    return SearchFieldListItem<EmployeeModel>(
+                      "${e.firstName} ${e.lastName}", // 👈 name show
+                      item: e, // 👈 full object store
+                    );
+                  }).toList(),
 
                   onSuggestionTap: (value) {
-                    salesPersonController.text = value.searchKey; // 👈 ADD THIS
+                    final emp = value.item!; // 👈 full employee
 
+                    salesPersonController.text =
+                        "${emp.firstName} ${emp.lastName}";
+
+                    // 👇 name
                     context.read<EstBloc>().add(
-                      EstSelectSalesPerson(value.searchKey),
+                      EstSelectSalesPerson("${emp.firstName} ${emp.lastName}"),
                     );
+
+                    // 👇 ID
+                    context.read<EstBloc>().add(EstSelectSalesPersonId(emp.id));
                   },
                 ),
               ),
@@ -137,7 +185,6 @@ class EstimateDetailsCard extends StatelessWidget {
           ),
           flix: 30,
         ),
-        SizedBox(height: Sizes.height * .03),
       ],
     );
   }

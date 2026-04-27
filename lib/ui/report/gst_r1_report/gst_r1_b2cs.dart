@@ -116,7 +116,7 @@ class _Gstr1B2CSReportScreenState extends State<Gstr1B2CSReportScreen> {
     return Column(
       children: [
         _summaryBar(),
-        SizedBox(child: Expanded(child: _table())),
+        Expanded(child: _table()),
       ],
     );
   }

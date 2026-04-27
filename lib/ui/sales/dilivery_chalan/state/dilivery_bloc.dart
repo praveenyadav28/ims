@@ -50,6 +50,21 @@ class DiliveryChallanSelectCatalogForRow extends DiliveryChallanEvent {
   DiliveryChallanSelectCatalogForRow(this.rowId, this.item);
 }
 
+class DiliveryChallanSelectSalesPerson extends DiliveryChallanEvent {
+  final String name;
+  DiliveryChallanSelectSalesPerson(this.name);
+}
+
+class DiliveryChallanSetDate extends DiliveryChallanEvent {
+  final DateTime date;
+  DiliveryChallanSetDate(this.date);
+}
+
+class DiliveryChallanSelectSalesPersonId extends DiliveryChallanEvent {
+  final String salesPersonId;
+  DiliveryChallanSelectSalesPersonId(this.salesPersonId);
+}
+
 class DiliveryChallanSelectVariantForRow extends DiliveryChallanEvent {
   final String rowId;
   final VariantModel variant;
@@ -170,6 +185,8 @@ class DiliveryChallanState {
   final double cgst;
   final double totalAmount;
   final bool autoRound;
+  final String? salesPerson;
+  final String? salesPersonId;
 
   // master list from get/misccharge (for lookup)
   final List<MiscChargeModelList> miscMasterList;
@@ -212,6 +229,8 @@ class DiliveryChallanState {
     this.transPrefix = "",
     this.transId,
     this.transPlaceOfSupply,
+    this.salesPerson,
+    this.salesPersonId,
   });
 
   DiliveryChallanState copyWith({
@@ -243,6 +262,8 @@ class DiliveryChallanState {
     String? transPrefix,
     String? transId,
     String? transPlaceOfSupply,
+    String? salesPerson,
+    String? salesPersonId,
   }) {
     return DiliveryChallanState(
       customers: customers ?? this.customers,
@@ -273,6 +294,8 @@ class DiliveryChallanState {
       transPrefix: transPrefix ?? this.transPrefix,
       transId: transId ?? this.transId,
       transPlaceOfSupply: transPlaceOfSupply ?? this.transPlaceOfSupply,
+      salesPerson: salesPerson ?? this.salesPerson,
+      salesPersonId: salesPersonId ?? this.salesPersonId,
     );
   }
 }
@@ -356,7 +379,15 @@ class DiliveryChallanBloc
     on<DiliveryChallanUpdatePrefix>((event, emit) {
       emit(state.copyWith(prefix: event.value));
     });
-
+    on<DiliveryChallanSelectSalesPerson>((event, emit) {
+      emit(state.copyWith(salesPerson: event.name));
+    });
+    on<DiliveryChallanSelectSalesPersonId>((event, emit) {
+      emit(state.copyWith(salesPersonId: event.salesPersonId));
+    });
+    on<DiliveryChallanSetDate>((event, emit) {
+      emit(state.copyWith(diliveryChallanDate: event.date));
+    });
     // misc
     on<DiliveryChallanAddMiscCharge>(_onAddMiscCharge);
     on<DiliveryChallanRemoveMiscCharge>(_onRemoveMiscCharge);
@@ -909,6 +940,8 @@ class DiliveryChallanBloc
         "case_sale": isCash,
         "add_note": jsonEncode(e.notes),
         "te_co": jsonEncode(e.terms),
+        "employeename": state.salesPerson,
+        "employeeid": state.salesPersonId,
         "sub_totle": state.subtotal,
         "sub_gst": state.totalGst,
         "auto_ro": state.autoRound,

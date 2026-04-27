@@ -1,3 +1,348 @@
+// import 'package:ims/ui/sales/models/print_model.dart';
+// import 'package:pdf/widgets.dart' as pw;
+// import 'package:pdf/pdf.dart';
+// import 'package:printing/printing.dart';
+// import 'package:intl/intl.dart';
+
+// class PdfEngine {
+//   static Future<void> printPremiumInvoice({
+//     required PrintDocModel doc,
+//     required CompanyPrintProfile company,
+//   }) async {
+//     final pdf = pw.Document();
+
+//     final logo = await _loadNetImage(company.logoUrl);
+//     final otherLogo = await _loadNetImage(company.otherlogoUrl);
+//     final sign = await _loadNetImage(company.signatureUrl);
+
+//     pdf.addPage(
+//       pw.MultiPage(
+//         pageFormat: PdfPageFormat.a4,
+//         margin: const pw.EdgeInsets.all(20),
+
+//         // HEADER HAR PAGE PAR
+//         header: (context) => _headerClassic(company, logo, otherLogo),
+
+//         // FOOTER PAGE NUMBER
+//         footer: (context) => pw.Center(
+//           child: pw.Text(
+//             "Page ${context.pageNumber} of ${context.pagesCount}",
+//             style: const pw.TextStyle(fontSize: 9),
+//           ),
+//         ),
+
+//         build: (context) => [
+//           pw.SizedBox(height: 6),
+
+//           pw.Center(
+//             child: pw.Text(
+//               doc.title,
+//               style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
+//             ),
+//           ),
+
+//           pw.SizedBox(height: 6),
+
+//           _partyAndInvoice(doc),
+
+//           pw.SizedBox(height: 6),
+
+//           _itemTableClassic(doc),
+
+//           pw.SizedBox(height: 10),
+
+//           _totalsClassic(doc, company),
+
+//           pw.SizedBox(height: 6),
+
+//           _gstSummary(doc, company),
+
+//           pw.SizedBox(height: 6),
+
+//           _termsAndSign(company, sign, doc),
+//         ],
+//       ),
+//     );
+
+//     final bytes = await pdf.save();
+//     await Printing.layoutPdf(onLayout: (_) async => bytes);
+//   }
+
+//   // ================= HEADER =================
+
+//   static pw.Widget _headerClassic(
+//     CompanyPrintProfile c,
+//     pw.ImageProvider? logo,
+//     pw.ImageProvider? otherLogo,
+//   ) {
+//     return pw.Row(
+//       crossAxisAlignment: pw.CrossAxisAlignment.start,
+//       children: [
+//         pw.Container(
+//           width: 80,
+//           height: 80,
+//           child: logo != null ? pw.Image(logo) : pw.Container(),
+//         ),
+//         pw.Expanded(
+//           child: pw.Column(
+//             children: [
+//               pw.Text(
+//                 c.name,
+//                 style: pw.TextStyle(
+//                   fontWeight: pw.FontWeight.bold,
+//                   fontSize: 14,
+//                 ),
+//               ),
+//               pw.Text(
+//                 c.address,
+//                 textAlign: pw.TextAlign.center,
+//                 style: const pw.TextStyle(fontSize: 9),
+//               ),
+//               pw.Text(
+//                 "City: ${c.city} | District: ${c.district}",
+//                 style: const pw.TextStyle(fontSize: 9),
+//               ),
+//               pw.Text(
+//                 "State: ${c.state} | Pin Code: ${c.pincode}",
+//                 style: const pw.TextStyle(fontSize: 9),
+//               ),
+//               pw.Text(
+//                 "GSTIN: ${c.gst}",
+//                 style: const pw.TextStyle(fontSize: 9),
+//               ),
+//               pw.Text(
+//                 "Phone: ${c.phone} | Email: ${c.email}",
+//                 style: const pw.TextStyle(fontSize: 9),
+//               ),
+//             ],
+//           ),
+//         ),
+//         pw.Container(
+//           width: 80,
+//           height: 80,
+//           child: otherLogo != null ? pw.Image(otherLogo) : pw.Container(),
+//         ),
+//       ],
+//     );
+//   }
+
+//   // ================= PARTY DETAILS =================
+
+//   static pw.Widget _partyAndInvoice(PrintDocModel d) {
+//     String ledgername = "";
+//     if (d.partyName.contains('~')) {
+//       List<String> parts = d.partyName.split('~');
+
+//       ledgername = parts[0];
+//     } else {
+//       ledgername = d.partyName;
+//     }
+//     return pw.Table(
+//       border: pw.TableBorder.all(),
+//       columnWidths: const {
+//         0: pw.FlexColumnWidth(1),
+//         1: pw.FlexColumnWidth(2),
+//         2: pw.FlexColumnWidth(1),
+//         3: pw.FlexColumnWidth(2),
+//       },
+//       children: [
+//         pw.TableRow(
+//           children: [
+//             _cell("Party Name"),
+//             _cell(ledgername),
+//             _cell("Invoice No"),
+//             _cell(d.number),
+//           ],
+//         ),
+//         pw.TableRow(
+//           children: [
+//             _cell("Address"),
+//             _cell(d.address0),
+//             _cell("Date"),
+//             _cell(DateFormat("dd-MM-yyyy").format(d.date)),
+//           ],
+//         ),
+//         pw.TableRow(
+//           children: [
+//             _cell("State"),
+//             _cell(d.placeOfSupply),
+//             _cell(""),
+//             _cell(""),
+//           ],
+//         ),
+//       ],
+//     );
+//   }
+
+//   // ================= ITEM TABLE =================
+
+//   static pw.Widget _itemTableClassic(PrintDocModel d) {
+//     return pw.Table(
+//       border: pw.TableBorder.all(),
+//       columnWidths: const {
+//         0: pw.FlexColumnWidth(1),
+//         1: pw.FlexColumnWidth(3),
+//         2: pw.FlexColumnWidth(1.5),
+//         3: pw.FlexColumnWidth(1),
+//         4: pw.FlexColumnWidth(1),
+//         5: pw.FlexColumnWidth(1),
+//         6: pw.FlexColumnWidth(1),
+//         7: pw.FlexColumnWidth(1.2),
+//       },
+//       children: [
+//         pw.TableRow(
+//           decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+//           children: [
+//             _th("S.N"),
+//             _th("Item Description"),
+//             _th("HSN"),
+//             _th("Qty"),
+//             _th("Rate"),
+//             _th("Disc"),
+//             _th("GST %"),
+//             _th("Taxable"),
+//           ],
+//         ),
+//         ...d.items.asMap().entries.map((e) {
+//           final i = e.key + 1;
+//           final it = e.value;
+
+//           final taxable =
+//               it.amount - ((it.amount * it.gstRate) / (100 + it.gstRate));
+
+//           return pw.TableRow(
+//             children: [
+//               _td("$i"),
+//               _td(it.name),
+//               _td(it.hsn),
+//               _td("${it.qty}"),
+//               _td(it.amount.toStringAsFixed(2)),
+//               _td(it.discount.toStringAsFixed(2)),
+//               _td("${it.gstRate}%"),
+//               _td(taxable.toStringAsFixed(2)),
+//             ],
+//           );
+//         }),
+//       ],
+//     );
+//   }
+
+//   // ================= TOTAL =================
+
+//   // ================= GST SUMMARY =================
+
+//   static pw.Widget _gstSummary(PrintDocModel d, CompanyPrintProfile p) {
+//     final Map<double, double> rateWiseTaxable = {};
+
+//     for (final item in d.items) {
+//       final rate = item.gstRate.toDouble();
+
+//       final taxable =
+//           item.amount - ((item.amount * item.gstRate) / (100 + item.gstRate));
+
+//       rateWiseTaxable[rate] = (rateWiseTaxable[rate] ?? 0) + taxable;
+//     }
+
+//     return pw.Table(
+//       border: pw.TableBorder.all(),
+//       children: [
+//         pw.TableRow(
+//           decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+//           children: [
+//             _th("GST Rate"),
+//             _th("Taxable Amount"),
+//             _th("IGST"),
+//             _th("CGST"),
+//             _th("SGST"),
+//           ],
+//         ),
+//         ...rateWiseTaxable.entries.map((e) {
+//           final rate = e.key;
+//           final taxable = e.value;
+
+//           final totalGst = taxable * rate / 100;
+
+//           final igst = d.placeOfSupply != p.state ? totalGst : 0;
+//           final cgst = d.placeOfSupply == p.state ? totalGst / 2 : 0;
+//           final sgst = d.placeOfSupply == p.state ? totalGst / 2 : 0;
+
+//           return pw.TableRow(
+//             children: [
+//               _td("${rate.toStringAsFixed(0)}%"),
+//               _td(taxable.toStringAsFixed(2)),
+//               _td(igst.toStringAsFixed(2)),
+//               _td(cgst.toStringAsFixed(2)),
+//               _td(sgst.toStringAsFixed(2)),
+//             ],
+//           );
+//         }),
+//       ],
+//     );
+//   }
+
+//   // ================= TERMS + SIGN =================
+
+//   static pw.Widget _termsAndSign(
+//     CompanyPrintProfile c,
+//     pw.ImageProvider? sign,
+//     PrintDocModel p,
+//   ) {
+//     return pw.Row(
+//       children: [
+//         pw.Expanded(
+//           child: pw.Column(
+//             crossAxisAlignment: pw.CrossAxisAlignment.start,
+//             children: [
+//               pw.Text(
+//                 "Terms & Conditions",
+//                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+//               ),
+//               ...p.terms.map(
+//                 (e) => pw.Text(e, style: const pw.TextStyle(fontSize: 9)),
+//               ),
+//             ],
+//           ),
+//         ),
+//         pw.Column(
+//           children: [
+//             pw.Text("For ${c.name}"),
+//             pw.SizedBox(height: 30),
+//             if (sign != null && p.printSign) pw.Image(sign, height: 40),
+//             pw.Text("Authorised Signatory"),
+//           ],
+//         ),
+//       ],
+//     );
+//   }
+
+//   // ================= HELPERS =================
+
+//   static pw.Widget _cell(String t) =>
+//       pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(t));
+
+//   static pw.Widget _th(String t) => pw.Padding(
+//     padding: const pw.EdgeInsets.all(4),
+//     child: pw.Text(t, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+//   );
+
+//   static pw.Widget _td(String t) =>
+//       pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(t));
+
+//   static pw.TableRow _row2(String k, double v) =>
+//       pw.TableRow(children: [_td(k), _td(v.toStringAsFixed(2))]);
+
+//   static Future<pw.ImageProvider?> _loadNetImage(String url) async {
+//     if (url.isEmpty) return null;
+//     try {
+//       return await networkImage(url);
+//     } catch (e) {
+//       return null;
+//     }
+//   }
+// }
+
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:ims/ui/sales/models/print_model.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
@@ -5,7 +350,23 @@ import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 
 class PdfEngine {
+  /// ================= SAFE TEXT =================
+  static String safeText(dynamic input) {
+    if (input == null) return "";
+    return input.toString().replaceAll(RegExp(r'[^\x00-\x7F]'), '').trim();
+  }
+
+  /// ================= PRINT =================
   static Future<void> printPremiumInvoice({
+    required PrintDocModel doc,
+    required CompanyPrintProfile company,
+  }) async {
+    final bytes = await generateInvoiceBytes(doc: doc, company: company);
+    await Printing.layoutPdf(onLayout: (_) async => bytes);
+  }
+
+  /// ================= GENERATE PDF =================
+  static Future<Uint8List> generateInvoiceBytes({
     required PrintDocModel doc,
     required CompanyPrintProfile company,
   }) async {
@@ -14,7 +375,6 @@ class PdfEngine {
     final logo = await _loadNetImage(company.logoUrl);
     final otherLogo = await _loadNetImage(company.otherlogoUrl);
     final sign = await _loadNetImage(company.signatureUrl);
-
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -65,161 +425,101 @@ class PdfEngine {
     );
 
     final bytes = await pdf.save();
-    await Printing.layoutPdf(onLayout: (_) async => bytes);
+
+    if (bytes.isEmpty) {
+      throw Exception("PDF generation failed");
+    }
+
+    return bytes;
   }
 
-  // ================= HEADER =================
-
+  /// ================= HEADER =================
   static pw.Widget _headerClassic(
     CompanyPrintProfile c,
     pw.ImageProvider? logo,
     pw.ImageProvider? otherLogo,
   ) {
     return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Container(
-          width: 80,
-          height: 80,
+          width: 60,
+          height: 60,
           child: logo != null ? pw.Image(logo) : pw.Container(),
         ),
         pw.Expanded(
           child: pw.Column(
             children: [
               pw.Text(
-                c.name,
+                safeText(c.name),
                 style: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
                   fontSize: 14,
                 ),
               ),
               pw.Text(
-                c.address,
-                textAlign: pw.TextAlign.center,
+                safeText(c.address),
                 style: const pw.TextStyle(fontSize: 9),
               ),
               pw.Text(
-                "City: ${c.city} | District: ${c.district}",
+                "City: ${safeText(c.city)}",
                 style: const pw.TextStyle(fontSize: 9),
               ),
               pw.Text(
-                "State: ${c.state} | Pin Code: ${c.pincode}",
+                "State: ${safeText(c.state)}",
                 style: const pw.TextStyle(fontSize: 9),
               ),
               pw.Text(
-                "GSTIN: ${c.gst}",
+                "GSTIN: ${safeText(c.gst)}",
                 style: const pw.TextStyle(fontSize: 9),
               ),
               pw.Text(
-                "Phone: ${c.phone} | Email: ${c.email}",
+                "Phone: ${safeText(c.phone)}",
                 style: const pw.TextStyle(fontSize: 9),
               ),
             ],
           ),
         ),
         pw.Container(
-          width: 80,
-          height: 80,
+          width: 60,
+          height: 60,
           child: otherLogo != null ? pw.Image(otherLogo) : pw.Container(),
         ),
       ],
     );
   }
 
-  // ================= PARTY DETAILS =================
-
+  /// ================= PARTY =================
   static pw.Widget _partyAndInvoice(PrintDocModel d) {
-    String ledgername = "";
-    if (d.partyName.contains('~')) {
-      List<String> parts = d.partyName.split('~');
-
-      ledgername = parts[0];
-    } else {
-      ledgername = d.partyName;
-    }
     return pw.Table(
       border: pw.TableBorder.all(),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(1),
-        1: pw.FlexColumnWidth(2),
-        2: pw.FlexColumnWidth(1),
-        3: pw.FlexColumnWidth(2),
-      },
       children: [
+        pw.TableRow(children: [_cell("Party"), _cell(safeText(d.partyName))]),
+        pw.TableRow(children: [_cell("Invoice No"), _cell(safeText(d.number))]),
         pw.TableRow(
           children: [
-            _cell("Party Name"),
-            _cell(ledgername),
-            _cell("Invoice No"),
-            _cell(d.number),
-          ],
-        ),
-        pw.TableRow(
-          children: [
-            _cell("Address"),
-            _cell(d.address0),
             _cell("Date"),
             _cell(DateFormat("dd-MM-yyyy").format(d.date)),
-          ],
-        ),
-        pw.TableRow(
-          children: [
-            _cell("State"),
-            _cell(d.placeOfSupply),
-            _cell(""),
-            _cell(""),
           ],
         ),
       ],
     );
   }
 
-  // ================= ITEM TABLE =================
-
+  /// ================= ITEM TABLE =================
   static pw.Widget _itemTableClassic(PrintDocModel d) {
     return pw.Table(
       border: pw.TableBorder.all(),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(1),
-        1: pw.FlexColumnWidth(3),
-        2: pw.FlexColumnWidth(1.5),
-        3: pw.FlexColumnWidth(1),
-        4: pw.FlexColumnWidth(1),
-        5: pw.FlexColumnWidth(1),
-        6: pw.FlexColumnWidth(1),
-        7: pw.FlexColumnWidth(1.2),
-      },
       children: [
         pw.TableRow(
-          decoration: const pw.BoxDecoration(color: PdfColors.grey300),
-          children: [
-            _th("S.N"),
-            _th("Item Description"),
-            _th("HSN"),
-            _th("Qty"),
-            _th("Rate"),
-            _th("Disc"),
-            _th("GST %"),
-            _th("Taxable"),
-          ],
+          children: [_th("Item"), _th("Qty"), _th("Rate"), _th("Amount")],
         ),
-        ...d.items.asMap().entries.map((e) {
-          final i = e.key + 1;
-          final it = e.value;
-
-          final taxable =
-              it.amount - ((it.amount * it.gstRate) / (100 + it.gstRate));
-
+        ...d.items.map((i) {
           return pw.TableRow(
             children: [
-              _td("$i"),
-              _td(it.name),
-              _td(it.hsn),
-              _td("${it.qty}"),
-              _td(it.amount.toStringAsFixed(2)),
-              _td(it.discount.toStringAsFixed(2)),
-              _td("${it.gstRate}%"),
-              _td(taxable.toStringAsFixed(2)),
+              _td(safeText(i.name)),
+              _td("${i.qty}"),
+              _td(i.amount.toStringAsFixed(2)),
+              _td(i.amount.toStringAsFixed(2)),
             ],
           );
         }),
@@ -227,7 +527,7 @@ class PdfEngine {
     );
   }
 
-  // ================= TOTAL =================
+  /// ================= TOTAL =================
 
   static pw.Widget _totalsClassic(PrintDocModel d, CompanyPrintProfile p) {
     return pw.Row(
@@ -241,22 +541,87 @@ class PdfEngine {
         ),
         pw.Container(
           width: 200,
-          child: pw.Table(
-            border: pw.TableBorder.all(),
-            children: [
-              _row2("Taxable Amount", d.subTotal),
-              _row2("IGST", d.placeOfSupply != p.state ? d.gstTotal : 0),
-              _row2("CGST", d.placeOfSupply == p.state ? d.gstTotal / 2 : 0),
-              _row2("SGST", d.placeOfSupply == p.state ? d.gstTotal / 2 : 0),
-              _row2("Grand Total", d.grandTotal),
-            ],
+          child: pw.Container(
+            decoration: pw.BoxDecoration(
+              border: pw.TableBorder.all(color: PdfColors.black),
+            ),
+            child: pw.Column(
+              children: [
+                _row2("Taxable Amount", d.subTotal),
+                _row2("IGST", (d.placeOfSupply != p.state ? d.gstTotal : 0)),
+                _row2("CGST", d.placeOfSupply == p.state ? d.gstTotal / 2 : 0),
+                _row2("SGST", d.placeOfSupply == p.state ? d.gstTotal / 2 : 0),
+                _row2("Grand Total", d.grandTotal),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  // ================= GST SUMMARY =================
+  /// ================= TERMS =================
+
+  static pw.Widget _termsAndSign(
+    CompanyPrintProfile c,
+    pw.ImageProvider? sign,
+    PrintDocModel p,
+  ) {
+    return pw.Row(
+      children: [
+        pw.Expanded(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                "Terms & Conditions",
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              ),
+              ...p.terms.map(
+                (e) => pw.Text(e, style: const pw.TextStyle(fontSize: 9)),
+              ),
+            ],
+          ),
+        ),
+        pw.Column(
+          children: [
+            pw.Text("For ${c.name}"),
+            pw.SizedBox(height: 30),
+            if (sign != null && p.printSign) pw.Image(sign, height: 40),
+            pw.Text("Authorised Signatory"),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// ================= HELPERS =================
+  static pw.Widget _cell(String t) => pw.Padding(
+    padding: const pw.EdgeInsets.all(4),
+    child: pw.Text(safeText(t)),
+  );
+
+  static pw.Widget _th(String t) => pw.Padding(
+    padding: const pw.EdgeInsets.all(4),
+    child: pw.Text(safeText(t)),
+  );
+
+  static pw.Widget _td(String t) => pw.Padding(
+    padding: const pw.EdgeInsets.all(4),
+    child: pw.Text(safeText(t)),
+  );
+
+  static pw.Widget _row2(String k, double v) =>
+      pw.Text("${safeText(k)} : ${v.toStringAsFixed(2)}");
+
+  static Future<pw.ImageProvider?> _loadNetImage(String url) async {
+    if (url.isEmpty) return null;
+    try {
+      return await networkImage(url);
+    } catch (e) {
+      return null;
+    }
+  }
 
   static pw.Widget _gstSummary(PrintDocModel d, CompanyPrintProfile p) {
     final Map<double, double> rateWiseTaxable = {};
@@ -305,66 +670,6 @@ class PdfEngine {
         }),
       ],
     );
-  }
-
-  // ================= TERMS + SIGN =================
-
-  static pw.Widget _termsAndSign(
-    CompanyPrintProfile c,
-    pw.ImageProvider? sign,
-    PrintDocModel p,
-  ) {
-    return pw.Row(
-      children: [
-        pw.Expanded(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                "Terms & Conditions",
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              ),
-              ...p.terms.map(
-                (e) => pw.Text(e, style: const pw.TextStyle(fontSize: 9)),
-              ),
-            ],
-          ),
-        ),
-        pw.Column(
-          children: [
-            pw.Text("For ${c.name}"),
-            pw.SizedBox(height: 30),
-            if (sign != null && p.printSign) pw.Image(sign, height: 40),
-            pw.Text("Authorised Signatory"),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // ================= HELPERS =================
-
-  static pw.Widget _cell(String t) =>
-      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(t));
-
-  static pw.Widget _th(String t) => pw.Padding(
-    padding: const pw.EdgeInsets.all(4),
-    child: pw.Text(t, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-  );
-
-  static pw.Widget _td(String t) =>
-      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(t));
-
-  static pw.TableRow _row2(String k, double v) =>
-      pw.TableRow(children: [_td(k), _td(v.toStringAsFixed(2))]);
-
-  static Future<pw.ImageProvider?> _loadNetImage(String url) async {
-    if (url.isEmpty) return null;
-    try {
-      return await networkImage(url);
-    } catch (e) {
-      return null;
-    }
   }
 }
 

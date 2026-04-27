@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/prefence.dart';
@@ -107,27 +108,44 @@ class _BalanceSheetAllInOneScreenState
       "get/purchasereturn",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-
     totalSale = (sales['data'] as List)
         .where((e) => !_isAfterAsOn(e['invoice_date']))
-        .fold(0.0, (s, e) => s + toDouble(e['sub_total'].toString()));
+        .fold(
+          0.0,
+          (s, e) => s + toDouble((e['sub_total'] ?? e['sub_totle']).toString()),
+        );
 
     totalSaleReturn = (saleReturns['data'] as List)
         .where((e) => !_isAfterAsOn(e['returnsale_date']))
-        .fold(0.0, (s, e) => s + toDouble(e['sub_total'].toString()));
+        .fold(
+          0.0,
+          (s, e) => s + toDouble((e['sub_total'] ?? e['sub_totle']).toString()),
+        );
 
     totalPurchase = (purchases['data'] as List)
         .where((e) => !_isAfterAsOn(e['purchaseinvoice_date']))
-        .fold(0.0, (s, e) => s + toDouble(e['sub_total'].toString()));
+        .fold(
+          0.0,
+          (s, e) => s + toDouble((e['sub_total'] ?? e['sub_totle']).toString()),
+        );
 
     totalPurchaseReturn = (purchaseReturns['data'] as List)
         .where((e) => !_isAfterAsOn(e['return_date']))
-        .fold(0.0, (s, e) => s + toDouble(e['sub_total'].toString()));
+        .fold(
+          0.0,
+          (s, e) => s + toDouble((e['sub_total'] ?? e['sub_totle']).toString()),
+        );
   }
 
-  bool _isAfterAsOn(String dateStr) {
-    final d = DateTime.parse(dateStr);
-    return d.isAfter(asOn);
+  bool _isAfterAsOn(dynamic dateStr) {
+    if (dateStr == null) return false;
+
+    try {
+      final d = DateTime.parse(dateStr.toString());
+      return d.isAfter(asOn);
+    } catch (e) {
+      return false;
+    }
   }
 
   // ================= EXPENSE =================
@@ -278,7 +296,7 @@ class _BalanceSheetAllInOneScreenState
       child: Row(
         children: [
           Expanded(
-            child: TextField(
+            child: CommonTextField(
               controller: asOnCtrl,
               readOnly: true,
               onTap: () async {
@@ -296,11 +314,8 @@ class _BalanceSheetAllInOneScreenState
                   loadAll();
                 }
               },
-              decoration: const InputDecoration(
-                labelText: "As On Date",
-                suffixIcon: Icon(Icons.calendar_month),
-                border: OutlineInputBorder(),
-              ),
+              hintText: "As On Date",
+              suffixIcon: Icon(Icons.calendar_month),
             ),
           ),
           const SizedBox(width: 12),

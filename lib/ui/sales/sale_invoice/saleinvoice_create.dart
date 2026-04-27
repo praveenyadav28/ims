@@ -1,8 +1,8 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/model/employee_model.dart';
 import 'package:ims/model/ledger_model.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/data/create_cust_dialogue.dart';
@@ -137,6 +137,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
       stateController.text = e.placeOfSupply;
+      salesPersonController.text = e.salePerson;
       pickedInvoiceDate = e.saleInvoiceDate;
       transNoController.text = e.transNo.toString() == "0"
           ? ""
@@ -146,7 +147,9 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
         noteController.text = widget.saleInvoiceData!.notes.join(", ");
       }
       selectedTermsList = e.terms;
-
+      context.read<SaleInvoiceBloc>().add(
+        SaleInvoiceSelectSalesPersonId(widget.saleInvoiceData!.salePersonId),
+      );
       if (e.caseSale == true) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           context.read<SaleInvoiceBloc>().add(SaleInvoiceToggleCashSale(true));
@@ -186,6 +189,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
     });
     // fetch misc etc.
     fetchMiscCharges();
+    fetchEmployee();
     getAutoVoucherApi();
     ledgerApi();
   }
@@ -215,6 +219,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
     );
     if (date != null) {
       pickedInvoiceDate = date;
+      bloc.add(SaleInvoiceSetDate(date)); // 🔥 ADD THIS
       bloc.add(SaleInvoiceCalculate());
       setState(() {});
     }
@@ -233,6 +238,21 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
           .toList();
       setState(() {});
     }
+  }
+
+  List<EmployeeModel> employeeList = [];
+  Future<void> fetchEmployee() async {
+    var response = await ApiService.fetchData(
+      "get/employee",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    List responseData = response['data'] ?? [];
+    setState(() {
+      employeeList = responseData
+          .map((e) => EmployeeModel.fromJson(e))
+          .toList();
+    });
   }
 
   // ---------------- UI ----------------
@@ -321,10 +341,26 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
                   text:
-                      "${widget.saleInvoiceData == null ? "Create" : "Update"} Sale Invoice",
+                      "${widget.saleInvoiceData == null ? "Save" : "Update"} Sale Invoice",
                   height: 40,
                   width: 190,
                   onTap: () {
+                    final validRows = paymentRows.where((e) {
+                      return e.ledger?.id != null &&
+                          e.ledger?.ledgerName != null &&
+                          e.amountController.text.trim().isNotEmpty &&
+                          double.tryParse(e.amountController.text) != null &&
+                          double.parse(e.amountController.text) > 0;
+                    }).toList();
+
+                    final ledgerDetails = validRows.map((e) {
+                      return {
+                        "ledger_id": e.ledger?.id,
+                        "ledger_name": e.ledger?.ledgerName,
+                        "amount": double.parse(e.amountController.text.trim()),
+                      };
+                    }).toList();
+
                     bloc.add(
                       SaleInvoiceSaveWithUIData(
                         customerName: cusNameController.text,
@@ -341,34 +377,15 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                         printAfterSave: printAfterSave,
                         printSignature: printSignature,
                         sendWhatsApp: sendWhatsApp,
+
+                        // 🔥 payment data
+                        ledgerDetails: ledgerDetails,
+                        voucherNo: voucherNoController.text,
+                        date: pickedInvoiceDate,
+                        prefix: voucherPrefixController.text,
+                        reminderDate: reminderController.text,
                       ),
                     );
-                    final validRows = paymentRows.where((e) {
-                      return e.ledger?.id != null &&
-                          e.ledger?.ledgerName != null &&
-                          e.amountController.text.trim().isNotEmpty &&
-                          double.tryParse(e.amountController.text) != null &&
-                          double.parse(e.amountController.text) > 0;
-                    }).toList();
-                    if (validRows.isNotEmpty) {
-                      final ledgerDetails = validRows.map((e) {
-                        return {
-                          "ledger_id": e.ledger?.id,
-                          "ledger_name": e.ledger?.ledgerName,
-                          "amount": e.amountController.text,
-                        };
-                      }).toList();
-
-                      bloc.add(
-                        SaleInvoiceSavePayment(
-                          ledgerDetails: ledgerDetails,
-                          voucherNo: voucherNoController.text,
-                          date: pickedInvoiceDate,
-                          prefix: voucherPrefixController.text,
-                          reminderDate: reminderController.text,
-                        ),
-                      );
-                    }
                   },
                 ),
                 const SizedBox(width: 10),
@@ -384,11 +401,17 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
               trackVisibility: true,
               child: SingleChildScrollView(
                 controller: _scrollController,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     GlobalHeaderCard(
+                      flex1: 5,
+                      flex2: 5,
+                      flex3: 9,
                       billTo: GlobalBillToCard(
                         focusNode: _customerFocus,
                         ispurchase: false,
@@ -454,6 +477,8 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                         prefixController: prefixController,
                         invoiceNoController: invoiceNoController,
                         pickedInvoiceDate: pickedInvoiceDate,
+                        salesPersonController: salesPersonController,
+                        employeeList: employeeList,
                         onTapInvoiceDate: () => _pickSaleInvoiceDate(
                           context,
                           context.read<SaleInvoiceBloc>(),
@@ -463,7 +488,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                       ),
                     ),
 
-                    SizedBox(height: Sizes.height * .03),
+                    SizedBox(height: Sizes.height * .02),
                     GlobalItemsTableSection(
                       ledgerType:
                           state.selectedCustomer?.ledgerType ?? 'Individual',
@@ -485,7 +510,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                           if (_scrollController.hasClients) {
                             _scrollController.animateTo(
                               _scrollController.offset + 75,
-                              duration: const Duration(milliseconds: 300),
+                              duration: const Duration(milliseconds: 200),
                               curve: Curves.ease,
                             );
                           }
@@ -781,7 +806,6 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
                                                   child: CommonTextField(
                                                     controller:
                                                         row.amountController,
-                                                    readOnly: fullyPaid,
 
                                                     hintText: "Amount",
 
@@ -1009,7 +1033,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
 
     final completer = Completer<List<LedgerModelDrop>>();
 
-    _ledgerDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _ledgerDebounce = Timer(const Duration(milliseconds: 200), () async {
       final result = await repo.searchLedger(text, true);
       completer.complete(result);
     });
@@ -1022,7 +1046,7 @@ class _CreateSaleInvoiceViewState extends State<CreateSaleInvoiceView> {
 
     final completer = Completer<List<ItemServiceModel>>();
 
-    _itemDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _itemDebounce = Timer(const Duration(milliseconds: 200), () async {
       final result = await repo.searchItems(text);
       completer.complete(result);
     });

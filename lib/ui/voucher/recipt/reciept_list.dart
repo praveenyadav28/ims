@@ -1,6 +1,7 @@
 // top of file
 import 'dart:io';
 import 'package:excel/excel.dart' hide Border;
+import 'package:ims/utils/access.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
@@ -70,10 +71,7 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
     if (ledgerCtrl.text.isNotEmpty) {
       final q = ledgerCtrl.text.toLowerCase();
       temp = temp.where((e) {
-        return e.supplierName.toLowerCase().contains(q) 
-        // ||
-        //     e.ledgerName.toLowerCase().contains(q)
-            ;
+        return e.supplierName.toLowerCase().contains(q);
       }).toList();
     }
 
@@ -169,22 +167,23 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
           ),
           const SizedBox(width: 10),
 
-          Center(
-            child: defaultButton(
-              onTap: () async {
-                var data = await pushTo(RecieptEntry());
-                if (data != null) {
-                  fetchReciepts().then((onValue) {
-                    setState(() {});
-                  });
-                }
-              },
-              buttonColor: AppColor.blue,
-              text: "Create Reciept",
-              height: 40,
-              width: 150,
+          if (hasModuleAccess("Receipt Voucher", "create"))
+            Center(
+              child: defaultButton(
+                onTap: () async {
+                  var data = await pushTo(RecieptEntry());
+                  if (data != null) {
+                    fetchReciepts().then((onValue) {
+                      setState(() {});
+                    });
+                  }
+                },
+                buttonColor: AppColor.blue,
+                text: "Create Reciept",
+                height: 40,
+                width: 150,
+              ),
             ),
-          ),
           SizedBox(width: 10),
         ],
       ),
@@ -321,6 +320,7 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
           Expanded(flex: 2, child: Text("Date")),
           Expanded(flex: 2, child: Text("Reciept Number")),
           Expanded(flex: 3, child: Text("Party Name")),
+          Expanded(flex: 3, child: Text("Recieve Mode")),
           Expanded(flex: 2, child: Text("Amount")),
           Expanded(flex: 2, child: Text("Type")),
           Expanded(flex: 2, child: Text("Invoice No.")),
@@ -343,10 +343,25 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
           Expanded(
             flex: 2,
             child: Text(
-              "${p.prefix}${p.prefix.isNotEmpty ? '-' : ''}${p.voucherNo}",
+              "${p.prefix}${p.prefix.isNotEmpty ? '/' : ''}${p.voucherNo}",
             ),
           ),
           Expanded(flex: 3, child: Text(p.supplierName)),
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (p.ledgerDetails != null && p.ledgerDetails!.isNotEmpty)
+                  ...p.ledgerDetails!.map((e) {
+                    return Text(
+                      "${e.ledgerName ?? ''} - ₹${e.amount ?? 0}",
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    );
+                  }).toList(),
+              ],
+            ),
+          ),
           Expanded(
             flex: 2,
             child: Text(
@@ -405,19 +420,21 @@ class _RecieptListTableScreenState extends State<RecieptListTableScreen> {
                 },
               ),
 
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () async {
-                  var data = await pushTo(RecieptEntry(recieptModel: p));
-                  if (data != null) {
-                    fetchReciepts();
-                  }
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => confirmDelete(p.id),
-              ),
+              if (hasModuleAccess("Receipt Voucher", "update"))
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () async {
+                    var data = await pushTo(RecieptEntry(recieptModel: p));
+                    if (data != null) {
+                      fetchReciepts();
+                    }
+                  },
+                ),
+              if (hasModuleAccess("Receipt Voucher", "delete"))
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => confirmDelete(p.id),
+                ),
             ],
           ),
         ],

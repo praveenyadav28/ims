@@ -30,6 +30,8 @@ class GlobalDataAll {
   final List<ServiceDetail> serviceDetails;
 
   final String signature;
+  final String warningmessage;
+  final bool warningStatus;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -58,6 +60,8 @@ class GlobalDataAll {
     required this.signature,
     required this.createdAt,
     required this.updatedAt,
+    required this.warningmessage,
+    required this.warningStatus,
   });
 
   factory GlobalDataAll.fromJson(Map<String, dynamic> j) => GlobalDataAll(
@@ -101,6 +105,8 @@ class GlobalDataAll {
         .toList(),
 
     signature: j["signature"] ?? "",
+    warningStatus: j["warning"] ?? false,
+    warningmessage: j["warning_message"] ?? "",
     createdAt: DateTime.parse(j["createdAt"]),
     updatedAt: DateTime.parse(j["updatedAt"]),
   );
@@ -135,6 +141,8 @@ class GlobalDataAllPurchase {
   final List<ItemDetail> itemDetails;
 
   final String signature;
+  final bool warningStatus;
+  final String warningmessage;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -162,6 +170,8 @@ class GlobalDataAllPurchase {
     required this.signature,
     required this.createdAt,
     required this.updatedAt,
+    required this.warningmessage,
+    required this.warningStatus,
   });
 
   factory GlobalDataAllPurchase.fromJson(Map<String, dynamic> j) =>
@@ -204,5 +214,7 @@ class GlobalDataAllPurchase {
         signature: j["signature"] ?? "",
         createdAt: DateTime.parse(j["createdAt"]),
         updatedAt: DateTime.parse(j["updatedAt"]),
+        warningStatus: j["warning"] ?? false,
+        warningmessage: j["warning_message"] ?? "",
       );
 }

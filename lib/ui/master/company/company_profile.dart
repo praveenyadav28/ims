@@ -174,9 +174,33 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
     };
 
     final Map<String, Uint8List> images = {};
-    if (companyLogo != null) images['company_logo'] = companyLogo!;
-    if (otherLogo != null) images['other_logo'] = otherLogo!;
-    if (signatureImage != null) images['signature'] = signatureImage!;
+
+    // ================= IMAGE LOGIC =================
+
+    /// 🔵 COMPANY LOGO
+    if (companyLogo != null) {
+      // New upload
+      images['company_logo'] = companyLogo!;
+    } else if (companyLogoUrl.isEmpty) {
+      // Removed → send empty
+      data['company_logo'] = "";
+    }
+
+    /// 🔵 OTHER LOGO
+    if (otherLogo != null) {
+      images['other_logo'] = otherLogo!;
+    } else if (otherLogoUrl.isEmpty) {
+      data['other_logo'] = "";
+    }
+
+    /// 🔵 SIGNATURE
+    if (signatureImage != null) {
+      images['signature'] = signatureImage!;
+    } else if (signatureUrl.isEmpty) {
+      data['signature'] = "";
+    }
+
+    // ================= API CALL =================
     try {
       final response = hasExistingProfile
           ? await CompanyProfileAPi.updateCompanyProfile(
@@ -188,10 +212,11 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
               data: data,
               images: images,
             );
+
       if (response["status"] == true) {
         Preference.setString(PrefKeys.state, stateController.text.trim());
         showCustomSnackbarSuccess(context, response["message"]);
-        fetchCompanyProfile();
+        fetchCompanyProfile(); // refresh UI
       } else {
         showCustomSnackbarError(context, response["message"]);
       }
@@ -491,51 +516,83 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
           onTap: () => pickImage('signature'),
           child: SizedBox(
             width: double.infinity,
-            height: 125,
-            child: DottedBorder(
-              options: RoundedRectDottedBorderOptions(
-                strokeWidth: 1.6,
-                radius: Radius.circular(6),
-                dashPattern: [5, 3],
-                color: AppColor.textLightBlack,
-              ),
-              child: (signatureImage == null && signatureUrl.isEmpty)
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.add, size: 30),
-                          SizedBox(height: 12),
-                          Text("+ Add Signature"),
-                        ],
-                      ),
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: signatureImage != null
-                          ? Image.memory(
-                              signatureImage!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: 125,
-                            )
-                          : Image.network(
-                              signatureUrl,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: 125,
-                              errorBuilder: (_, __, ___) => Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [
-                                    Icon(Icons.add, size: 30),
-                                    SizedBox(height: 12),
-                                    Text("+ Add Signature"),
-                                  ],
-                                ),
-                              ),
-                            ),
+            height: 137,
+            child: Stack(
+              alignment: Alignment.topRight,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 10, right: 10),
+                  width: double.infinity,
+                  height: 125,
+                  child: DottedBorder(
+                    options: RoundedRectDottedBorderOptions(
+                      strokeWidth: 1.6,
+                      radius: Radius.circular(6),
+                      dashPattern: [5, 3],
+                      color: AppColor.textLightBlack,
                     ),
+                    child: (signatureImage == null && signatureUrl.isEmpty)
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(Icons.add, size: 30),
+                                SizedBox(height: 12),
+                                Text("+ Add Signature"),
+                              ],
+                            ),
+                          )
+                        : ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: signatureImage != null
+                                ? Image.memory(
+                                    signatureImage!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: 125,
+                                  )
+                                : Image.network(
+                                    signatureUrl,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: 125,
+                                    errorBuilder: (_, __, ___) => Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: const [
+                                          Icon(Icons.add, size: 30),
+                                          SizedBox(height: 12),
+                                          Text("+ Add Signature"),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      signatureImage = null;
+                      signatureUrl = "";
+                    });
+                  },
+                  child: signatureImage == null && signatureUrl.isEmpty
+                      ? SizedBox(width: 0, height: 0)
+                      : Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.close,
+                            color: AppColor.redLight,
+                            size: 20,
+                          ),
+                        ),
+                ),
+              ],
             ),
           ),
         ),
@@ -559,35 +616,83 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
     return GestureDetector(
       onTap: () => pickImage(target),
       child: SizedBox(
-        width: width ?? 146,
-        height: 125,
-        child: DottedBorder(
-          options: RoundedRectDottedBorderOptions(
-            strokeWidth: 1.6,
-            radius: Radius.circular(6),
-            dashPattern: [5, 3],
-            color: AppColor.textLightBlack,
-          ),
-          child: (file == null && imageUrl.isEmpty)
-              ? _uploadPlaceholder(title)
-              : ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: file != null
-                      ? Image.memory(
-                          file,
-                          fit: BoxFit.cover,
-                          width: width ?? 146,
-                          height: 125,
-                        )
-                      : Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          width: width ?? 146,
-                          height: 125,
-                          errorBuilder: (_, __, ___) =>
-                              _uploadPlaceholder(title),
-                        ),
+        width: width ?? 157,
+        height: 137,
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 10, right: 10),
+              child: DottedBorder(
+                options: RoundedRectDottedBorderOptions(
+                  strokeWidth: 1.6,
+                  radius: Radius.circular(6),
+                  dashPattern: [5, 3],
+                  color: AppColor.textLightBlack,
                 ),
+                child: (file == null && imageUrl.isEmpty)
+                    ? _uploadPlaceholder(title)
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: file != null
+                            ? Image.memory(
+                                file,
+                                fit: BoxFit.cover,
+                                width: width ?? 146,
+                                height: 125,
+                              )
+                            : Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                width: width ?? 146,
+                                height: 125,
+                                errorBuilder: (_, __, ___) =>
+                                    _uploadPlaceholder(title),
+                              ),
+                      ),
+              ),
+            ),
+            InkWell(
+              onTap: () {
+                setState(() {
+                  if (target == 'company') {
+                    companyLogo = null;
+                    companyLogoUrl = "";
+                  }
+                  if (target == 'other') {
+                    otherLogo = null;
+                    otherLogoUrl = "";
+                  }
+                  if (target == 'signature') {
+                    signatureImage = null;
+                    signatureUrl = "";
+                  }
+                });
+              },
+              child:
+                  (target == 'company' &&
+                          companyLogo == null &&
+                          companyLogoUrl.isEmpty) ||
+                      (target == 'other' &&
+                          otherLogo == null &&
+                          otherLogoUrl.isEmpty) ||
+                      (target == 'signature' &&
+                          signatureImage == null &&
+                          signatureUrl.isEmpty)
+                  ? SizedBox(width: 0, height: 0)
+                  : Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        color: AppColor.redLight,
+                        size: 20,
+                      ),
+                    ),
+            ),
+          ],
         ),
       ),
     );
@@ -714,7 +819,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
               children: [
                 Expanded(
                   child: CommonTextField(
-                    hintText: "www.website.com",
+                    hintText: "www.example.com",
                     controller: website,
                   ),
                 ),

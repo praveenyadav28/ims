@@ -166,6 +166,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
     );
     if (date != null) {
       pickedInvoiceDate = date;
+      bloc.add(DebitNoteSetDate(date));
       bloc.add(DebitNoteCalculate());
       setState(() {});
     }
@@ -270,7 +271,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
                   text:
-                      "${widget.debitNoteData == null ? "Create" : "Update"} Credit Note",
+                      "${widget.debitNoteData == null ? "Save" : "Update"} Credit Note",
                   height: 40,
                   width: 190,
                   onTap: () {
@@ -377,7 +378,7 @@ class _CreateDebitNoteViewState extends State<CreateDebitNoteView> {
                     ),
                   ),
 
-                  SizedBox(height: Sizes.height * .03),
+                  SizedBox(height: Sizes.height * .02),
                   NoteItemsTableSection(
                     rows: state.rows, // list of GlobalItemRow
                     hsnList: state.hsnMaster, // list of HsnModel

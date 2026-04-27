@@ -99,3 +99,21 @@ void showCustomSnackbarSuccess(
     onActionPressed: onActionPressed,
   );
 }
+
+void showCustomSnackbarWarning(
+  BuildContext context,
+  String message, {
+  Duration duration = const Duration(seconds: 3),
+  String? actionLabel,
+  VoidCallback? onActionPressed,
+}) {
+  _showSnackbar(
+    context,
+    message: message,
+    bgColor: Colors.orange,
+    icon: Icons.warning_amber_outlined,
+    duration: duration,
+    actionLabel: actionLabel,
+    onActionPressed: onActionPressed,
+  );
+}

@@ -31,14 +31,27 @@ class PaymentModel {
 
   factory PaymentModel.fromJson(Map<String, dynamic> json) {
     return PaymentModel(
-      id: json['_id'],
-      supplierName: json['supplier_name'] ?? json['customer_name'],
-      amount: double.tryParse(json['amount2'] ?? "0") ?? 0,
-      invoiceNo: json['invoice_no'] ?? "",
-      date: DateTime.parse(json['date']),
-      reminderDate: json['reminder_date'] != null
+      id: json['_id']?.toString() ?? "",
+
+      supplierName:
+          json['supplier_name']?.toString() ??
+          json['customer_name']?.toString() ??
+          "",
+
+      amount: (json['amount'] ?? 0).toDouble(),
+
+      invoiceNo: json['invoice_no']?.toString() ?? "",
+
+      date: json['date'] != null
+          ? DateTime.parse(json['date'])
+          : DateTime.now(),
+
+      reminderDate:
+          json['reminder_date'] != null &&
+              json['reminder_date'].toString().isNotEmpty
           ? DateTime.parse(json['reminder_date'])
           : null,
+
       ledgerDetails: json["ledger_details"] == null
           ? <VoucherLedgerDetail>[]
           : List<VoucherLedgerDetail>.from(
@@ -46,12 +59,18 @@ class PaymentModel {
                 (x) => VoucherLedgerDetail.fromJson(x),
               ),
             ),
-      prefix: json['prefix'] ?? "",
-      voucherNo: json['vouncher_no'],
-      note: json['note'] ?? '',
-      type: json['type'] ?? '',
-      docu: json['docu'] ?? "",
-      other1: json['other1'] ?? '',
+
+      prefix: json['prefix']?.toString() ?? "",
+
+      voucherNo: int.tryParse(json['vouncher_no']?.toString() ?? "0") ?? 0,
+
+      note: json['note']?.toString() ?? "",
+
+      type: json['type']?.toString() ?? "",
+
+      docu: json['docu']?.toString() ?? "",
+
+      other1: json['other1']?.toString() ?? "",
     );
   }
 }
@@ -59,13 +78,15 @@ class PaymentModel {
 class VoucherLedgerDetail {
   String? ledgerId;
   String? ledgerName;
-  int? amount;
+  double? amount;
 
   VoucherLedgerDetail({this.ledgerId, this.ledgerName, this.amount});
-  factory VoucherLedgerDetail.fromJson(Map<String, dynamic> json) =>
-      VoucherLedgerDetail(
-        ledgerId: json["ledger_id"],
-        ledgerName: json["ledger_name"],
-        amount: json["amount"],
-      );
+
+  factory VoucherLedgerDetail.fromJson(Map<String, dynamic> json) {
+    return VoucherLedgerDetail(
+      ledgerId: json["ledger_id"]?.toString(),
+      ledgerName: json["ledger_name"]?.toString(),
+      amount: (json["amount"] ?? 0).toDouble(),
+    );
+  }
 }

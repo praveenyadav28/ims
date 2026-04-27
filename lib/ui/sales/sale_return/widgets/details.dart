@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ims/ui/sales/sale_return/state/return_bloc.dart';
+import 'package:ims/utils/api.dart';
 import 'package:ims/utils/colors.dart';
+import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
@@ -37,10 +39,45 @@ class SaleReturnDetailsCard extends StatelessWidget {
                 child: CommonTextField(
                   controller: prefixController,
                   hintText: 'Prefix',
-                  onChanged: (value) {
+                  onChanged: (value) async {
                     context.read<SaleReturnBloc>().add(
                       SaleReturnUpdatePrefix(value),
                     );
+
+                    final currentText = value;
+
+                    Future.delayed(const Duration(milliseconds: 300), () async {
+                      if (prefixController.text != currentText) return;
+
+                      final res = await ApiService.postData(
+                        'get/nexttranseno',
+                        {
+                          "trans_type": "Returnsale",
+                          "prefix": currentText.trim(),
+                        },
+                        licenceNo: Preference.getint(PrefKeys.licenseNo),
+                      );
+
+                      // latest text hi chale
+                      if (prefixController.text != currentText) return;
+
+                      if (res != null && res['status'] == true) {
+                        final newNo = res['next_no'].toString();
+
+                        invoiceNoController.value = TextEditingValue(
+                          text: newNo,
+                          selection: TextSelection.collapsed(
+                            offset: newNo.length,
+                          ),
+                        );
+
+                        context.read<SaleReturnBloc>().add(
+                          SaleReturnUpdateNo(newNo),
+                        );
+                      } else {
+                        invoiceNoController.clear();
+                      }
+                    });
                   },
                 ),
               ),
@@ -61,7 +98,7 @@ class SaleReturnDetailsCard extends StatelessWidget {
           flix: 30,
         ),
 
-        SizedBox(height: Sizes.height * .03),
+        SizedBox(height: Sizes.height * .02),
         nameField(
           text: "Return Date",
           child: Row(
@@ -82,7 +119,7 @@ class SaleReturnDetailsCard extends StatelessWidget {
           ),
           flix: 30,
         ),
-        SizedBox(height: Sizes.height * .03),
+        SizedBox(height: Sizes.height * .02),
         nameField(
           text: "Sale Invoice No",
           child: Row(
@@ -131,7 +168,6 @@ class SaleReturnDetailsCard extends StatelessWidget {
 
           flix: 30,
         ),
-        SizedBox(height: Sizes.height * .03),
       ],
     );
   }

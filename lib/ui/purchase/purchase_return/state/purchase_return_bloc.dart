@@ -749,10 +749,17 @@ class PurchaseReturnBloc
 
       emit(newState);
       add(PurchaseReturnCalculate());
-      showCustomSnackbarSuccess(
-        purchaseReturnNavigatorKey.currentContext!,
-        "Transaction loaded",
-      );
+      if (estimate.warningStatus) {
+        showCustomSnackbarWarning(
+          purchaseReturnNavigatorKey.currentContext!,
+          estimate.warningmessage,
+        );
+      } else {
+        showCustomSnackbarSuccess(
+          purchaseReturnNavigatorKey.currentContext!,
+          "Transaction loaded",
+        );
+      }
     } catch (err) {
       showCustomSnackbarError(
         purchaseReturnNavigatorKey.currentContext!,

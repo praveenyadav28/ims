@@ -12,7 +12,7 @@ import 'package:ims/utils/print_mapper.dart';
 extension PerformaMapper on PerformaData {
   String get baseId => id;
   DateTime get baseDate => performaDate;
-  String get baseNumber => "$prefix-$no";
+  String get baseNumber => "$prefix/$no";
   String get baseCustomer => customerName;
   double get baseAmount => totalAmount;
 }
@@ -37,6 +37,8 @@ class _PerformaInvoiceListScreenState extends State<PerformaInvoiceListScreen> {
     return TransactionListScreen<PerformaData>(
       key: listKey, // 👈 IMPORTANT
       title: "Performa Invoice",
+
+      module: "Performa Invoice",
 
       /// API Call
       fetchData: repo.getPerforma,
@@ -73,7 +75,7 @@ class _PerformaInvoiceListScreenState extends State<PerformaInvoiceListScreen> {
       idGetter: (e) => e.id,
       dateGetter: (e) => e.performaDate,
       numberGetter: (e) =>
-          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
+          "${e.prefix}${e.prefix.isNotEmpty ? '/' : ''}${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
       mobile: (e) => e.mobile,

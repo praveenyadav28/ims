@@ -46,6 +46,11 @@ class DebitNoteUpdateRow extends DebitNoteEvent {
   DebitNoteUpdateRow(this.row);
 }
 
+class DebitNoteSetDate extends DebitNoteEvent {
+  final DateTime date;
+  DebitNoteSetDate(this.date);
+}
+
 class DebitNoteApplyHsnToRow extends DebitNoteEvent {
   final String rowId;
   final HsnModel hsn;
@@ -323,7 +328,9 @@ class DebitNoteBloc extends Bloc<DebitNoteEvent, DebitNoteState> {
     on<DebitNoteUpdatePrefix>((event, emit) {
       emit(state.copyWith(prefix: event.value));
     });
-
+    on<DebitNoteSetDate>((event, emit) {
+      emit(state.copyWith(debitNoteDate: event.date));
+    });
     // misc
     on<DebitNoteAddMiscCharge>(_onAddMiscCharge);
     on<DebitNoteRemoveMiscCharge>(_onRemoveMiscCharge);

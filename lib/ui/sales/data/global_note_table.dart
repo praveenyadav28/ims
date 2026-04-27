@@ -29,7 +29,7 @@ class NoteItemsTableSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
       decoration: BoxDecoration(
         color: AppColor.white,
 
@@ -39,15 +39,6 @@ class NoteItemsTableSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Notes',
-            style: GoogleFonts.roboto(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColor.textColor,
-            ),
-          ),
-          const SizedBox(height: 10),
           _buildHeader(),
           const Divider(),
           SizedBox(
@@ -67,7 +58,6 @@ class NoteItemsTableSection extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
           DottedBorder(
             options: RectDottedBorderOptions(
               color: AppColor.primarydark,
@@ -77,10 +67,10 @@ class NoteItemsTableSection extends StatelessWidget {
             child: InkWell(
               onTap: onAddRow,
               child: Container(
-                height: 46,
+                height: 35,
                 alignment: Alignment.center,
                 child: const Text(
-                  '+ Add Item or Service',
+                  '+ Add Note Item',
                   style: TextStyle(color: Colors.purple),
                 ),
               ),
@@ -95,7 +85,10 @@ class NoteItemsTableSection extends StatelessWidget {
 
   Widget _buildHeader() {
     return Container(
-      color: const Color(0xffF3F4F6),
+      decoration: BoxDecoration(
+        color: const Color(0xffF3F4F6),
+        borderRadius: BorderRadius.circular(6),
+      ),
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
@@ -260,7 +253,7 @@ class _NoteItemRowWidgetState extends State<_NoteItemRowWidget> {
     );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           // ITEM SELECTOR

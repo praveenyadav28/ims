@@ -87,23 +87,6 @@ class GlobalShipToCard extends StatelessWidget {
 
         /// ------------ SHIPPING ADDRESS ------------
         Text(
-          'Shipping Address',
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColor.textColor,
-          ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          shippingAddress,
-          style: GoogleFonts.roboto(
-            fontSize: 14,
-            color: const Color(0xff565D6D),
-          ),
-        ),
-        SizedBox(height: Sizes.height * .02),
-        Text(
           "Place Of Supply",
           style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
         ),

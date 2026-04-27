@@ -38,6 +38,7 @@ class _SaleReturnInvoiceListScreenState
   Widget build(BuildContext context) {
     return TransactionListScreen<SaleReturnData>(
       key: listKey,
+      module: "Sale Return",
       title: "Sale Return Invoice",
       fetchData: repo.getSaleReturn,
       onView: (e) async {
@@ -68,7 +69,7 @@ class _SaleReturnInvoiceListScreenState
       idGetter: (e) => e.id,
       dateGetter: (e) => e.saleReturnDate,
       numberGetter: (e) =>
-          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
+          "${e.prefix}${e.prefix.isNotEmpty ? '/' : ''}${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
       mobile: (e) => e.mobile,

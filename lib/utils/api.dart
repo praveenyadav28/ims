@@ -16,7 +16,8 @@ class ApiException implements Exception {
 }
 
 class ApiService {
-  static String baseurl = "http://192.168.1.19:4000/api";
+  static bool _isRequestRunning = false;
+  static String baseurl = "https://ims.dormsync.com/api";
   static final Dio dio = Dio(
     BaseOptions(
       baseUrl: baseurl,
@@ -88,10 +89,15 @@ class ApiService {
     Map<String, dynamic> data, {
     int? licenceNo,
   }) async {
+    if (_isRequestRunning) {
+      throw ApiException("Please wait... Request already in progress");
+    }
+    _isRequestRunning = true;
+
     try {
       final response = await dio.post(
         "/$endpoint",
-        data: data, // <-- send raw JSON
+        data: data,
         options: Options(
           headers: {
             ..._authHeaders(licenceNo: licenceNo),
@@ -103,6 +109,8 @@ class ApiService {
       return response.data;
     } catch (e) {
       throw _formatError(e);
+    } finally {
+      _isRequestRunning = false; // 🔥 important
     }
   }
 
@@ -142,18 +150,25 @@ class ApiService {
     }
   }
 
+  static bool _isUploadRunning = false;
+
   static Future<dynamic> uploadMultipart({
     required String endpoint,
     required Map<String, dynamic> fields,
     required bool updateStatus,
-    Uint8List? file, // ✅ bytes
+    Uint8List? file,
     String fileKey = "signature",
     int? licenceNo,
   }) async {
+    if (_isUploadRunning) {
+      throw ApiException("Upload already in progress, please wait...");
+    }
+
+    _isUploadRunning = true;
+
     try {
       final Map<String, dynamic> dataMap = {};
 
-      // Convert + encode all fields safely
       fields.forEach((key, value) {
         if (value is Map || value is List) {
           dataMap[key] = jsonEncode(value);
@@ -162,7 +177,6 @@ class ApiService {
         }
       });
 
-      // ✅ Add file from bytes
       if (file != null) {
         dataMap[fileKey] = MultipartFile.fromBytes(
           file,
@@ -198,6 +212,8 @@ class ApiService {
       return response.data;
     } catch (e) {
       throw _formatError(e);
+    } finally {
+      _isUploadRunning = false; // 🔥 very important
     }
   }
 
@@ -205,9 +221,16 @@ class ApiService {
   static ApiException _formatError(Object e) {
     if (e is DioException) {
       final status = e.response?.statusCode ?? 500;
-      final msg = e.response?.data is Map
-          ? (e.response?.data['message'] ?? "Server Error")
-          : e.message;
+
+      String msg;
+
+      if (status == 429) {
+        msg = "Too many requests. Please try again later.";
+      } else {
+        msg = e.response?.data is Map
+            ? (e.response?.data['message'] ?? "Server Error")
+            : e.message;
+      }
 
       return ApiException(msg.toString(), statusCode: status);
     }

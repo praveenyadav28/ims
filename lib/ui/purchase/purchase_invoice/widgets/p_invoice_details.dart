@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ims/ui/purchase/purchase_invoice/state/p_invoice_bloc.dart';
+import 'package:ims/utils/api.dart';
+import 'package:ims/utils/prefence.dart';
 import 'package:ims/utils/sizes.dart';
 import 'package:ims/utils/textfield.dart';
 import 'package:intl/intl.dart';
@@ -36,10 +38,48 @@ class PurchaseInvoiceDetailsCard extends StatelessWidget {
                 child: CommonTextField(
                   controller: prefixController,
                   hintText: 'Prefix',
-                  onChanged: (value) {
+                  onChanged: (value) async {
                     context.read<PurchaseInvoiceBloc>().add(
                       PurchaseInvoiceUpdatePrefix(value),
                     );
+
+                    final currentText = value;
+
+                    Future.delayed(const Duration(milliseconds: 300), () async {
+                      // user ne aur type kiya ho to old request ignore
+                      if (prefixController.text.trim() != currentText.trim())
+                        return;
+
+                      final res = await ApiService.postData(
+                        'get/nexttranseno',
+                        {
+                          "trans_type": "Purchaseinvoice",
+                          "prefix": currentText.trim(),
+                        },
+                        licenceNo: Preference.getint(PrefKeys.licenseNo),
+                      );
+
+                      // latest text hi chale
+                      if (prefixController.text.trim() != currentText.trim())
+                        return;
+
+                      if (res != null && res['status'] == true) {
+                        final newNo = res['next_no'].toString();
+
+                        purchaseInvoiceNoController.value = TextEditingValue(
+                          text: newNo,
+                          selection: TextSelection.collapsed(
+                            offset: newNo.length,
+                          ),
+                        );
+
+                        context.read<PurchaseInvoiceBloc>().add(
+                          PurchaseInvoiceUpdateNo(newNo),
+                        );
+                      } else {
+                        purchaseInvoiceNoController.clear();
+                      }
+                    });
                   },
                 ),
               ),

@@ -1,3 +1,6 @@
+import 'package:ims/ui/report/global/salesman_report.dart';
+import 'package:ims/utils/access.dart';
+import 'package:ims/utils/snackbar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -49,7 +52,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
     "Accounts Reports": [
       "Profit and Loss Report",
       "Ledger Report",
-      "OutStanding Report",
+      "Outstanding Report",
       "Ledger Balance Report",
       "Bank Book",
       "Cash Book",
@@ -57,6 +60,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
       "OutStanding Reminder",
       "Trial Balance",
       "Balance Sheet",
+      "Salesman Report",
     ],
   };
 
@@ -154,46 +158,62 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
   }
 
   void _navigate(BuildContext context, String name) {
+    void handleNavigation(String menuName, Widget screen) {
+      if (hasMenuAccess(menuName)) {
+        pushTo(screen);
+      } else {
+        showCustomSnackbarError(context, "Access Denied");
+      }
+    }
+
     if (name == "Item Report By Party") {
-      pushTo(PartyLedgerScreen());
+      handleNavigation("Item Report by Party", PartyLedgerScreen());
     } else if (name == "Item Sales and Purchase Summary") {
-      pushTo(ItemLedgerScreen());
+      handleNavigation("Item Sale-Purchase Summary", ItemLedgerScreen());
     } else if (name == "Item Profit/Loss Report") {
-      pushTo(FifoReportScreen());
+      handleNavigation("Item Profit/Loss Reprot", FifoReportScreen());
     } else if (name == "Stock Details Report") {
-      pushTo(InventoryAdvancedReportScreen());
+      handleNavigation("Stock Details Reprot", InventoryAdvancedReportScreen());
     } else if (name == "Purchase Invoice Report") {
-      pushTo(PurchaseInvoiceAdvancedReportScreen());
+      handleNavigation(
+        "Purchase Invoice Report",
+        PurchaseInvoiceAdvancedReportScreen(),
+      );
     } else if (name == "GST Purchase Report") {
-      pushTo(GstPurchaseReportScreen());
+      handleNavigation("GST Purchase Report", GstPurchaseReportScreen());
     } else if (name == "Sale Invoice Report") {
-      pushTo(SaleInvoiceAdvancedReportScreen());
+      handleNavigation(
+        "Sale Invoice Report",
+        SaleInvoiceAdvancedReportScreen(),
+      );
     } else if (name == "GST Sale Report") {
-      pushTo(GstSaleReportScreen());
+      handleNavigation("GST Sale Report", GstSaleReportScreen());
     } else if (name == "GSTR-1") {
-      pushTo(Gstr1DashboardScreen());
+      handleNavigation("GSTR-1", Gstr1DashboardScreen());
     } else if (name == "GSTR-2") {
-      pushTo(Gstr2DashboardScreen());
+      handleNavigation("GSTR-2", Gstr2DashboardScreen());
     } else if (name == "Profit and Loss Report") {
-      pushTo(ProfitLossScreen());
+      handleNavigation("Profit/Loss Report", ProfitLossScreen());
     } else if (name == "Ledger Report") {
-      pushTo(LedgerReportScreen());
-    } else if (name == "OutStanding Report") {
-      pushTo(OutstandingReportScreen());
+      handleNavigation("Ledger Report", LedgerReportScreen());
+    } else if (name == "Outstanding Report") {
+      handleNavigation("Outstanding Report", OutstandingReportScreen());
     } else if (name == "Ledger Balance Report") {
-      pushTo(BalanceReportScreen());
+      handleNavigation("Ledger Balance Report", BalanceReportScreen());
     } else if (name == "Bank Book") {
-      pushTo(BankBookReportScreen());
+      handleNavigation("Bank Book", BankBookReportScreen());
     } else if (name == "Cash Book") {
-      pushTo(CashBookReportScreen());
+      handleNavigation("Cash Book", CashBookReportScreen());
     } else if (name == "Day Book") {
-      pushTo(DayBookReportScreen());
+      handleNavigation("Day Book", DayBookReportScreen());
     } else if (name == "OutStanding Reminder") {
-      pushTo(OutStandingReminder());
+      handleNavigation("OutStanding Reminder", OutStandingReminder());
     } else if (name == "Trial Balance") {
-      pushTo(TrialBalanceScreen());
+      handleNavigation("Trial Balance", TrialBalanceScreen());
     } else if (name == "Balance Sheet") {
-      pushTo(BalanceSheetAllInOneScreen());
+      handleNavigation("Balance Sheet", BalanceSheetAllInOneScreen());
+    } else if (name == "Salesman Report") {
+      handleNavigation("Salesman Report", SalesmanReportScreen());
     }
   }
 }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ims/model/employee_model.dart';
 import 'package:ims/ui/master/misc/misc_charge_model.dart';
 import 'package:ims/ui/sales/data/create_cust_dialogue.dart';
 import 'package:ims/ui/sales/data/global_additionalcharge.dart';
@@ -74,6 +75,7 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
   final cashShippingController = TextEditingController();
   final noteController = TextEditingController();
   final transNoController = TextEditingController();
+  final salesPersonController = TextEditingController();
   final prefixTransController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   DateTime pickedInvoiceDate = DateTime.now();
@@ -121,6 +123,7 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
       cashBillingController.text = e.address0;
       cashShippingController.text = e.address1;
       stateController.text = e.placeOfSupply;
+      salesPersonController.text = e.salePerson;
       pickedInvoiceDate = e.diliveryChallanDate;
       if (widget.diliveryChallanData != null) {
         noteController.text = widget.diliveryChallanData!.notes.join(", ");
@@ -165,6 +168,7 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
     });
     // fetch misc etc.
     fetchMiscCharges();
+    fetchEmployee();
   }
 
   @override
@@ -190,6 +194,7 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
     );
     if (date != null) {
       pickedInvoiceDate = date;
+      bloc.add(DiliveryChallanSetDate(date));
       bloc.add(DiliveryChallanCalculate());
       setState(() {});
     }
@@ -208,6 +213,21 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
           .toList();
       setState(() {});
     }
+  }
+
+  List<EmployeeModel> employeeList = [];
+  Future<void> fetchEmployee() async {
+    var response = await ApiService.fetchData(
+      "get/employee",
+      licenceNo: Preference.getint(PrefKeys.licenseNo),
+    );
+
+    List responseData = response['data'] ?? [];
+    setState(() {
+      employeeList = responseData
+          .map((e) => EmployeeModel.fromJson(e))
+          .toList();
+    });
   }
 
   // ---------------- UI ----------------
@@ -289,7 +309,7 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
                   text:
-                      "${widget.diliveryChallanData == null ? "Create" : "Update"} Dilivery Challan",
+                      "${widget.diliveryChallanData == null ? "Save" : "Update"} Dilivery Challan",
                   height: 40,
                   width: 190,
                   onTap: () {
@@ -327,11 +347,17 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
               trackVisibility: true,
               child: SingleChildScrollView(
                 controller: _scrollController,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     GlobalHeaderCard(
+                      flex1: 5,
+                      flex2: 5,
+                      flex3: 9,
                       billTo: GlobalBillToCard(
                         ispurchase: false,
                         // --------- STATE VALUES ---------
@@ -398,6 +424,8 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
                         prefixController: prefixController,
                         invoiceNoController: invoiceNoController,
                         pickedInvoiceDate: pickedInvoiceDate,
+                        salesPersonController: salesPersonController,
+                        employeeList: employeeList,
                         onTapInvoiceDate: () => _pickChallanDate(
                           context,
                           context.read<DiliveryChallanBloc>(),
@@ -407,7 +435,7 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
                       ),
                     ),
 
-                    SizedBox(height: Sizes.height * .03),
+                    SizedBox(height: Sizes.height * .02),
                     GlobalItemsTableSection(
                       ledgerType:
                           state.selectedCustomer?.ledgerType ?? 'Individual',
@@ -434,7 +462,7 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
                           if (_scrollController.hasClients) {
                             _scrollController.animateTo(
                               _scrollController.offset + 75,
-                              duration: const Duration(milliseconds: 300),
+                              duration: const Duration(milliseconds: 200),
                               curve: Curves.ease,
                             );
                           }
@@ -696,7 +724,7 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
 
     final completer = Completer<List<LedgerModelDrop>>();
 
-    _ledgerDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _ledgerDebounce = Timer(const Duration(milliseconds: 200), () async {
       final result = await repo.searchLedger(text, true);
       completer.complete(result);
     });
@@ -709,7 +737,7 @@ class _CreateDiliveryChallanViewState extends State<CreateDiliveryChallanView> {
 
     final completer = Completer<List<ItemServiceModel>>();
 
-    _itemDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _itemDebounce = Timer(const Duration(milliseconds: 200), () async {
       final result = await repo.searchItems(text);
       completer.complete(result);
     });

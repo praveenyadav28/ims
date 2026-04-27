@@ -12,7 +12,7 @@ import 'package:ims/utils/print_mapper.dart';
 extension DiliveryChallanMapper on DiliveryChallanData {
   String get baseId => id;
   DateTime get baseDate => diliveryChallanDate;
-  String get baseNumber => "$prefix-$no";
+  String get baseNumber => "$prefix/$no";
   String get baseCustomer => customerName;
   double get baseAmount => totalAmount;
 }
@@ -38,6 +38,7 @@ class _DiliveryChallanInvoiceListScreenState
     return TransactionListScreen<DiliveryChallanData>(
       key: listKey, // 👈 IMPORTANT
       title: "Dilivery Challan",
+      module: "Delivery Challan",
       fetchData: repo.getDiliveryChallan,
       onView: (e) async {
         final doc = e.toPrintModel(); // ✅ no dynamic
@@ -67,7 +68,7 @@ class _DiliveryChallanInvoiceListScreenState
       idGetter: (e) => e.id,
       dateGetter: (e) => e.diliveryChallanDate,
       numberGetter: (e) =>
-          "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
+          "${e.prefix}${e.prefix.isNotEmpty ? '/' : ''}${e.no}",
       customerGetter: (e) => e.customerName,
       amountGetter: (e) => e.totalAmount,
       mobile: (e) => e.mobile,

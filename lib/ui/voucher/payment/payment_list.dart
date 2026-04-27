@@ -1,6 +1,7 @@
 // top of file
 import 'dart:io';
 import 'package:excel/excel.dart' hide Border;
+import 'package:ims/utils/access.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
@@ -178,22 +179,23 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
           ),
           const SizedBox(width: 10),
 
-          Center(
-            child: defaultButton(
-              onTap: () async {
-                var data = await pushTo(PaymentEntry());
-                if (data != null) {
-                  fetchPayments().then((onValue) {
-                    setState(() {});
-                  });
-                }
-              },
-              buttonColor: AppColor.blue,
-              text: "Create Payment",
-              height: 40,
-              width: 150,
+          if (hasModuleAccess("Payment Voucher", "create"))
+            Center(
+              child: defaultButton(
+                onTap: () async {
+                  var data = await pushTo(PaymentEntry());
+                  if (data != null) {
+                    fetchPayments().then((onValue) {
+                      setState(() {});
+                    });
+                  }
+                },
+                buttonColor: AppColor.blue,
+                text: "Create Payment",
+                height: 40,
+                width: 150,
+              ),
             ),
-          ),
           SizedBox(width: 10),
         ],
       ),
@@ -353,7 +355,7 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
           Expanded(
             flex: 2,
             child: Text(
-              "${p.prefix}${p.prefix.isNotEmpty ? '-' : ''}${p.voucherNo}",
+              "${p.prefix}${p.prefix.isNotEmpty ? '/' : ''}${p.voucherNo}",
             ),
           ),
           Expanded(
@@ -438,21 +440,23 @@ class _PaymentListTableScreenState extends State<PaymentListTableScreen> {
                   },
                 ),
 
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  onPressed: () async {
-                    var data = await pushTo(PaymentEntry(data: p));
-                    if (data != null) {
-                      fetchPayments().then((onValue) {
-                        setState(() {});
-                      });
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => confirmDelete(p.id),
-                ),
+                if (hasModuleAccess("Payment Voucher", "update"))
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () async {
+                      var data = await pushTo(PaymentEntry(data: p));
+                      if (data != null) {
+                        fetchPayments().then((onValue) {
+                          setState(() {});
+                        });
+                      }
+                    },
+                  ),
+                if (hasModuleAccess("Payment Voucher", "delete"))
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => confirmDelete(p.id),
+                  ),
               ],
             ),
           ),

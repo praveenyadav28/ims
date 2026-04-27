@@ -28,8 +28,9 @@ class _PurchaseOrderListScreenState extends State<PurchaseOrderListScreen> {
     return TransactionListScreen<PurchaseOrderData>(
       key: listKey,
       title: "Purchase Order",
+      module: "Purchase Order",
       fetchData: repo.getPurchaseOrder,
-        onView: (e) async {
+      onView: (e) async {
         final doc = e.toPrintModel(); // ✅ no dynamic
 
         final companyApi = await CompanyProfileAPi.getCompanyProfile();
@@ -58,7 +59,8 @@ class _PurchaseOrderListScreenState extends State<PurchaseOrderListScreen> {
       /// EXTRACTORS — REQUIRED
       idGetter: (e) => e.id,
       dateGetter: (e) => e.purchaseOrderDate,
-      numberGetter: (e) => "${e.prefix}${e.prefix.isNotEmpty ? '-' : ''}${e.no}",
+      numberGetter: (e) =>
+          "${e.prefix}${e.prefix.isNotEmpty ? '/' : ''}${e.no}",
       customerGetter: (e) => e.supplierName,
       amountGetter: (e) => e.totalAmount,
       gstGetter: (e) => e.subGst,

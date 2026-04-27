@@ -65,7 +65,7 @@ class _GlobalItemsTableSectionState extends State<GlobalItemsTableSection> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
       decoration: BoxDecoration(
         color: AppColor.white,
 
@@ -75,102 +75,6 @@ class _GlobalItemsTableSectionState extends State<GlobalItemsTableSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                'Items',
-                style: GoogleFonts.roboto(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColor.textColor,
-                ),
-              ),
-              Spacer(),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == "bin") {
-                    setState(() => showBin = !showBin);
-                    Preference.setBool("show_bin", showBin);
-                  }
-
-                  if (value == "unit") {
-                    setState(() => showUnit = !showUnit);
-                    Preference.setBool("show_unit", showUnit);
-                  }
-                },
-                itemBuilder: (context) => [
-                  CheckedPopupMenuItem(
-                    value: "bin",
-                    checked: showBin,
-                    child: const Text("Show Bin"),
-                  ),
-                  CheckedPopupMenuItem(
-                    value: "unit",
-                    checked: showUnit,
-                    child: const Text("Show Unit"),
-                  ),
-                ],
-                child: Container(
-                  height: 32,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColor.primary.withOpacity(.6)),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(Icons.tune, color: AppColor.primary, size: 18),
-                ),
-              ),
-
-              const SizedBox(width: 10),
-
-              InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () {
-                  pushTo(CreateNewItemScreen());
-                },
-                child: Container(
-                  height: 32,
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: AppColor.primary.withOpacity(.6),
-                      width: 1.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColor.primary.withOpacity(.15),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.add_circle_outline,
-                        size: 16,
-                        color: AppColor.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        "Create New Item",
-                        style: TextStyle(
-                          color: AppColor.primary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
           _buildHeader(),
           const Divider(),
           Column(
@@ -196,7 +100,7 @@ class _GlobalItemsTableSectionState extends State<GlobalItemsTableSection> {
               );
             }).toList(),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           if (widget.isReturn ?? true == true)
             DottedBorder(
               options: RectDottedBorderOptions(
@@ -207,7 +111,7 @@ class _GlobalItemsTableSectionState extends State<GlobalItemsTableSection> {
               child: InkWell(
                 onTap: widget.onAddRow,
                 child: Container(
-                  height: 46,
+                  height: 35,
                   alignment: Alignment.center,
                   child: const Text(
                     '+ Add Items',
@@ -225,7 +129,10 @@ class _GlobalItemsTableSectionState extends State<GlobalItemsTableSection> {
 
   Widget _buildHeader() {
     return Container(
-      color: const Color(0xffF3F4F6),
+      decoration: BoxDecoration(
+        color: const Color(0xffF3F4F6),
+        borderRadius: BorderRadius.circular(10),
+      ),
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
@@ -251,7 +158,45 @@ class _GlobalItemsTableSectionState extends State<GlobalItemsTableSection> {
           Expanded(child: Text('TAX', textAlign: TextAlign.center)),
           _gap(),
           Expanded(child: Text('AMOUNT (₹)', textAlign: TextAlign.center)),
-          Icon(Icons.cancel, color: Colors.transparent),
+          SizedBox(
+            width: 50,
+            child: Center(
+              child: PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == "bin") {
+                    setState(() => showBin = !showBin);
+                    Preference.setBool("show_bin", showBin);
+                  }
+
+                  if (value == "unit") {
+                    setState(() => showUnit = !showUnit);
+                    Preference.setBool("show_unit", showUnit);
+                  }
+                },
+                itemBuilder: (context) => [
+                  CheckedPopupMenuItem(
+                    value: "bin",
+                    checked: showBin,
+                    child: const Text("Show Bin"),
+                  ),
+                  CheckedPopupMenuItem(
+                    value: "unit",
+                    checked: showUnit,
+                    child: const Text("Show Unit"),
+                  ),
+                ],
+                child: Container(
+                  height: 32,
+                  width: 32,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColor.primary.withOpacity(.6)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.tune, color: AppColor.primary, size: 18),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -476,7 +421,7 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
     );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           // ITEM SELECTOR
@@ -527,6 +472,16 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
                     focusNode: qtyF,
                     textAlign: TextAlign.center,
                     keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      final q = int.tryParse(value) ?? r.qty;
+                      final updated = r.copyWith(qty: q).recalc();
+                      widget.onUpdate(updated);
+                    },
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*\.?\d{0,2}'),
+                      ),
+                    ],
                     decoration: input.copyWith(labelText: "Qty"),
                   ),
                 ),
@@ -562,7 +517,15 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
             child: TextField(
               controller: priceCtrl,
               focusNode: priceF,
+              onChanged: (value) {
+                final p = double.tryParse(value) ?? r.pricePerSelectedUnit;
+                final updated = r.copyWith(pricePerSelectedUnit: p).recalc();
+                widget.onUpdate(updated);
+              },
               keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
               decoration: input.copyWith(labelText: "Price"),
             ),
           ),
@@ -574,6 +537,9 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
               controller: discCtrl,
               focusNode: discF,
               keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
               decoration: input.copyWith(labelText: "%"),
             ),
           ),
@@ -618,9 +584,12 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
           ),
 
           // DELETE
-          TextButton(
-            onPressed: widget.onRemove,
-            child: Icon(Icons.cancel, color: AppColor.red),
+          SizedBox(
+            width: 50,
+            child: TextButton(
+              onPressed: widget.onRemove,
+              child: Icon(Icons.cancel, color: AppColor.red),
+            ),
           ),
         ],
       ),
@@ -771,7 +740,23 @@ class _GlobalItemRowWidgetState extends State<_GlobalItemRowWidget> {
           return list; // dropdown show
         },
 
-        searchInputDecoration: input.copyWith(labelText: "Item / Service"),
+        searchInputDecoration: input.copyWith(
+          labelText: "Item / Service",
+          suffixIcon: InkWell(
+            focusNode: FocusNode(skipTraversal: true),
+            onTap: () async {
+              await pushTo(CreateNewItemScreen());
+            },
+            child: Container(
+              margin: EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: AppColor.primary.withValues(alpha: .2),
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Icon(Icons.add, color: AppColor.primarydark),
+            ),
+          ),
+        ),
 
         suggestionStyle: GoogleFonts.inter(
           color: const Color(0xFF565D6D),

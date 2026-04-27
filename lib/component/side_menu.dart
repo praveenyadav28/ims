@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/onboarding/splash_screen.dart';
+import 'package:ims/utils/access.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/navigation.dart';
+import 'package:ims/utils/prefence.dart';
+import 'package:ims/utils/snackbar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'menu_screen.dart';
 
 class SideMenu extends StatefulWidget {
@@ -16,19 +20,42 @@ class SideMenu extends StatefulWidget {
   State<SideMenu> createState() => _SideMenuState();
 }
 
-class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
+class _SideMenuState extends State<SideMenu> {
   String? expandedKey;
 
   Color get activeColor => const Color(0xff22CCB2);
   Color get bgColor => AppColor.black;
   Color get tileColor => const Color(0xff20293C);
 
-  // ================= SINGLE MENU =================
-  Widget menuItem(String icon, String title, MenuScreen screen) {
+  // ================= ACCESS CHECK =================
+  bool canAccessMenu({String? menuRight, String? module}) {
+    if (isAdmin()) return true;
+
+    if (menuRight != null && hasMenuAccess(menuRight)) return true;
+
+    if (module != null && hasModuleAccess(module, "view")) return true;
+
+    return false;
+  }
+
+  // ================= MENU ITEM =================
+  Widget menuItem(
+    String icon,
+    String title,
+    MenuScreen screen, {
+    String? module,
+    String? right,
+  }) {
     final bool active = widget.selected == screen;
 
     return InkWell(
-      onTap: () => widget.onSelect(screen),
+      onTap: () {
+        if (canAccessMenu(menuRight: right, module: module)) {
+          widget.onSelect(screen);
+        } else {
+          showCustomSnackbarError(context, "Access Denied");
+        }
+      },
       child: Container(
         height: 77,
         width: double.infinity,
@@ -53,11 +80,22 @@ class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
   }
 
   // ================= CHILD ITEM =================
-  Widget childItem(String title, MenuScreen screen) {
+  Widget childItem({
+    required String title,
+    required MenuScreen screen,
+    String? module,
+    String? right,
+  }) {
     final bool active = widget.selected == screen;
 
     return InkWell(
-      onTap: () => widget.onSelect(screen),
+      onTap: () {
+        if (canAccessMenu(menuRight: right, module: module)) {
+          widget.onSelect(screen);
+        } else {
+          showCustomSnackbarError(context, "Access Denied");
+        }
+      },
       child: Container(
         width: double.infinity,
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -76,13 +114,12 @@ class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
     );
   }
 
-  // ================= EXPANDABLE MENU =================
+  // ================= EXPANDABLE =================
   Widget expandableMenu({
     required String menuKey,
     required String icon,
     required String title,
-    required List<Map<String, MenuScreen>> children,
-
+    required List<Map<String, dynamic>> children,
     bool isPng = false,
   }) {
     final bool isOpen = expandedKey == menuKey;
@@ -147,9 +184,14 @@ class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
             curve: Curves.easeInOut,
             child: isOpen
                 ? Column(
-                    children: children
-                        .map((e) => childItem(e.keys.first, e.values.first))
-                        .toList(),
+                    children: children.map((e) {
+                      return childItem(
+                        title: e["title"],
+                        screen: e["screen"],
+                        module: e["module"],
+                        right: e["right"],
+                      );
+                    }).toList(),
                   )
                 : const SizedBox(),
           ),
@@ -161,109 +203,208 @@ class _SideMenuState extends State<SideMenu> with TickerProviderStateMixin {
   // ================= BUILD =================
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Container(
-        color: bgColor,
+    return Container(
+      color: bgColor,
+      child: SingleChildScrollView(
         child: Column(
           children: [
             const SizedBox(height: 16),
-            const Icon(Icons.blur_on, color: Colors.white),
-            const SizedBox(height: 20),
+            InkWell(
+              onTap: () => widget.onSelect(MenuScreen.dashboardScreen),
+              child: Image.asset("assets/images/applogo.png", height: 24),
+            ),
+            const SizedBox(height: 10),
 
+            /// Dashboard
             menuItem(
               "assets/icons/home.svg",
               "Home",
               MenuScreen.dashboardScreen,
+              right: "Dashboard",
             ),
 
+            /// Trader
             expandableMenu(
-              menuKey: "customers",
+              menuKey: "trader",
               icon: "assets/icons/user.svg",
               title: "Trader",
               children: [
-                {"Customer": MenuScreen.customerList},
-                {"Supplier": MenuScreen.supplierList},
+                {
+                  "title": "Customer",
+                  "screen": MenuScreen.customerList,
+                  "module": "Ledger",
+                },
+                {
+                  "title": "Supplier",
+                  "screen": MenuScreen.supplierList,
+                  "module": "Ledger",
+                },
               ],
             ),
 
-            menuItem(
-              "assets/icons/inventry.svg",
-              "Inventory",
-              MenuScreen.inventoryScreen,
-            ),
+            /// Inventory
 
+            /// Sales
             expandableMenu(
               menuKey: "sales",
               icon: "assets/icons/sales.svg",
               title: "Sales",
               children: [
-                {"Estimate": MenuScreen.estimateList},
-                {"Performa Invoice": MenuScreen.performaInvoice},
-                {"Delivery": MenuScreen.deliveryChallan},
-                {"Sale Invoice": MenuScreen.saleInvoice},
-                {"Sales Return": MenuScreen.saleReturn},
-                {"Credit Note": MenuScreen.debitNote},
+                {
+                  "title": "Estimate",
+                  "screen": MenuScreen.estimateList,
+                  "module": "Estimate",
+                },
+                {
+                  "title": "Performa Invoice",
+                  "screen": MenuScreen.performaInvoice,
+                  "module": "Performa Invoice",
+                },
+                {
+                  "title": "Delivery",
+                  "screen": MenuScreen.deliveryChallan,
+                  "module": "Delivery Challan",
+                },
+                {
+                  "title": "Sale Invoice",
+                  "screen": MenuScreen.saleInvoice,
+                  "module": "Sale Invoice",
+                },
+                {
+                  "title": "Sales Return",
+                  "screen": MenuScreen.saleReturn,
+                  "module": "Sale Return",
+                },
+                {
+                  "title": "Credit Note",
+                  "screen": MenuScreen.debitNote,
+                  "module": "Credit Note",
+                },
               ],
             ),
 
+            /// Purchase
             expandableMenu(
               menuKey: "purchase",
               icon: "assets/icons/purchase.svg",
               title: "Purchase",
               children: [
-                {"Purchase Order": MenuScreen.purchaseOrder},
-                {"Purchase Invoice": MenuScreen.purchaseInvoice},
-                {"Purchase Return": MenuScreen.purchaseReturn},
-                {"Debit Note": MenuScreen.creditNote},
+                {
+                  "title": "Purchase Order",
+                  "screen": MenuScreen.purchaseOrder,
+                  "module": "Purchase Order",
+                },
+                {
+                  "title": "Purchase Invoice",
+                  "screen": MenuScreen.purchaseInvoice,
+                  "module": "Purchase Invoice",
+                },
+                {
+                  "title": "Purchase Return",
+                  "screen": MenuScreen.purchaseReturn,
+                  "module": "Purchase Return",
+                },
+                {
+                  "title": "Debit Note",
+                  "screen": MenuScreen.creditNote,
+                  "module": "Debit Note",
+                },
               ],
             ),
 
-            // menuItem(
-            //   "assets/icons/reports.svg",
-            //   "Reports",
-            //   MenuScreen.reportsDashboardScreen,
-            // ),
+            /// Vouchers
             expandableMenu(
-              menuKey: "vouchers",
+              menuKey: "voucher",
               icon: "assets/icons/vouchers.svg",
               title: "Vouchers",
               children: [
-                {"Payment": MenuScreen.payment},
-                {"Reciept": MenuScreen.reciept},
-                {"Expense": MenuScreen.expanse},
-                {"Contra": MenuScreen.contra},
-                {"Journal": MenuScreen.journal},
+                {
+                  "title": "Reciept",
+                  "screen": MenuScreen.reciept,
+                  "module": "Receipt Voucher",
+                },
+                {
+                  "title": "Expense",
+                  "screen": MenuScreen.expanse,
+                  "module": "Expense Voucher",
+                },
+                {
+                  "title": "Payment",
+                  "screen": MenuScreen.payment,
+                  "module": "Payment Voucher",
+                },
+                {
+                  "title": "Contra",
+                  "screen": MenuScreen.contra,
+                  "module": "Contra Voucher",
+                },
+                {
+                  "title": "Journal",
+                  "screen": MenuScreen.journal,
+                  "module": "Journal Voucher",
+                },
               ],
             ),
+            menuItem(
+              "assets/icons/inventry.svg",
+              "Inventory",
+              MenuScreen.inventoryScreen,
+              module: "Item",
+            ),
+
+            /// Employee/User
             expandableMenu(
               menuKey: "employee",
               icon: "assets/icons/employee.png",
               title: "Employees/Users",
-              children: [
-                {"User": MenuScreen.userMaster},
-                {"Employee": MenuScreen.employeeMaster},
-              ],
               isPng: true,
+              children: [
+                {
+                  "title": "User",
+                  "screen": MenuScreen.userMaster,
+                  "module": "User",
+                },
+                {
+                  "title": "Employee",
+                  "screen": MenuScreen.employeeMaster,
+                  "module": "Employee",
+                },
+              ],
             ),
 
+            /// Utilities
             expandableMenu(
               menuKey: "utils",
               icon: "assets/icons/utils.svg",
               title: "Utilities",
               children: [
-                {"Misc Charge": MenuScreen.miscCharge},
-                {"Company Profile": MenuScreen.companyProfile},
-                {"Ledger": MenuScreen.ledgerMaster},
+                {
+                  "title": "Company Profile",
+                  "screen": MenuScreen.companyProfile,
+                  "right": "Company Profile",
+                },
+                {
+                  "title": "Ledger",
+                  "screen": MenuScreen.ledgerMaster,
+                  "module": "Ledger",
+                },
+                {
+                  "title": "Misc Charge",
+                  "screen": MenuScreen.miscCharge,
+                  "module": "Misc Charge",
+                },
               ],
             ),
-            const SizedBox(height: 20),
+
+            /// Logout
             IconButton(
               icon: const Icon(Icons.logout, color: Colors.white),
-              onPressed: () {
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.clear();
                 pushNdRemove(SplashScreen());
               },
             ),
-            const SizedBox(height: 10),
           ],
         ),
       ),

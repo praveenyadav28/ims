@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/ui/master/misc/misc_charge.dart';
+import 'package:ims/utils/access.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/colors.dart';
 import 'package:ims/utils/prefence.dart';
@@ -58,8 +59,7 @@ class _MiscChargeScreenState extends State<MiscChargeScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = miscList.where((e) {
-      return e.name.toLowerCase().contains(_search.toLowerCase()) ||
-          e.ledgerName.toLowerCase().contains(_search.toLowerCase());
+      return e.name.toLowerCase().contains(_search.toLowerCase());
     }).toList();
 
     return Scaffold(
@@ -76,22 +76,23 @@ class _MiscChargeScreenState extends State<MiscChargeScreen> {
           ),
         ),
         actions: [
-          Center(
-            child: TextButton.icon(
-              onPressed: () async {
-                final updated = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CreateMiscCharge()),
-                );
-                if (updated == "refresh") fetchMiscCharges();
-              },
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text(
-                "Create",
-                style: TextStyle(color: Colors.white),
+          if (hasModuleAccess("Misc Charge", "create"))
+            Center(
+              child: TextButton.icon(
+                onPressed: () async {
+                  final updated = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CreateMiscCharge()),
+                  );
+                  if (updated == "refresh") fetchMiscCharges();
+                },
+                icon: const Icon(Icons.add, color: Colors.white),
+                label: const Text(
+                  "Create",
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ),
-          ),
           const SizedBox(width: 12),
         ],
       ),
@@ -164,7 +165,6 @@ class _MiscChargeScreenState extends State<MiscChargeScreen> {
       child: Row(
         children: [
           Expanded(flex: 3, child: Text("Name", style: _headStyle)),
-          Expanded(flex: 3, child: Text("Ledger", style: _headStyle)),
           Expanded(flex: 2, child: Text("GST %", style: _headStyle)),
           SizedBox(width: 110, child: Text("Action", style: _headStyle)),
         ],
@@ -189,7 +189,6 @@ class _MiscChargeScreenState extends State<MiscChargeScreen> {
       child: Row(
         children: [
           Expanded(flex: 3, child: _cell(e.name)),
-          Expanded(flex: 3, child: _ledgerChip(e.ledgerName)),
           Expanded(flex: 2, child: _gstChip(e.gst)),
           _actionButtons(e),
         ],
@@ -259,15 +258,19 @@ class _MiscChargeScreenState extends State<MiscChargeScreen> {
       width: 110,
       child: Row(
         children: [
-          _iconBtn(Icons.edit, AppColor.primary, () async {
-            final updated = await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => CreateMiscCharge(editData: e)),
-            );
-            if (updated == "refresh") fetchMiscCharges();
-          }),
+          if (hasModuleAccess("Misc Charge", "update"))
+            _iconBtn(Icons.edit, AppColor.primary, () async {
+              final updated = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CreateMiscCharge(editData: e),
+                ),
+              );
+              if (updated == "refresh") fetchMiscCharges();
+            }),
           const SizedBox(width: 10),
-          _iconBtn(Icons.delete, Colors.red, () => _confirmDelete(e.id)),
+          if (hasModuleAccess("Misc Charge", "delete"))
+            _iconBtn(Icons.delete, Colors.red, () => _confirmDelete(e.id)),
         ],
       ),
     );

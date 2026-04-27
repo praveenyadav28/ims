@@ -293,7 +293,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                 defaultButton(
                   buttonColor: const Color(0xff8947E5),
                   text:
-                      "${widget.purchaseReturnData == null ? "Create" : "Update"} Purchase Return",
+                      "${widget.purchaseReturnData == null ? "Save" : "Update"} Purchase Return",
                   height: 40,
                   width: 189,
                   onTap: () {
@@ -405,7 +405,7 @@ class _CreatePurchaseReturnViewState extends State<CreatePurchaseReturnView> {
                       ),
                     ),
 
-                    SizedBox(height: Sizes.height * .03),
+                    SizedBox(height: Sizes.height * .02),
                     GlobalItemsTableSection(
                       ledgerType:
                           state.selectedCustomer?.ledgerType ?? 'Individual',

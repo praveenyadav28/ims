@@ -22,7 +22,7 @@ class CreateLedger extends StatefulWidget {
 }
 
 class _CreateLedgerState extends State<CreateLedger> {
-  String _selectedBalance = 'Cr';
+  String _selectedBalance = 'Dr';
   final List<String> _balanceType = ['Cr', 'Dr'];
 
   String? _selectedLedgerGroup;
@@ -322,7 +322,7 @@ class _CreateLedgerState extends State<CreateLedger> {
           children: [
             defaultButton(
               buttonColor: Color(0xff8947E5),
-              text: "${widget.existing == null ? "Create" : "Update"} Ledger",
+              text: widget.existing == null ? "Save" : "Update",
               height: 40,
               width: 149,
               onTap: () => postLedger(),
@@ -342,6 +342,22 @@ class _CreateLedgerState extends State<CreateLedger> {
   }
 
   Future<void> postLedger() async {
+    final int newOpening = openingBalanceController.text.trim().isEmpty
+        ? 0
+        : int.tryParse(openingBalanceController.text.trim()) ?? 0;
+
+    final int signedNewOpening = _selectedBalance != "Cr"
+        ? newOpening
+        : -newOpening;
+
+    int finalClosing = signedNewOpening;
+
+    if (widget.existing != null) {
+      final oldOpening = widget.existing?.openingBalance ?? 0;
+      final oldClosing = widget.existing?.closingBalance ?? 0;
+
+      finalClosing = oldClosing + (signedNewOpening - oldOpening);
+    }
     final Map<String, dynamic> payloadData = {
       'licence_no': Preference.getint(PrefKeys.licenseNo),
       'branch_id': Preference.getString(PrefKeys.locationId),
@@ -353,11 +369,8 @@ class _CreateLedgerState extends State<CreateLedger> {
       'whatapp_no': whatsapppNoController.text.trim().toString(),
       'email': emailIdController.text.trim().toString(),
       'ledger_group': _selectedLedgerGroup,
-      'opening_balance': openingBalanceController.text.trim().isEmpty
-          ? "0"
-          : _selectedBalance != "Cr"
-          ? "${int.tryParse(openingBalanceController.text.trim())}"
-          : "-${int.tryParse(openingBalanceController.text.trim())}",
+      'opening_balance': "$signedNewOpening",
+      'closing_balance': "$finalClosing",
       'address': addressLine1Controller.text.trim().toString(),
       'town': permanentareaController.text.trim().toString(),
       'opening_type': _selectedBalance,

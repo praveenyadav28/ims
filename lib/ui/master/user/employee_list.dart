@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/employee_model.dart';
 import 'package:ims/ui/master/user/create_employee.dart';
+import 'package:ims/utils/access.dart';
 import 'package:ims/utils/api.dart';
 import 'package:ims/utils/button.dart';
 import 'package:ims/utils/colors.dart';
@@ -70,18 +71,19 @@ class _EmployeeTableScreenState extends State<EmployeeTableScreen> {
           ),
         ),
         actions: [
-          Center(
-            child: defaultButton(
-              height: 40,
-              width: 150,
-              onTap: () async {
-                var data = await pushTo(UserEmpCreate());
-                if (data == "data") loadData();
-              },
-              text: "Create",
-              buttonColor: AppColor.blue,
+          if (hasModuleAccess("Employee", "create"))
+            Center(
+              child: defaultButton(
+                height: 40,
+                width: 150,
+                onTap: () async {
+                  var data = await pushTo(UserEmpCreate());
+                  if (data == "data") loadData();
+                },
+                text: "Create",
+                buttonColor: AppColor.blue,
+              ),
             ),
-          ),
           const SizedBox(width: 12),
         ],
       ),
@@ -202,7 +204,18 @@ class _EmployeeTableScreenState extends State<EmployeeTableScreen> {
         children: [
           _iconBtn(Icons.visibility, Colors.blue, () => _showDetails(c)),
           const SizedBox(width: 10),
-          _iconBtn(Icons.delete, Colors.red, () => _confirmDelete(c.id)),
+
+          if (hasModuleAccess("Employee", "update"))
+            _iconBtn(Icons.edit, Colors.green, () {
+              var data = pushTo(UserEmpCreate(employee: c));
+              data.then((value) {
+                if (value == "data") loadData();
+              });
+            }),
+          const SizedBox(width: 10),
+
+          if (hasModuleAccess("Employee", "delete"))
+            _iconBtn(Icons.delete, Colors.red, () => _confirmDelete(c.id)),
         ],
       ),
     );

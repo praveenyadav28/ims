@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:excel/excel.dart' hide Border;
+import 'package:ims/utils/access.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
@@ -168,20 +169,22 @@ class _ContraListTableScreenState extends State<ContraListTableScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          Center(
-            child: defaultButton(
-              onTap: () async {
-                var data = await pushTo(ContraEntry());
-                if (data != null) {
-                  fetchPayments();
-                }
-              },
-              buttonColor: AppColor.blue,
-              text: "Create Contra",
-              height: 40,
-              width: 150,
+
+          if (hasModuleAccess("Contra Voucher", "create"))
+            Center(
+              child: defaultButton(
+                onTap: () async {
+                  var data = await pushTo(ContraEntry());
+                  if (data != null) {
+                    fetchPayments();
+                  }
+                },
+                buttonColor: AppColor.blue,
+                text: "Create Contra",
+                height: 40,
+                width: 150,
+              ),
             ),
-          ),
           SizedBox(width: 10),
         ],
       ),
@@ -337,7 +340,12 @@ class _ContraListTableScreenState extends State<ContraListTableScreen> {
             flex: 2,
             child: Text(DateFormat('yyyy-MM-dd').format(p.date)),
           ),
-          Expanded(flex: 3, child: Text("${p.prefix}${p.prefix.isNotEmpty ? '-' : ''}${p.voucherNo}")),
+          Expanded(
+            flex: 3,
+            child: Text(
+              "${p.prefix}${p.prefix.isNotEmpty ? '/' : ''}${p.voucherNo}",
+            ),
+          ),
           Expanded(flex: 3, child: Text(p.fromAccount)),
           Expanded(flex: 3, child: Text(p.toAccount)),
           Expanded(
@@ -402,19 +410,23 @@ class _ContraListTableScreenState extends State<ContraListTableScreen> {
                     }
                   },
                 ),
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  onPressed: () async {
-                    var data = await pushTo(ContraEntry(contraModel: p));
-                    if (data != null) {
-                      fetchPayments();
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => confirmDelete(p.id),
-                ),
+
+                if (hasModuleAccess("Contra Voucher", "update"))
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () async {
+                      var data = await pushTo(ContraEntry(contraModel: p));
+                      if (data != null) {
+                        fetchPayments();
+                      }
+                    },
+                  ),
+
+                if (hasModuleAccess("Contra Voucher", "delete"))
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => confirmDelete(p.id),
+                  ),
               ],
             ),
           ),

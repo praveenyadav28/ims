@@ -43,6 +43,8 @@ class SaleInvoiceData {
   final String transNo;
   final String transPre;
   final String transType;
+  final String salePerson;
+  final String salePersonId;
 
   final String prefix;
   final int no;
@@ -101,6 +103,8 @@ class SaleInvoiceData {
     required this.itemDetails,
     required this.serviceDetails,
     required this.signature,
+    required this.salePerson,
+    required this.salePersonId,
   });
 
   factory SaleInvoiceData.fromJson(Map<String, dynamic> j) => SaleInvoiceData(
@@ -155,5 +159,7 @@ class SaleInvoiceData {
         .toList(),
 
     signature: j["signature"] ?? "",
+    salePerson: j["employeename"] ?? "",
+    salePersonId: j["employeeid"] ?? "",
   );
 }

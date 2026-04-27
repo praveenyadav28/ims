@@ -1,7 +1,6 @@
-import 'dart:io';
+import 'dart:typed_data';
+import 'dart:html' as html;
 import 'package:excel/excel.dart' hide Border;
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ims/model/cussup_model.dart';
@@ -83,9 +82,19 @@ class _Gstr1DashboardScreenState extends State<Gstr1DashboardScreen>
     invoices = SaleInvoiceListResponse.fromJson(results[0]).data;
     saleReturns = SaleReturnListResponse.fromJson(results[1]).data;
     debitNotes = DebitNoteListResponse.fromJson(results[2]).data;
-    customers = (results[3]['data'] as List)
-        .map((e) => Customer.fromJson(e))
-        .toList();
+    customers = (results[3]['data'] as List).map((e) {
+      final customerJson = e['customer'] ?? {};
+      final ledgerJson = e['ledger'] ?? {};
+
+      // merge balances
+      customerJson['opening_balance'] =
+          ledgerJson['opening_balance'] ?? customerJson['opening_balance'];
+
+      customerJson['closing_balance'] =
+          ledgerJson['closing_balance'] ?? customerJson['closing_balance'];
+
+      return Customer.fromJson(customerJson);
+    }).toList();
 
     applyFilter();
 
@@ -280,14 +289,25 @@ class _Gstr1DashboardScreenState extends State<Gstr1DashboardScreen>
     _addHSNSheet(excel);
     _addDocsSheet(excel);
 
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File(
-      "${dir.path}/GSTR1_${DateFormat('MMyyyy').format(DateTime.now())}.xlsx",
-    );
-
     final bytes = excel.encode();
-    await file.writeAsBytes(bytes!);
-    await OpenFilex.open(file.path);
+    if (bytes == null) return;
+
+    final fileName =
+        "GSTR1_${DateFormat('MMyyyy').format(DateTime.now())}.xlsx";
+
+    final data = Uint8List.fromList(bytes);
+
+    final blob = html.Blob([
+      data,
+    ], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+    final url = html.Url.createObjectUrlFromBlob(blob);
+
+    html.AnchorElement(href: url)
+      ..setAttribute("download", fileName)
+      ..click();
+
+    html.Url.revokeObjectUrl(url);
   }
 
   void _addB2BSheet(Excel excel) {

@@ -64,7 +64,6 @@ class _GstPurchaseReportScreenState extends State<GstPurchaseReportScreen> {
       "get/purchaseinvoice",
       licenceNo: Preference.getint(PrefKeys.licenseNo),
     );
-    print(res);
     final data = PurchaseInvoiceListResponse.fromJson(res).data;
 
     // Prepare filter masters
